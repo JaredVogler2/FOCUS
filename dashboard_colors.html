@@ -1,0 +1,1389 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jared's Production Dashboard - Enhanced</title>
+    <!-- Frappe Gantt CSS and JS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/frappe-gantt@0.5.0/dist/frappe-gantt.css">
+    <script src="https://cdn.jsdelivr.net/npm/frappe-gantt@0.5.0/dist/frappe-gantt.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #2563eb;
+            --primary-dark: #1e40af;
+            --secondary: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --dark: #1f2937;
+            --gray: #6b7280;
+            --light: #f3f4f6;
+            --white: #ffffff;
+            --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+            --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1);
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: var(--dark);
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        /* Header */
+        .header {
+            background: var(--white);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: var(--shadow-lg);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+
+        .header h1 {
+            font-size: 24px;
+            color: var(--dark);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .header .icon {
+            width: 32px;
+            height: 32px;
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+        }
+
+        /* Controls */
+        .controls {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .scenario-selector {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .scenario-selector label {
+            font-weight: 500;
+            color: var(--gray);
+        }
+
+        .scenario-selector select, select {
+            padding: 8px 12px;
+            border: 2px solid var(--light);
+            border-radius: 8px;
+            background: var(--white);
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+
+        .scenario-selector select:hover, select:hover {
+            border-color: var(--primary);
+        }
+
+        .scenario-selector select:focus, select:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+
+        /* View Tabs */
+        .view-tabs {
+            display: flex;
+            gap: 5px;
+            background: var(--light);
+            padding: 4px;
+            border-radius: 10px;
+        }
+
+        .view-tab {
+            padding: 8px 16px;
+            border: none;
+            background: transparent;
+            color: var(--gray);
+            font-weight: 500;
+            cursor: pointer;
+            border-radius: 6px;
+            transition: all 0.3s;
+            font-size: 14px;
+        }
+
+        .view-tab.active {
+            background: var(--white);
+            color: var(--primary);
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        .view-tab:hover:not(.active) {
+            background: rgba(255, 255, 255, 0.5);
+        }
+
+        /* Main Content */
+        .main-content {
+            background: var(--white);
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: var(--shadow-lg);
+            min-height: 600px;
+            position: relative;
+        }
+
+        .view-content {
+            display: none;
+        }
+
+        .view-content.active {
+            display: block;
+            animation: fadeIn 0.3s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Scenario Info Banner */
+        #scenarioInfo {
+            background: #f0f9ff;
+            border: 1px solid var(--primary);
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+
+        /* Team Lead View */
+        .team-filters {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .filter-group {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .filter-group label {
+            font-weight: 500;
+            color: var(--gray);
+            font-size: 14px;
+        }
+
+        .team-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+
+        .stat-card {
+            background: var(--light);
+            padding: 15px;
+            border-radius: 10px;
+            border-left: 4px solid var(--primary);
+        }
+
+        .stat-card h3 {
+            font-size: 12px;
+            color: var(--gray);
+            text-transform: uppercase;
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+
+        .stat-card .value {
+            font-size: 24px;
+            font-weight: bold;
+            color: var(--dark);
+        }
+
+        .stat-card .subtext {
+            font-size: 12px;
+            color: var(--gray);
+            margin-top: 4px;
+        }
+
+        /* Task Table */
+        .task-table-container {
+            background: var(--white);
+            border-radius: 10px;
+            overflow: hidden;
+            border: 1px solid var(--light);
+        }
+
+        .table-header {
+            background: var(--light);
+            padding: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .table-header h3 {
+            font-size: 16px;
+            color: var(--dark);
+        }
+
+        .table-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn {
+            padding: 6px 12px;
+            border: none;
+            border-radius: 6px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: 500;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-dark);
+        }
+
+        .btn-secondary {
+            background: var(--white);
+            color: var(--gray);
+            border: 1px solid var(--light);
+        }
+
+        .btn-secondary:hover {
+            background: var(--light);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        thead {
+            background: var(--light);
+        }
+
+        th {
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+            color: var(--gray);
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 2px solid var(--white);
+        }
+
+        td {
+            padding: 12px;
+            border-bottom: 1px solid var(--light);
+            font-size: 14px;
+            vertical-align: top;
+        }
+
+        tbody tr:hover {
+            background: rgba(37, 99, 235, 0.03);
+        }
+
+        .task-id {
+            font-weight: 600;
+            color: var(--dark);
+        }
+
+        .task-type {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            display: inline-block;
+        }
+
+        .task-type.production {
+            background: rgba(16, 185, 129, 0.1);
+            color: var(--secondary);
+        }
+
+        .task-type.quality {
+            background: rgba(37, 99, 235, 0.1);
+            color: var(--primary);
+        }
+
+        .task-type.late-part {
+            background: rgba(245, 158, 11, 0.1);
+            color: var(--warning);
+        }
+
+        .task-type.rework {
+            background: rgba(239, 68, 68, 0.1);
+            color: var(--danger);
+        }
+
+        .priority {
+            font-weight: bold;
+            color: var(--dark);
+        }
+
+        .assign-select {
+            padding: 4px 8px;
+            border: 1px solid var(--light);
+            border-radius: 4px;
+            font-size: 13px;
+            cursor: pointer;
+            max-width: 150px;
+        }
+
+		/* Enhanced Gantt Chart Product Colors */
+		.bar-wrapper.gantt-prod-a rect.bar {
+			fill: #DC2626 !important; /* Red for Product A */
+		}
+
+		.bar-wrapper.gantt-prod-b rect.bar {
+			fill: #FCD34D !important; /* Yellow for Product B */
+		}
+
+		.bar-wrapper.gantt-prod-c rect.bar {
+			fill: #10B981 !important; /* Green for Product C */
+		}
+
+		.bar-wrapper.gantt-prod-d rect.bar {
+			fill: #3B82F6 !important; /* Blue for Product D */
+		}
+
+		.bar-wrapper.gantt-prod-e rect.bar {
+			fill: #8B5CF6 !important; /* Purple for Product E */
+		}
+
+		/* Critical path indicator - ENHANCED with maximum specificity */
+		svg .gantt-critical rect.bar,
+		svg .gantt-critical rect.bar-progress,
+		svg g.gantt-critical rect.bar,
+		svg g.gantt-critical rect.bar-progress,
+		.gantt svg .gantt-critical rect.bar,
+		.gantt svg g.gantt-critical rect.bar,
+		#ganttChart svg .gantt-critical rect.bar,
+		#ganttChart svg g.gantt-critical rect.bar {
+			stroke: #000000 !important;
+			stroke-width: 3px !important;
+			stroke-dasharray: none !important;
+			stroke-opacity: 1 !important;
+			filter: drop-shadow(0 0 3px rgba(0,0,0,0.8)) !important;
+		}
+
+		/* Ensure critical path shows even with product colors */
+		.bar-wrapper.gantt-prod-a.gantt-critical rect.bar,
+		.bar-wrapper.gantt-prod-b.gantt-critical rect.bar,
+		.bar-wrapper.gantt-prod-c.gantt-critical rect.bar,
+		.bar-wrapper.gantt-prod-d.gantt-critical rect.bar,
+		.bar-wrapper.gantt-prod-e.gantt-critical rect.bar,
+		svg .gantt-prod-a.gantt-critical rect.bar,
+		svg .gantt-prod-b.gantt-critical rect.bar,
+		svg .gantt-prod-c.gantt-critical rect.bar,
+		svg .gantt-prod-d.gantt-critical rect.bar,
+		svg .gantt-prod-e.gantt-critical rect.bar {
+			stroke: #000000 !important;
+			stroke-width: 4px !important;
+			stroke-dasharray: none !important;
+			box-shadow: 0 0 4px rgba(0,0,0,0.8);
+		}
+
+		/* Late part tasks - dashed orange border */
+		.bar-wrapper.gantt-late-part rect.bar {
+			stroke: #F59E0B !important;
+			stroke-width: 2px !important;
+			stroke-dasharray: 5,3 !important;
+		}
+
+		/* Rework tasks - dotted red border */
+		.bar-wrapper.gantt-rework rect.bar {
+			stroke: #EF4444 !important;
+			stroke-width: 2px !important;
+			stroke-dasharray: 2,2 !important;
+		}
+
+		/* Also style the progress bars */
+		.bar-wrapper.gantt-prod-a rect.bar-progress {
+			fill: #DC2626 !important;
+		}
+
+		.bar-wrapper.gantt-prod-b rect.bar-progress {
+			fill: #FCD34D !important;
+		}
+
+		.bar-wrapper.gantt-prod-c rect.bar-progress {
+			fill: #10B981 !important;
+		}
+
+		.bar-wrapper.gantt-prod-d rect.bar-progress {
+			fill: #3B82F6 !important;
+		}
+
+		.bar-wrapper.gantt-prod-e rect.bar-progress {
+			fill: #8B5CF6 !important;
+		}
+
+		/* Z-index trick to bring critical tasks forward */
+		svg .gantt-critical {
+			z-index: 1000 !important;
+		}
+
+		/* Animation to make critical path more visible */
+		@keyframes critical-pulse {
+			0% { stroke-width: 3px; }
+			50% { stroke-width: 5px; }
+			100% { stroke-width: 3px; }
+		}
+
+		svg .gantt-critical rect.bar {
+			animation: critical-pulse 2s ease-in-out infinite;
+		}
+
+        /* Gantt legend */
+        .gantt-legend {
+            display: flex;
+            gap: 20px;
+            padding: 15px;
+            background: #F3F4F6;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+
+        .gantt-legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+        }
+
+        .gantt-legend-box {
+            width: 20px;
+            height: 14px;
+            border-radius: 3px;
+        }
+
+        .gantt-legend-box.critical {
+            border: 3px solid #000;
+        }
+
+        .gantt-legend-box.late-part {
+            border: 2px dashed #F59E0B;
+        }
+
+        .gantt-legend-box.rework {
+            border: 2px dotted #EF4444;
+        }
+
+        /* Management View */
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .metric-card {
+            background: var(--white);
+            border: 1px solid var(--light);
+            border-radius: 10px;
+            padding: 20px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .metric-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary), var(--secondary));
+        }
+
+        .metric-card h3 {
+            font-size: 14px;
+            color: var(--gray);
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            font-weight: 500;
+        }
+
+        .metric-value {
+            font-size: 28px;
+            font-weight: bold;
+            color: var(--dark);
+            margin-bottom: 5px;
+        }
+
+        .metric-label {
+            font-size: 12px;
+            color: var(--gray);
+        }
+
+        .product-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+            margin-top: 25px;
+        }
+
+        .product-card {
+            background: var(--white);
+            border: 1px solid var(--light);
+            border-radius: 10px;
+            padding: 20px;
+            transition: transform 0.3s, box-shadow 0.3s;
+            cursor: pointer;
+        }
+
+        .product-card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .product-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .product-name {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--dark);
+        }
+
+        .status-badge {
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .status-badge.on-time {
+            background: rgba(16, 185, 129, 0.1);
+            color: var(--secondary);
+        }
+
+        .status-badge.at-risk {
+            background: rgba(245, 158, 11, 0.1);
+            color: var(--warning);
+        }
+
+        .status-badge.late {
+            background: rgba(239, 68, 68, 0.1);
+            color: var(--danger);
+        }
+
+        .progress-bar {
+            background: var(--light);
+            height: 8px;
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 15px 0;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--primary), var(--secondary));
+            border-radius: 4px;
+            transition: width 0.5s ease;
+        }
+
+        .product-stats {
+            display: flex;
+            justify-content: space-between;
+            font-size: 13px;
+            color: var(--gray);
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        /* Utilization Chart */
+        .chart-container {
+            background: var(--white);
+            border: 1px solid var(--light);
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+
+        .chart-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .chart-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--dark);
+        }
+
+        .utilization-bars {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .utilization-item {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .team-label {
+            min-width: 150px;
+            font-size: 13px;
+            color: var(--dark);
+            font-weight: 500;
+        }
+
+        .utilization-bar {
+            flex: 1;
+            background: var(--light);
+            height: 30px;
+            border-radius: 6px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .utilization-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--primary), var(--secondary));
+            border-radius: 6px;
+            transition: width 0.5s ease;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            padding-right: 10px;
+        }
+
+        .utilization-percent {
+            color: white;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        /* Impact cards for late parts analysis */
+        .impact-card {
+            background: white;
+            border: 1px solid #E5E7EB;
+            border-radius: 10px;
+            padding: 20px;
+            position: relative;
+        }
+
+        .impact-card.high-impact {
+            border-color: #EF4444;
+            background: #FEE2E2;
+        }
+
+        .impact-card.medium-impact {
+            border-color: #F59E0B;
+            background: #FEF3C7;
+        }
+
+        .impact-card.low-impact {
+            border-color: #10B981;
+            background: #D1FAE5;
+        }
+
+        .impact-result.high-impact {
+            background: #FEE2E2;
+            border: 1px solid #EF4444;
+        }
+
+        .impact-result.medium-impact {
+            background: #FEF3C7;
+            border: 1px solid #F59E0B;
+        }
+
+        .impact-result.low-impact {
+            background: #DCFCE7;
+            border: 1px solid #10B981;
+        }
+
+        /* Individual Mechanic View */
+        .mechanic-header {
+            background: var(--light);
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 25px;
+        }
+
+        .mechanic-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+
+        .mechanic-select {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .mechanic-select label {
+            font-weight: 500;
+            color: var(--gray);
+        }
+
+        .mechanic-select select {
+            padding: 10px 15px;
+            border: 2px solid var(--white);
+            border-radius: 8px;
+            background: var(--white);
+            cursor: pointer;
+            font-size: 14px;
+            min-width: 200px;
+        }
+
+        .shift-info {
+            display: flex;
+            gap: 30px;
+        }
+
+        .shift-detail {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .shift-detail label {
+            font-size: 12px;
+            color: var(--gray);
+            margin-bottom: 4px;
+            text-transform: uppercase;
+        }
+
+        .shift-detail .value {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--dark);
+        }
+
+        .task-timeline {
+            background: var(--white);
+            border: 1px solid var(--light);
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .timeline-header {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--dark);
+            margin-bottom: 20px;
+        }
+
+        .timeline-item {
+            display: flex;
+            gap: 20px;
+            padding: 15px;
+            border-left: 3px solid var(--primary);
+            margin-left: 10px;
+            position: relative;
+            transition: all 0.3s;
+        }
+
+        .timeline-item:hover {
+            background: rgba(37, 99, 235, 0.03);
+            border-left-color: var(--primary-dark);
+        }
+
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            left: -8px;
+            top: 20px;
+            width: 12px;
+            height: 12px;
+            background: var(--primary);
+            border-radius: 50%;
+            border: 3px solid var(--white);
+        }
+
+        .timeline-time {
+            min-width: 100px;
+            font-weight: 600;
+            color: var(--dark);
+        }
+
+        .timeline-content {
+            flex: 1;
+        }
+
+        .timeline-task {
+            font-weight: 600;
+            color: var(--dark);
+            margin-bottom: 5px;
+        }
+
+        .timeline-details {
+            font-size: 13px;
+            color: var(--gray);
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .dependency-warning {
+            background: rgba(245, 158, 11, 0.1);
+            color: var(--warning);
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 13px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* Analytics cards */
+        .analytics-card {
+            transition: transform 0.2s;
+        }
+
+        .analytics-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        /* Button styles for new features */
+        .btn-sm {
+            padding: 4px 8px;
+            font-size: 12px;
+            background: #3B82F6;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .btn-sm:hover {
+            background: #2563EB;
+        }
+
+        /* Gantt view buttons */
+        .gantt-view-btn {
+            padding: 6px 12px;
+            font-size: 13px;
+            background: #E5E7EB;
+            color: #374151;
+            border: 1px solid #D1D5DB;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .gantt-view-btn:hover {
+            background: #D1D5DB;
+        }
+
+        .gantt-view-btn.active {
+            background: #3B82F6;
+            color: white;
+            border-color: #3B82F6;
+        }
+
+        /* Gantt date header styling for non-work days */
+        .gantt svg .tick.weekend text {
+            fill: #DC2626 !important;
+            font-weight: bold !important;
+        }
+
+        .gantt svg .tick.holiday text {
+            fill: #F59E0B !important;
+            font-weight: bold !important;
+        }
+
+        /* Gantt sorting group separators */
+        .gantt-group-separator {
+            stroke: #6B7280 !important;
+            stroke-width: 2px !important;
+            stroke-dasharray: 5,5 !important;
+            opacity: 0.5;
+        }
+
+        /* Gantt group labels */
+        .gantt-group-label {
+            fill: #1F2937 !important;
+            font-weight: bold !important;
+            font-size: 14px !important;
+        }
+
+        /* Enhanced visual separation for sorted groups */
+        .gantt svg rect.bar.group-start {
+            margin-top: 10px !important;
+        }
+
+        /* Highlight sorted groups on hover */
+        .gantt-group:hover rect.bar {
+            opacity: 0.9 !important;
+        }
+
+        /* Loading State */
+        .loading {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 400px;
+            color: var(--gray);
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid var(--light);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Task Type Summary */
+        #taskTypeSummary {
+            grid-column: span 2;
+            background: var(--light);
+            padding: 15px;
+            border-radius: 10px;
+            border-left: 4px solid var(--secondary);
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+            }
+
+            .header {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .controls {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .view-tabs {
+                width: 100%;
+            }
+
+            .team-stats {
+                grid-template-columns: 1fr;
+            }
+
+            .metrics-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .product-grid {
+                grid-template-columns: 1fr;
+            }
+
+            table {
+                font-size: 12px;
+            }
+
+            th, td {
+                padding: 8px;
+            }
+
+            .mechanic-info {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .filter-group select {
+                width: 100%;
+            }
+        }
+
+        /* Print styles */
+        @media print {
+            body {
+                background: white;
+            }
+
+            .header {
+                box-shadow: none;
+                border: 1px solid #ddd;
+            }
+
+            .main-content {
+                box-shadow: none;
+                border: 1px solid #ddd;
+            }
+
+            .btn, .controls {
+                display: none;
+            }
+        }
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>
+                <div class="icon">JV</div>
+                Jared's Production Dashboard
+            </h1>
+            <div class="controls">
+                <div class="scenario-selector">
+                    <label>Scenario:</label>
+                    <select id="scenarioSelect">
+                        <option value="baseline">Baseline (CSV Capacity)</option>
+                        <option value="scenario1">Scenario 1: CSV Headcount</option>
+                        <option value="scenario2">Scenario 2: Minimize Makespan</option>
+                        <option value="scenario3">Scenario 3: Multi-Dimensional</option>
+                    </select>
+                </div>
+                <div class="view-tabs">
+                    <button class="view-tab active" data-view="team-lead">Team Lead</button>
+                    <button class="view-tab" data-view="management">Management</button>
+                    <button class="view-tab" data-view="mechanic">Individual</button>
+                    <button class="view-tab" data-view="project">Project View</button>
+                </div>
+                <button id="refreshBtn" class="btn btn-secondary" style="margin-left: 10px;">🔄 Refresh Data</button>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Team Lead View -->
+            <div id="team-lead-view" class="view-content active">
+                <div class="team-filters">
+                    <div class="filter-group">
+                        <label>Team:</label>
+                        <select id="teamSelect">
+                            <option value="all">All Teams</option>
+                            <!-- Teams will be populated dynamically from data -->
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label>Shift:</label>
+                        <select id="shiftSelect">
+                            <option value="all">All Shifts</option>
+                            <option value="1st">1st Shift (6:00 AM - 2:30 PM)</option>
+                            <option value="2nd">2nd Shift (2:30 PM - 11:00 PM)</option>
+                            <option value="3rd">3rd Shift (11:00 PM - 6:00 AM)</option>
+                        </select>
+                    </div>
+                    <!-- Product Filter Added Here -->
+                    <div class="filter-group">
+                        <label>Product:</label>
+                        <select id="productSelect">
+                            <option value="all">All Products</option>
+                            <!-- Dynamically populated by JS -->
+                        </select>
+                    </div>
+                </div>
+
+                <div class="team-stats">
+                    <div class="stat-card">
+                        <h3>Team Capacity</h3>
+                        <div class="value" id="teamCapacity">0</div>
+                        <div class="subtext">mechanics available</div>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Tasks Today</h3>
+                        <div class="value" id="tasksToday">0</div>
+                        <div class="subtext">to be completed</div>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Utilization</h3>
+                        <div class="value" id="teamUtilization">0%</div>
+                        <div class="subtext">current shift</div>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Critical Tasks</h3>
+                        <div class="value" id="criticalTasks">0</div>
+                        <div class="subtext">high priority</div>
+                    </div>
+                </div>
+
+				<div class="task-table-container">
+					<div class="table-header">
+						<h3>Task Priority List (Top 30)</h3>
+						<div class="table-actions">
+							<button class="btn btn-secondary" onclick="exportTasks()">📥 Export</button>
+							<button class="btn btn-primary" onclick="autoAssign()">⚡ Auto-Assign</button>
+							<button class="btn btn-primary" onclick="openTeamAssignmentModal(document.getElementById('teamSelect').value)">
+								👥 Generate Individual Assignments
+							</button>
+						</div>
+					</div>
+					<table id="taskTable">
+                        <thead>
+                            <tr>
+                                <th>Priority</th>
+                                <th>Task ID</th>
+                                <th>Type</th>
+                                <th>Product</th>
+                                <th>Start Time</th>
+                                <th>Duration</th>
+                                <th>Mechanics</th>
+                                <th>Assign To</th>
+                            </tr>
+                        </thead>
+                        <tbody id="taskTableBody">
+                            <!-- Tasks will be populated here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Management View -->
+            <div id="management-view" class="view-content">
+                <div class="metrics-grid">
+                    <div class="metric-card">
+                        <h3>Total Workforce</h3>
+                        <div class="metric-value" id="totalWorkforce">0</div>
+                        <div class="metric-label">mechanics & quality inspectors</div>
+                    </div>
+                    <div class="metric-card">
+                        <h3>Makespan</h3>
+                        <div class="metric-value" id="makespan">0</div>
+                        <div class="metric-label">working days</div>
+                    </div>
+                    <div class="metric-card">
+                        <h3>On-Time Delivery</h3>
+                        <div class="metric-value" id="onTimeRate">0%</div>
+                        <div class="metric-label">of products</div>
+                    </div>
+                    <div class="metric-card">
+                        <h3>Avg Utilization</h3>
+                        <div class="metric-value" id="avgUtilization">0%</div>
+                        <div class="metric-label">across all teams</div>
+                    </div>
+                </div>
+
+                <h3 style="margin: 25px 0 15px; font-size: 18px; color: var(--dark);">Product Delivery Status</h3>
+                <div class="product-grid" id="productGrid">
+                    <!-- Product cards will be populated here -->
+                </div>
+
+                <div class="chart-container">
+                    <div class="chart-header">
+                        <div class="chart-title">Team Utilization Analysis</div>
+                    </div>
+                    <div class="utilization-bars" id="utilizationChart">
+                        <!-- Utilization bars will be populated here -->
+                    </div>
+                </div>
+
+                <!-- Late Parts Impact Analysis -->
+                <div class="late-parts-analysis" style="margin-top: 30px;">
+                    <h3 style="font-size: 18px; color: var(--dark); margin-bottom: 20px;">
+                        Late Parts Impact Analysis
+                    </h3>
+
+                    <div id="latePartsImpactGrid" class="impact-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px;">
+                        <!-- Late parts impact cards will be inserted here -->
+                    </div>
+
+                    <div class="late-parts-summary" style="margin-top: 20px; padding: 20px; background: #FEF3C7; border-radius: 10px; border-left: 4px solid #F59E0B;">
+                        <h4 style="margin-top: 0; color: #92400E;">Overall Late Parts Impact</h4>
+                        <div id="latePartsSummary">
+                            <!-- Summary statistics will be inserted here -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Priority Simulator -->
+                <div class="priority-simulator" style="background: white; border-radius: 12px; padding: 25px; margin-top: 30px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                    <h3 style="margin-top: 0; color: #1F2937; display: flex; align-items: center; gap: 10px;">
+                        <span style="font-size: 24px;">🎯</span>
+                        Priority Scenario Simulator
+                    </h3>
+
+                    <div class="simulator-controls" style="display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 15px; margin-bottom: 20px;">
+                        <div>
+                            <label style="display: block; margin-bottom: 5px; font-size: 12px; color: #6B7280;">Prioritize Product:</label>
+                            <select id="priorityProduct" style="width: 100%; padding: 8px; border: 1px solid #D1D5DB; border-radius: 6px;">
+                                <option value="">Select Product</option>
+                                <option value="Product A">Product A</option>
+                                <option value="Product B">Product B</option>
+                                <option value="Product C">Product C</option>
+                                <option value="Product D">Product D</option>
+                                <option value="Product E">Product E</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label style="display: block; margin-bottom: 5px; font-size: 12px; color: #6B7280;">Priority Level:</label>
+                            <select id="priorityLevel" style="width: 100%; padding: 8px; border: 1px solid #D1D5DB; border-radius: 6px;">
+                                <option value="high">High Priority (+50% resources)</option>
+                                <option value="critical">Critical Priority (+75% resources)</option>
+                                <option value="exclusive">Exclusive Priority (100% until 50% complete)</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label style="display: block; margin-bottom: 5px; font-size: 12px; color: #6B7280;">Simulation Days:</label>
+                            <input type="number" id="simDays" value="30" min="7" max="90" style="width: 100%; padding: 8px; border: 1px solid #D1D5DB; border-radius: 6px;">
+                        </div>
+
+                        <div style="display: flex; align-items: flex-end;">
+                            <button onclick="runPrioritySimulation()" class="btn btn-primary" style="white-space: nowrap;">
+                                Run Simulation
+                            </button>
+                        </div>
+                    </div>
+
+                    <div id="simulationResults" style="display: none;">
+                        <!-- Results will be inserted here -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Individual Mechanic View -->
+            <div id="mechanic-view" class="view-content">
+                <div class="mechanic-header">
+                    <div class="mechanic-info">
+                        <div class="mechanic-select">
+                            <label>Mechanic:</label>
+                            <select id="mechanicSelect">
+                                <option value="mech1">John Smith - Team 1</option>
+                                <option value="mech2">Jane Doe - Team 1</option>
+                                <option value="mech3">Bob Johnson - Team 2</option>
+                                <option value="mech4">Alice Williams - Team 2</option>
+                                <option value="mech5">Charlie Brown - Team 3</option>
+                                <option value="mech6">Diana Prince - Team 3</option>
+                                <option value="mech7">Frank Castle - Team 4</option>
+                                <option value="mech8">Grace Lee - Team 4</option>
+                                <option value="qual1">Tom Wilson - Quality 1</option>
+                                <option value="qual2">Sarah Connor - Quality 2</option>
+                                <option value="qual3">Mike Ross - Quality 3</option>
+                            </select>
+                        </div>
+                        <div class="shift-info">
+                            <div class="shift-detail">
+                                <label>Current Shift</label>
+                                <div class="value" id="currentShift">1st Shift</div>
+                            </div>
+                            <div class="shift-detail">
+                                <label>Tasks Assigned</label>
+                                <div class="value" id="tasksAssigned">0</div>
+                            </div>
+                            <div class="shift-detail">
+                                <label>Est. Completion</label>
+                                <div class="value" id="estCompletion">N/A</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="task-timeline">
+                    <div class="timeline-header">Today's Task Schedule</div>
+                    <div id="mechanicTimeline">
+                        <!-- Timeline items will be populated here -->
+                    </div>
+                </div>
+            </div>
+
+            <div id="project-view" class="view-content">
+                <div id="gantt-filters" style="margin: 20px 0;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                        <div style="display: flex; gap: 20px;">
+                            <div>
+                                <label for="ganttProductSelect">Filter Product:</label>
+                                <select id="ganttProductSelect">
+                                    <option value="all">All Products</option>
+                                    <!-- Dynamically populated -->
+                                </select>
+                            </div>
+                            <div>
+                                <label for="ganttTeamSelect">Filter Team:</label>
+                                <select id="ganttTeamSelect">
+                                    <option value="all">All Teams</option>
+                                    <!-- Dynamically populated -->
+                                </select>
+                            </div>
+                        </div>
+                        <div style="display: flex; gap: 10px; align-items: center;">
+                            <label>View:</label>
+                            <button class="btn btn-sm gantt-view-btn active" onclick="changeGanttView('Day')">Day</button>
+                            <button class="btn btn-sm gantt-view-btn" onclick="changeGanttView('Week')">Week</button>
+                            <button class="btn btn-sm gantt-view-btn" onclick="changeGanttView('Month')">Month</button>
+                        </div>
+                    </div>
+                    <div style="display: flex; gap: 15px; align-items: center; padding: 12px; background: #F3F4F6; border-radius: 8px; border: 1px solid #E5E7EB;">
+                        <div style="flex: 1;">
+                            <label style="font-weight: 500; margin-right: 10px; color: #374151;">Sort By:</label>
+                            <select id="ganttSortSelect" style="padding: 6px 10px; border: 1px solid #D1D5DB; border-radius: 6px; background: white; cursor: pointer; font-size: 14px;">
+                                <option value="default">Default (Priority/Time)</option>
+                                <option value="product-asc">Product (A → Z)</option>
+                                <option value="product-desc">Product (Z → A)</option>
+                                <option value="team-asc">Team (A → Z)</option>
+                                <option value="team-desc">Team (Z → A)</option>
+                                <option value="slack-asc">Criticality (Most Critical First)</option>
+                                <option value="slack-desc">Criticality (Least Critical First)</option>
+                                <option value="type-asc">Task Type (A → Z)</option>
+                            </select>
+                        </div>
+                        <button class="btn btn-secondary" onclick="resetGanttFilters()" style="padding: 6px 12px; font-size: 13px;">
+                            🔄 Reset All
+                        </button>
+                    </div>
+                </div>
+                <div id="ganttChart"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Load the JavaScript file -->
+    <script src="/static/js/updated-dashboard-js.js"></script>
+</body>
+</html>

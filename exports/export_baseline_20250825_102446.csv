@@ -1,0 +1,444 @@
+taskId,type,product,team,startTime,endTime,duration,mechanics,shift,priority,dependencies,isLatePartTask,isReworkTask,isCritical,slackHours,Scenario,MaxLateness,TotalLateness,InstanceBased
+Product E_1,Production,Product E,Mechanic Team 1,2025-08-22T06:00:00,2025-08-22T06:30:00,30,1,1st,1,[],False,False,False,505.2,baseline,-7,0,True
+RW_410,Rework,Product A,Mechanic Team 3,2025-08-22T06:00:00,2025-08-22T07:40:00,100,2,1st,2,[],False,True,False,640.5,baseline,-7,0,True
+RW_401,Rework,Product E,Mechanic Team 1,2025-08-22T06:00:00,2025-08-22T07:00:00,60,2,1st,3,[],False,True,False,659.95,baseline,-7,0,True
+RW_404,Rework,Product D,Mechanic Team 3,2025-08-22T06:00:00,2025-08-22T06:30:00,30,1,1st,4,[],False,True,False,811.0,baseline,-7,0,True
+RW_407,Rework,Product C,Mechanic Team 1,2025-08-22T06:00:00,2025-08-22T06:50:00,50,1,1st,5,[],False,True,False,817.45,baseline,-7,0,True
+Product D_29,Production,Product D,Mechanic Team 5,2025-08-22T06:00:00,2025-08-22T06:40:00,40,1,1st,6,[],False,False,False,818.45,baseline,-7,0,True
+Product C_58,Production,Product C,Mechanic Team 5,2025-08-22T06:00:00,2025-08-22T07:00:00,60,2,1st,7,[],False,False,False,833.5,baseline,-7,0,True
+RW_408,Rework,Product C,Mechanic Team 1,2025-08-22T06:00:00,2025-08-22T06:40:00,40,1,1st,8,[],False,True,False,856.5,baseline,-7,0,True
+Product D_26,Production,Product D,Mechanic Team 1,2025-08-22T06:00:00,2025-08-22T07:00:00,60,2,1st,9,[],False,False,False,863.7,baseline,-7,0,True
+Product D_31,Production,Product D,Mechanic Team 1,2025-08-22T06:00:00,2025-08-22T06:30:00,30,1,1st,10,[],False,False,False,869.7,baseline,-7,0,True
+RW_402,Rework,Product E,Mechanic Team 1,2025-08-22T06:00:00,2025-08-22T06:45:00,45,1,1st,11,[],False,True,False,904.5,baseline,-7,0,True
+RW_405,Rework,Product D,Mechanic Team 3,2025-08-22T06:00:00,2025-08-22T07:15:00,75,2,1st,12,[],False,True,False,1000.5,baseline,-7,0,True
+RW_QI_404,Quality Inspection,Product D,Quality Team 3,2025-08-22T06:30:00,2025-08-22T07:00:00,30,1,1st,13,[],False,False,False,812.0,baseline,-7,0,True
+Product D_41,Production,Product D,Mechanic Team 1,2025-08-22T06:40:00,2025-08-22T07:00:00,20,1,1st,14,[],False,False,False,869.0333333333333,baseline,-7,0,True
+Product D_44,Production,Product D,Mechanic Team 5,2025-08-22T06:45:00,2025-08-22T08:15:00,90,3,1st,15,[],False,False,False,895.75,baseline,-7,0,True
+RW_QI_402,Quality Inspection,Product E,Quality Team 1,2025-08-22T06:45:00,2025-08-22T07:15:00,30,1,1st,16,[],False,False,False,905.25,baseline,-7,0,True
+Product D_36,Production,Product D,Mechanic Team 1,2025-08-22T06:45:00,2025-08-22T08:15:00,90,3,1st,17,[],False,False,False,926.7,baseline,-7,0,True
+Product C_61,Production,Product C,Mechanic Team 1,2025-08-22T06:50:00,2025-08-22T07:30:00,40,1,1st,18,[],False,False,False,791.6666666666666,baseline,-7,0,True
+RW_QI_407,Quality Inspection,Product C,Quality Team 1,2025-08-22T06:50:00,2025-08-22T07:20:00,30,1,1st,19,[],False,False,False,818.1166666666667,baseline,-7,0,True
+RW_QI_401,Quality Inspection,Product E,Quality Team 1,2025-08-22T07:00:00,2025-08-22T07:30:00,30,1,1st,20,[],False,False,False,660.45,baseline,-7,0,True
+Product C_52,Production,Product C,Mechanic Team 1,2025-08-22T07:00:00,2025-08-22T08:30:00,90,3,1st,21,[],False,False,False,797.75,baseline,-7,0,True
+Product C_QI_158,Quality Inspection,Product C,Quality Team 5,2025-08-22T07:00:00,2025-08-22T07:45:00,45,1,1st,22,[],False,False,False,851.25,baseline,-7,0,True
+Product D_35,Production,Product D,Mechanic Team 3,2025-08-22T07:00:00,2025-08-22T07:50:00,50,1,1st,23,[],False,False,False,897.25,baseline,-7,0,True
+Product D_46,Production,Product D,Mechanic Team 1,2025-08-22T07:00:00,2025-08-22T08:00:00,60,2,1st,24,[],False,False,False,928.7,baseline,-7,0,True
+Product D_30,Production,Product D,Mechanic Team 3,2025-08-22T07:15:00,2025-08-22T08:15:00,60,2,1st,25,[],False,False,False,814.25,baseline,-7,0,True
+RW_QI_408,Quality Inspection,Product C,Quality Team 1,2025-08-22T07:15:00,2025-08-22T07:45:00,30,1,1st,26,[],False,False,False,856.75,baseline,-7,0,True
+RW_QI_405,Quality Inspection,Product D,Quality Team 3,2025-08-22T07:15:00,2025-08-22T07:45:00,30,1,1st,27,[],False,False,False,1000.75,baseline,-7,0,True
+Product E_QI_101,Quality Inspection,Product E,Quality Team 1,2025-08-22T07:20:00,2025-08-22T08:05:00,45,1,1st,28,[],False,False,False,580.8666666666667,baseline,-7,0,True
+Product C_55,Production,Product C,Mechanic Team 5,2025-08-22T07:20:00,2025-08-22T08:16:00,56,2,1st,29,[],False,False,False,820.4166666666666,baseline,-7,0,True
+Product B_75,Production,Product B,Mechanic Team 1,2025-08-22T07:30:00,2025-08-22T08:00:00,30,1,1st,30,[],False,False,False,768.0,baseline,-7,0,True
+RW_QI_410,Quality Inspection,Product A,Quality Team 3,2025-08-22T07:40:00,2025-08-22T08:10:00,30,1,1st,31,[],False,False,False,640.3333333333334,baseline,-7,0,True
+Product C_50,Production,Product C,Mechanic Team 3,2025-08-22T07:40:00,2025-08-22T08:40:00,60,2,1st,32,[],False,False,False,747.8333333333334,baseline,-7,0,True
+Product D_45,Production,Product D,Mechanic Team 3,2025-08-22T07:50:00,2025-08-22T08:40:00,50,1,1st,33,[],False,False,False,898.6666666666666,baseline,-7,0,True
+Product D_QI_135,Quality Inspection,Product D,Quality Team 3,2025-08-22T07:50:00,2025-08-22T08:35:00,45,1,1st,34,[],False,False,False,911.9166666666666,baseline,-7,0,True
+Product B_82,Production,Product B,Mechanic Team 1,2025-08-22T08:00:00,2025-08-22T09:00:00,60,2,1st,35,[],False,False,False,753.25,baseline,-7,0,True
+Product B_QI_175,Quality Inspection,Product B,Quality Team 1,2025-08-22T08:00:00,2025-08-22T08:45:00,45,1,1st,36,[],False,False,False,779.5,baseline,-7,0,True
+Product A_82,Production,Product A,Mechanic Team 1,2025-08-22T08:15:00,2025-08-22T09:15:00,60,2,1st,37,[],False,False,False,609.0,baseline,-7,0,True
+Product B_79,Production,Product B,Mechanic Team 3,2025-08-22T08:15:00,2025-08-22T08:55:00,40,1,1st,38,[],False,False,False,780.0,baseline,-7,0,True
+Product D_QI_130,Quality Inspection,Product D,Quality Team 3,2025-08-22T08:15:00,2025-08-22T09:00:00,45,1,1st,39,[],False,False,False,830.5,baseline,-7,0,True
+Product D_QI_144,Quality Inspection,Product D,Quality Team 5,2025-08-22T08:15:00,2025-08-22T09:00:00,45,2,1st,40,[],False,False,False,932.75,baseline,-7,0,True
+Product D_QI_136,Quality Inspection,Product D,Quality Team 1,2025-08-22T08:15:00,2025-08-22T09:00:00,45,2,1st,41,[],False,False,False,960.7,baseline,-7,0,True
+Product D_56,Production,Product D,Mechanic Team 5,2025-08-22T08:15:00,2025-08-22T09:25:00,70,3,1st,42,[],False,False,False,960.75,baseline,-7,0,True
+Product C_QI_155,Quality Inspection,Product C,Quality Team 5,2025-08-22T08:16:00,2025-08-22T09:01:00,45,1,1st,43,[],False,False,False,842.2333333333333,baseline,-7,0,True
+Product C_QI_150,Quality Inspection,Product C,Quality Team 3,2025-08-22T08:40:00,2025-08-22T09:25:00,45,1,1st,44,[],False,False,False,767.5833333333334,baseline,-7,0,True
+Product C_60,Production,Product C,Mechanic Team 3,2025-08-22T08:40:00,2025-08-22T10:10:00,90,3,1st,45,[],False,False,False,814.8333333333334,baseline,-7,0,True
+Product B_QI_182,Quality Inspection,Product B,Quality Team 1,2025-08-22T09:00:00,2025-08-22T09:45:00,45,1,1st,46,[],False,False,False,772.0,baseline,-7,0,True
+Product C_QI_152,Quality Inspection,Product C,Quality Team 1,2025-08-22T09:00:00,2025-08-22T09:45:00,45,2,1st,47,[],False,False,False,827.0,baseline,-7,0,True
+Product D_55,Production,Product D,Mechanic Team 5,2025-08-22T09:00:00,2025-08-22T09:56:00,56,2,1st,48,[],False,False,False,962.75,baseline,-7,0,True
+Product C_56,Production,Product C,Mechanic Team 5,2025-08-22T09:25:00,2025-08-22T10:35:00,70,3,1st,49,[],False,False,False,815.5833333333334,baseline,-7,0,True
+Product D_QI_156,Quality Inspection,Product D,Quality Team 5,2025-08-22T09:25:00,2025-08-22T10:10:00,45,2,1st,50,[],False,False,False,980.5833333333334,baseline,-7,0,True
+Product A_QI_182,Quality Inspection,Product A,Quality Team 1,2025-08-22T09:45:00,2025-08-22T10:30:00,45,1,1st,51,[],False,False,False,627.25,baseline,-7,0,True
+Product B_78,Production,Product B,Mechanic Team 5,2025-08-22T09:56:00,2025-08-22T10:56:00,60,2,1st,52,[],False,False,False,770.5666666666667,baseline,-7,0,True
+Product D_QI_155,Quality Inspection,Product D,Quality Team 5,2025-08-22T09:56:00,2025-08-22T10:41:00,45,1,1st,53,[],False,False,False,984.5666666666667,baseline,-7,0,True
+Product C_QI_160,Quality Inspection,Product C,Quality Team 3,2025-08-22T10:10:00,2025-08-22T10:55:00,45,2,1st,54,[],False,False,False,839.8333333333334,baseline,-7,0,True
+Product B_88,Production,Product B,Mechanic Team 5,2025-08-22T10:35:00,2025-08-22T12:35:00,120,3,1st,55,[],False,False,False,769.9166666666666,baseline,-7,0,True
+Product C_QI_156,Quality Inspection,Product C,Quality Team 5,2025-08-22T10:35:00,2025-08-22T11:20:00,45,2,1st,56,[],False,False,False,835.4166666666666,baseline,-7,0,True
+Product B_QI_178,Quality Inspection,Product B,Quality Team 5,2025-08-22T10:56:00,2025-08-22T11:41:00,45,1,1st,57,[],False,False,False,778.5666666666667,baseline,-7,0,True
+Product A_88,Production,Product A,Mechanic Team 5,2025-08-22T12:35:00,2025-08-22T14:35:00,120,3,1st,58,[],False,False,False,623.9166666666666,baseline,-7,0,True
+Product B_QI_188,Quality Inspection,Product B,Quality Team 5,2025-08-22T12:35:00,2025-08-22T13:20:00,45,2,1st,59,[],False,False,False,776.9166666666666,baseline,-7,0,True
+Product C_68,Production,Product C,Mechanic Team 1,2025-08-22T14:00:00,2025-08-22T15:30:00,90,3,1st,60,[],False,False,False,825.5,baseline,-7,0,True
+Product E_3,Production,Product E,Mechanic Team 2,2025-08-22T14:30:00,2025-08-22T14:50:00,20,1,2nd,61,[],False,False,False,564.95,baseline,-7,0,True
+Product E_7,Production,Product E,Mechanic Team 2,2025-08-22T14:30:00,2025-08-22T15:00:00,30,1,2nd,62,[],False,False,False,624.2,baseline,-7,0,True
+Product C_53,Production,Product C,Mechanic Team 6,2025-08-22T14:30:00,2025-08-22T15:10:00,40,1,2nd,63,[],False,False,False,763.25,baseline,-7,0,True
+RW_409,Rework,Product B,Mechanic Team 2,2025-08-22T14:30:00,2025-08-22T15:50:00,80,2,2nd,64,[],False,True,False,776.0,baseline,-7,0,True
+Product C_62,Production,Product C,Mechanic Team 6,2025-08-22T14:30:00,2025-08-22T15:30:00,60,2,2nd,65,[],False,False,False,790.25,baseline,-7,0,True
+Product C_59,Production,Product C,Mechanic Team 6,2025-08-22T14:30:00,2025-08-22T15:00:00,30,1,2nd,66,[],False,False,False,792.75,baseline,-7,0,True
+RW_403,Rework,Product D,Mechanic Team 2,2025-08-22T14:30:00,2025-08-22T16:00:00,90,2,2nd,67,[],False,True,False,809.5,baseline,-7,0,True
+Product D_43,Production,Product D,Mechanic Team 2,2025-08-22T14:30:00,2025-08-22T15:00:00,30,1,2nd,68,[],False,False,False,825.75,baseline,-7,0,True
+Product C_57,Production,Product C,Mechanic Team 6,2025-08-22T14:30:00,2025-08-22T14:50:00,20,1,2nd,69,[],False,False,False,826.25,baseline,-7,0,True
+RW_406,Rework,Product C,Mechanic Team 2,2025-08-22T14:30:00,2025-08-22T16:30:00,120,3,2nd,70,[],False,True,False,848.0,baseline,-7,0,True
+Product D_53,Production,Product D,Mechanic Team 6,2025-08-22T14:30:00,2025-08-22T15:10:00,40,1,2nd,71,[],False,False,False,907.25,baseline,-7,0,True
+Product E_14,Production,Product E,Mechanic Team 2,2025-08-22T15:00:00,2025-08-22T16:30:00,90,3,2nd,72,[],False,False,False,661.95,baseline,-7,0,True
+Product C_80,Production,Product C,Mechanic Team 6,2025-08-22T15:10:00,2025-08-22T17:10:00,120,4,2nd,73,[],False,False,False,838.3333333333334,baseline,-7,0,True
+Product C_QI_162,Quality Inspection,Product C,Quality Team 6,2025-08-22T15:30:00,2025-08-22T16:15:00,45,1,2nd,74,[],False,False,False,820.5,baseline,-7,0,True
+Product B_77,Production,Product B,Mechanic Team 2,2025-08-22T15:50:00,2025-08-22T16:40:00,50,1,2nd,75,[],False,False,False,769.9166666666666,baseline,-7,0,True
+RW_QI_409,Quality Inspection,Product B,Quality Team 2,2025-08-22T15:50:00,2025-08-22T16:20:00,30,1,2nd,76,[],False,False,False,776.1666666666666,baseline,-7,0,True
+RW_QI_403,Quality Inspection,Product D,Quality Team 2,2025-08-22T16:00:00,2025-08-22T16:30:00,30,1,2nd,77,[],False,False,False,809.5,baseline,-7,0,True
+Product D_28,Production,Product D,Mechanic Team 2,2025-08-22T16:00:00,2025-08-22T17:30:00,90,3,2nd,78,[],False,False,False,818.0,baseline,-7,0,True
+Product C_64,Production,Product C,Mechanic Team 2,2025-08-22T16:30:00,2025-08-22T18:30:00,120,3,2nd,79,[],False,False,False,784.5,baseline,-7,0,True
+Product D_25,Production,Product D,Mechanic Team 2,2025-08-22T16:30:00,2025-08-22T17:20:00,50,1,2nd,80,[],False,False,False,811.5,baseline,-7,0,True
+RW_QI_406,Quality Inspection,Product C,Quality Team 2,2025-08-22T16:30:00,2025-08-22T17:00:00,30,1,2nd,81,[],False,False,False,847.5,baseline,-7,0,True
+Product B_80,Production,Product B,Mechanic Team 6,2025-08-22T17:10:00,2025-08-22T19:10:00,120,4,2nd,82,[],False,False,False,764.3333333333334,baseline,-7,0,True
+Product C_QI_180,Quality Inspection,Product C,Quality Team 6,2025-08-22T17:10:00,2025-08-22T17:55:00,45,2,2nd,83,[],False,False,False,838.5833333333334,baseline,-7,0,True
+Product D_33,Production,Product D,Mechanic Team 2,2025-08-22T17:20:00,2025-08-22T17:40:00,20,1,2nd,84,[],False,False,False,822.9166666666666,baseline,-7,0,True
+Product D_QI_128,Quality Inspection,Product D,Quality Team 2,2025-08-22T17:30:00,2025-08-22T18:15:00,45,2,2nd,85,[],False,False,False,886.25,baseline,-7,0,True
+Product C_QI_164,Quality Inspection,Product C,Quality Team 2,2025-08-22T18:30:00,2025-08-22T19:15:00,45,2,2nd,86,[],False,False,False,812.25,baseline,-7,0,True
+Product A_80,Production,Product A,Mechanic Team 6,2025-08-22T19:10:00,2025-08-22T21:10:00,120,4,2nd,87,[],False,False,False,618.3333333333334,baseline,-7,0,True
+Product B_QI_180,Quality Inspection,Product B,Quality Team 6,2025-08-22T19:10:00,2025-08-22T19:55:00,45,2,2nd,88,[],False,False,False,764.5833333333334,baseline,-7,0,True
+Product A_QI_180,Quality Inspection,Product A,Quality Team 6,2025-08-22T21:10:00,2025-08-22T21:55:00,45,2,2nd,89,[],False,False,False,618.5833333333334,baseline,-7,0,True
+Product A_81,Production,Product A,Mechanic Team 7,2025-08-22T23:00:00,2025-08-22T23:20:00,20,1,3rd,90,[],False,False,False,593.75,baseline,-7,0,True
+Product A_83,Production,Product A,Mechanic Team 7,2025-08-22T23:00:00,2025-08-22T23:30:00,30,1,3rd,91,[],False,False,False,612.5,baseline,-7,0,True
+Product A_87,Production,Product A,Mechanic Team 7,2025-08-22T23:00:00,2025-08-22T23:50:00,50,1,3rd,92,[],False,False,False,616.5,baseline,-7,0,True
+Product E_15,Production,Product E,Mechanic Team 4,2025-08-22T23:00:00,2025-08-22T23:40:00,40,1,3rd,93,[],False,False,False,674.45,baseline,-7,0,True
+Product B_81,Production,Product B,Mechanic Team 7,2025-08-22T23:00:00,2025-08-22T23:20:00,20,1,3rd,94,[],False,False,False,737.75,baseline,-7,0,True
+Product B_83,Production,Product B,Mechanic Team 7,2025-08-22T23:00:00,2025-08-22T23:30:00,30,1,3rd,95,[],False,False,False,756.5,baseline,-7,0,True
+Product B_87,Production,Product B,Mechanic Team 7,2025-08-22T23:00:00,2025-08-22T23:50:00,50,1,3rd,96,[],False,False,False,760.5,baseline,-7,0,True
+Product D_32,Production,Product D,Mechanic Team 4,2025-08-22T23:00:00,2025-08-23T01:00:00,120,3,3rd,97,[],False,False,False,858.25,baseline,-7,0,True
+Product D_42,Production,Product D,Mechanic Team 4,2025-08-22T23:00:00,2025-08-23T00:00:00,60,2,3rd,98,[],False,False,False,858.25,baseline,-7,0,True
+Product D_27,Production,Product D,Mechanic Team 4,2025-08-22T23:00:00,2025-08-22T23:20:00,20,1,3rd,99,[],False,False,False,864.0,baseline,-7,0,True
+Product A_85,Production,Product A,Mechanic Team 7,2025-08-22T23:20:00,2025-08-23T00:00:00,40,1,3rd,100,[],False,False,False,610.4166666666666,baseline,-7,0,True
+Product B_85,Production,Product B,Mechanic Team 7,2025-08-22T23:20:00,2025-08-23T00:00:00,40,1,3rd,101,[],False,False,False,754.4166666666666,baseline,-7,0,True
+Product D_QI_127,Quality Inspection,Product D,Quality Team 4,2025-08-22T23:20:00,2025-08-23T00:05:00,45,1,3rd,102,[],False,False,False,931.4166666666666,baseline,-7,0,True
+Product A_89,Production,Product A,Mechanic Team 7,2025-08-22T23:30:00,2025-08-22T23:50:00,20,1,3rd,103,[],False,False,False,623.5,baseline,-7,0,True
+Product B_89,Production,Product B,Mechanic Team 7,2025-08-22T23:30:00,2025-08-22T23:50:00,20,1,3rd,104,[],False,False,False,767.5,baseline,-7,0,True
+Product E_QI_115,Quality Inspection,Product E,Quality Team 4,2025-08-22T23:40:00,2025-08-23T00:25:00,45,1,3rd,105,[],False,False,False,698.8333333333334,baseline,-7,0,True
+Product D_54,Production,Product D,Mechanic Team 4,2025-08-22T23:40:00,2025-08-23T00:40:00,60,2,3rd,106,[],False,False,False,923.5833333333334,baseline,-7,0,True
+Product A_QI_187,Quality Inspection,Product A,Quality Team 7,2025-08-22T23:50:00,2025-08-23T00:35:00,45,1,3rd,107,[],False,False,False,623.1666666666666,baseline,-7,0,True
+Product B_QI_187,Quality Inspection,Product B,Quality Team 7,2025-08-22T23:50:00,2025-08-23T00:35:00,45,1,3rd,108,[],False,False,False,767.1666666666666,baseline,-7,0,True
+Product A_94,Production,Product A,Mechanic Team 1,2025-08-25T06:00:00,2025-08-25T07:00:00,60,2,1st,109,[],False,False,False,563.25,baseline,-7,0,True
+Product A_QI_188,Quality Inspection,Product A,Quality Team 5,2025-08-25T06:00:00,2025-08-25T06:45:00,45,2,1st,110,[],False,False,False,567.5,baseline,-7,0,True
+Product B_94,Production,Product B,Mechanic Team 1,2025-08-25T06:00:00,2025-08-25T07:00:00,60,2,1st,111,[],False,False,False,707.25,baseline,-7,0,True
+Product C_QI_168,Quality Inspection,Product C,Quality Team 1,2025-08-25T06:00:00,2025-08-25T06:45:00,45,2,1st,112,[],False,False,False,780.25,baseline,-7,0,True
+Product D_40,Production,Product D,Mechanic Team 3,2025-08-25T06:00:00,2025-08-25T08:00:00,120,4,1st,113,[],False,False,False,821.5,baseline,-7,0,True
+Product D_34,Production,Product D,Mechanic Team 5,2025-08-25T06:00:00,2025-08-25T07:00:00,60,2,1st,114,[],False,False,False,826.75,baseline,-7,0,True
+Product D_39,Production,Product D,Mechanic Team 5,2025-08-25T06:00:00,2025-08-25T06:40:00,40,1,1st,115,[],False,False,False,827.75,baseline,-7,0,True
+Product D_49,Production,Product D,Mechanic Team 5,2025-08-25T06:00:00,2025-08-25T06:20:00,20,1,1st,116,[],False,False,False,827.75,baseline,-7,0,True
+Product D_52,Production,Product D,Mechanic Team 1,2025-08-25T06:00:00,2025-08-25T07:30:00,90,3,1st,117,[],False,False,False,870.75,baseline,-7,0,True
+Product D_61,Production,Product D,Mechanic Team 1,2025-08-25T06:40:00,2025-08-25T07:20:00,40,1,1st,118,[],False,False,False,863.8333333333334,baseline,-7,0,True
+Product C_79,Production,Product C,Mechanic Team 3,2025-08-25T06:45:00,2025-08-25T07:25:00,40,1,1st,119,[],False,False,False,781.5,baseline,-7,0,True
+Product D_QI_152,Quality Inspection,Product D,Quality Team 1,2025-08-25T07:30:00,2025-08-25T08:15:00,45,2,1st,120,[],False,False,False,900.5,baseline,-7,0,True
+Product B_90,Production,Product B,Mechanic Team 3,2025-08-25T08:00:00,2025-08-25T09:00:00,60,2,1st,121,[],False,False,False,704.5,baseline,-7,0,True
+Product D_50,Production,Product D,Mechanic Team 3,2025-08-25T08:00:00,2025-08-25T09:00:00,60,2,1st,122,[],False,False,False,819.5,baseline,-7,0,True
+Product D_QI_140,Quality Inspection,Product D,Quality Team 3,2025-08-25T08:00:00,2025-08-25T08:45:00,45,2,1st,123,[],False,False,False,840.25,baseline,-7,0,True
+Product A_90,Production,Product A,Mechanic Team 3,2025-08-25T09:00:00,2025-08-25T10:00:00,60,2,1st,124,[],False,False,False,559.5,baseline,-7,0,True
+Product B_QI_190,Quality Inspection,Product B,Quality Team 3,2025-08-25T09:00:00,2025-08-25T09:45:00,45,1,1st,125,[],False,False,False,705.75,baseline,-7,0,True
+Product D_QI_150,Quality Inspection,Product D,Quality Team 3,2025-08-25T09:00:00,2025-08-25T09:45:00,45,1,1st,126,[],False,False,False,839.25,baseline,-7,0,True
+Product A_QI_190,Quality Inspection,Product A,Quality Team 3,2025-08-25T10:00:00,2025-08-25T10:45:00,45,1,1st,127,[],False,False,False,560.75,baseline,-7,0,True
+Product D_68,Production,Product D,Mechanic Team 1,2025-08-25T14:00:00,2025-08-25T15:30:00,90,3,1st,128,[],False,False,False,897.5,baseline,-7,0,True
+Product B_86,Production,Product B,Mechanic Team 2,2025-08-25T14:30:00,2025-08-25T15:30:00,60,2,2nd,129,[],False,False,False,693.5,baseline,-7,0,True
+Product D_48,Production,Product D,Mechanic Team 2,2025-08-25T14:30:00,2025-08-25T16:30:00,120,3,2nd,130,[],False,False,False,831.5,baseline,-7,0,True
+Product D_38,Production,Product D,Mechanic Team 2,2025-08-25T14:30:00,2025-08-25T15:30:00,60,2,2nd,131,[],False,False,False,831.5,baseline,-7,0,True
+Product D_51,Production,Product D,Mechanic Team 6,2025-08-25T14:30:00,2025-08-25T15:00:00,30,1,2nd,132,[],False,False,False,856.0,baseline,-7,0,True
+Product D_64,Production,Product D,Mechanic Team 2,2025-08-25T14:30:00,2025-08-25T16:30:00,120,3,2nd,133,[],False,False,False,858.5,baseline,-7,0,True
+Product D_62,Production,Product D,Mechanic Team 6,2025-08-25T14:30:00,2025-08-25T15:30:00,60,2,2nd,134,[],False,False,False,862.25,baseline,-7,0,True
+Product D_66,Production,Product D,Mechanic Team 6,2025-08-25T14:30:00,2025-08-25T15:30:00,60,2,2nd,135,[],False,False,False,884.75,baseline,-7,0,True
+Product A_86,Production,Product A,Mechanic Team 2,2025-08-25T15:30:00,2025-08-25T16:30:00,60,2,2nd,136,[],False,False,False,548.5,baseline,-7,0,True
+Product B_98,Production,Product B,Mechanic Team 2,2025-08-25T15:30:00,2025-08-25T16:30:00,60,2,2nd,137,[],False,False,False,702.25,baseline,-7,0,True
+Product D_QI_138,Quality Inspection,Product D,Quality Team 2,2025-08-25T15:30:00,2025-08-25T16:15:00,45,1,2nd,138,[],False,False,False,862.25,baseline,-7,0,True
+Product D_QI_162,Quality Inspection,Product D,Quality Team 6,2025-08-25T15:30:00,2025-08-25T16:15:00,45,1,2nd,139,[],False,False,False,892.5,baseline,-7,0,True
+Product A_98,Production,Product A,Mechanic Team 2,2025-08-25T16:30:00,2025-08-25T17:30:00,60,2,2nd,140,[],False,False,False,557.25,baseline,-7,0,True
+Product B_QI_198,Quality Inspection,Product B,Quality Team 2,2025-08-25T16:30:00,2025-08-25T17:15:00,45,1,2nd,141,[],False,False,False,703.5,baseline,-7,0,True
+Product D_QI_148,Quality Inspection,Product D,Quality Team 2,2025-08-25T16:30:00,2025-08-25T17:15:00,45,2,2nd,142,[],False,False,False,861.25,baseline,-7,0,True
+Product D_59,Production,Product D,Mechanic Team 6,2025-08-25T17:15:00,2025-08-25T17:45:00,30,1,2nd,143,[],False,False,False,862.0,baseline,-7,0,True
+Product D_QI_164,Quality Inspection,Product D,Quality Team 2,2025-08-25T17:15:00,2025-08-25T18:00:00,45,2,2nd,144,[],False,False,False,885.5,baseline,-7,0,True
+Product A_QI_198,Quality Inspection,Product A,Quality Team 2,2025-08-25T17:30:00,2025-08-25T18:15:00,45,1,2nd,145,[],False,False,False,558.5,baseline,-7,0,True
+Product D_71,Production,Product D,Mechanic Team 2,2025-08-25T18:00:00,2025-08-25T18:40:00,40,1,2nd,146,[],False,False,False,886.75,baseline,-7,0,True
+Product A_93,Production,Product A,Mechanic Team 7,2025-08-25T23:00:00,2025-08-25T23:40:00,40,1,3rd,147,[],False,False,False,550.5,baseline,-7,0,True
+Product A_95,Production,Product A,Mechanic Team 7,2025-08-25T23:00:00,2025-08-25T23:30:00,30,1,3rd,148,[],False,False,False,550.75,baseline,-7,0,True
+Product A_97,Production,Product A,Mechanic Team 7,2025-08-25T23:00:00,2025-08-25T23:20:00,20,1,3rd,149,[],False,False,False,553.0,baseline,-7,0,True
+Product C_63,Production,Product C,Mechanic Team 4,2025-08-25T23:00:00,2025-08-25T23:30:00,30,1,3rd,150,[],False,False,False,682.75,baseline,-7,0,True
+Product B_93,Production,Product B,Mechanic Team 7,2025-08-25T23:00:00,2025-08-25T23:40:00,40,1,3rd,151,[],False,False,False,694.5,baseline,-7,0,True
+Product B_97,Production,Product B,Mechanic Team 7,2025-08-25T23:00:00,2025-08-25T23:20:00,20,1,3rd,152,[],False,False,False,697.0,baseline,-7,0,True
+Product C_54,Production,Product C,Mechanic Team 4,2025-08-25T23:00:00,2025-08-26T00:00:00,60,2,3rd,153,[],False,False,False,708.25,baseline,-7,0,True
+Product D_63,Production,Product D,Mechanic Team 4,2025-08-25T23:00:00,2025-08-25T23:30:00,30,1,3rd,154,[],False,False,False,826.75,baseline,-7,0,True
+Product D_QI_132,Quality Inspection,Product D,Quality Team 4,2025-08-25T23:00:00,2025-08-25T23:45:00,45,2,3rd,155,[],False,False,False,857.0,baseline,-7,0,True
+Product D_QI_142,Quality Inspection,Product D,Quality Team 4,2025-08-25T23:00:00,2025-08-25T23:45:00,45,1,3rd,156,[],False,False,False,857.0,baseline,-7,0,True
+Product D_37,Production,Product D,Mechanic Team 4,2025-08-25T23:00:00,2025-08-25T23:30:00,30,1,3rd,157,[],False,False,False,861.25,baseline,-7,0,True
+Product A_QI_195,Quality Inspection,Product A,Quality Team 7,2025-08-25T23:30:00,2025-08-26T00:15:00,45,1,3rd,158,[],False,False,False,552.5,baseline,-7,0,True
+Product B_84,Production,Product B,Mechanic Team 4,2025-08-25T23:30:00,2025-08-26T01:00:00,90,3,3rd,159,[],False,False,False,676.75,baseline,-7,0,True
+Product D_69,Production,Product D,Mechanic Team 4,2025-08-25T23:30:00,2025-08-26T00:00:00,30,1,3rd,160,[],False,False,False,855.75,baseline,-7,0,True
+Product D_47,Production,Product D,Mechanic Team 4,2025-08-25T23:45:00,2025-08-26T00:25:00,40,1,3rd,161,[],False,False,False,858.25,baseline,-7,0,True
+Product C_69,Production,Product C,Mechanic Team 4,2025-08-26T00:00:00,2025-08-26T00:30:00,30,1,3rd,162,[],False,False,False,711.25,baseline,-7,0,True
+Product D_81,Production,Product D,Mechanic Team 7,2025-08-26T00:00:00,2025-08-26T00:20:00,20,1,3rd,163,[],False,False,False,880.75,baseline,-7,0,True
+Product D_85,Production,Product D,Mechanic Team 7,2025-08-26T00:20:00,2025-08-26T01:00:00,40,1,3rd,164,[],False,False,False,897.4166666666666,baseline,-7,0,True
+Product A_84,Production,Product A,Mechanic Team 4,2025-08-26T00:25:00,2025-08-26T01:55:00,90,3,3rd,165,[],False,False,False,531.8333333333334,baseline,-7,0,True
+Product D_QI_147,Quality Inspection,Product D,Quality Team 4,2025-08-26T00:25:00,2025-08-26T01:10:00,45,1,3rd,166,[],False,False,False,887.3333333333334,baseline,-7,0,True
+Product C_81,Production,Product C,Mechanic Team 7,2025-08-26T00:30:00,2025-08-26T00:50:00,20,1,3rd,167,[],False,False,False,736.25,baseline,-7,0,True
+Product B_QI_184,Quality Inspection,Product B,Quality Team 4,2025-08-26T01:00:00,2025-08-26T01:45:00,45,2,3rd,168,[],False,False,False,691.0,baseline,-7,0,True
+Product D_76,Production,Product D,Mechanic Team 4,2025-08-26T01:00:00,2025-08-26T02:30:00,90,3,3rd,169,[],False,False,False,896.75,baseline,-7,0,True
+Product B_91,Production,Product B,Mechanic Team 7,2025-08-26T01:45:00,2025-08-26T02:15:00,30,1,3rd,170,[],False,False,False,691.75,baseline,-7,0,True
+Product A_QI_184,Quality Inspection,Product A,Quality Team 4,2025-08-26T01:55:00,2025-08-26T02:40:00,45,2,3rd,171,[],False,False,False,546.0833333333334,baseline,-7,0,True
+Product B_76,Production,Product B,Mechanic Team 4,2025-08-26T01:55:00,2025-08-26T03:25:00,90,3,3rd,172,[],False,False,False,679.8333333333334,baseline,-7,0,True
+Product B_99,Production,Product B,Mechanic Team 7,2025-08-26T02:15:00,2025-08-26T03:05:00,50,1,3rd,173,[],False,False,False,693.75,baseline,-7,0,True
+Product B_96,Production,Product B,Mechanic Team 4,2025-08-26T02:30:00,2025-08-26T04:30:00,120,4,3rd,174,[],False,False,False,691.25,baseline,-7,0,True
+Product D_QI_176,Quality Inspection,Product D,Quality Team 4,2025-08-26T02:30:00,2025-08-26T03:15:00,45,2,3rd,175,[],False,False,False,905.75,baseline,-7,0,True
+Product A_91,Production,Product A,Mechanic Team 7,2025-08-26T02:40:00,2025-08-26T03:10:00,30,1,3rd,176,[],False,False,False,546.8333333333334,baseline,-7,0,True
+Product A_99,Production,Product A,Mechanic Team 7,2025-08-26T03:10:00,2025-08-26T04:00:00,50,1,3rd,177,[],False,False,False,548.8333333333334,baseline,-7,0,True
+Product B_QI_176,Quality Inspection,Product B,Quality Team 4,2025-08-26T03:25:00,2025-08-26T04:10:00,45,2,3rd,178,[],False,False,False,688.8333333333334,baseline,-7,0,True
+Product B_95,Production,Product B,Mechanic Team 7,2025-08-26T04:10:00,2025-08-26T04:40:00,30,1,3rd,179,[],False,False,False,689.5833333333334,baseline,-7,0,True
+Product A_96,Production,Product A,Mechanic Team 4,2025-08-26T04:30:00,2025-08-26T06:30:00,120,4,3rd,180,[],False,False,False,545.25,baseline,-7,0,True
+Product B_QI_196,Quality Inspection,Product B,Quality Team 4,2025-08-26T04:30:00,2025-08-26T05:15:00,45,2,3rd,181,[],False,False,False,691.5,baseline,-7,0,True
+Product B_QI_195,Quality Inspection,Product B,Quality Team 7,2025-08-26T04:40:00,2025-08-26T05:25:00,45,1,3rd,182,[],False,False,False,691.3333333333334,baseline,-7,0,True
+Product C_82,Production,Product C,Mechanic Team 1,2025-08-26T06:00:00,2025-08-26T07:00:00,60,2,1st,183,[],False,False,False,731.25,baseline,-7,0,True
+Product D_60,Production,Product D,Mechanic Team 3,2025-08-26T06:00:00,2025-08-26T07:30:00,90,3,1st,184,[],False,False,False,865.5,baseline,-7,0,True
+Product D_65,Production,Product D,Mechanic Team 5,2025-08-26T06:00:00,2025-08-26T06:20:00,20,1,1st,185,[],False,False,False,872.0,baseline,-7,0,True
+Product D_82,Production,Product D,Mechanic Team 1,2025-08-26T06:00:00,2025-08-26T07:00:00,60,2,1st,186,[],False,False,False,875.25,baseline,-7,0,True
+Product D_67,Production,Product D,Mechanic Team 3,2025-08-26T06:00:00,2025-08-26T06:50:00,50,1,1st,187,[],False,False,False,880.5,baseline,-7,0,True
+Product D_58,Production,Product D,Mechanic Team 5,2025-08-26T06:00:00,2025-08-26T07:00:00,60,2,1st,188,[],False,False,False,881.5,baseline,-7,0,True
+Product D_75,Production,Product D,Mechanic Team 1,2025-08-26T06:00:00,2025-08-26T06:30:00,30,1,1st,189,[],False,False,False,889.5,baseline,-7,0,True
+Product D_94,Production,Product D,Mechanic Team 1,2025-08-26T06:00:00,2025-08-26T07:00:00,60,2,1st,190,[],False,False,False,899.25,baseline,-7,0,True
+Product D_QI_168,Quality Inspection,Product D,Quality Team 1,2025-08-26T06:00:00,2025-08-26T06:45:00,45,2,1st,191,[],False,False,False,900.25,baseline,-7,0,True
+Product D_73,Production,Product D,Mechanic Team 3,2025-08-26T06:20:00,2025-08-26T06:40:00,20,1,1st,192,[],False,False,False,893.1666666666666,baseline,-7,0,True
+Product D_QI_175,Quality Inspection,Product D,Quality Team 1,2025-08-26T06:30:00,2025-08-26T07:15:00,45,1,1st,193,[],False,False,False,901.0,baseline,-7,0,True
+Product D_QI_167,Quality Inspection,Product D,Quality Team 3,2025-08-26T06:50:00,2025-08-26T07:35:00,45,1,1st,194,[],False,False,False,896.4166666666666,baseline,-7,0,True
+Product C_QI_182,Quality Inspection,Product C,Quality Team 1,2025-08-26T07:00:00,2025-08-26T07:45:00,45,1,1st,195,[],False,False,False,750.0,baseline,-7,0,True
+Product D_72,Production,Product D,Mechanic Team 5,2025-08-26T07:00:00,2025-08-26T09:00:00,120,4,1st,196,[],False,False,False,874.25,baseline,-7,0,True
+Product D_QI_182,Quality Inspection,Product D,Quality Team 1,2025-08-26T07:00:00,2025-08-26T07:45:00,45,1,1st,197,[],False,False,False,894.0,baseline,-7,0,True
+Product D_QI_158,Quality Inspection,Product D,Quality Team 5,2025-08-26T07:00:00,2025-08-26T07:45:00,45,1,1st,198,[],False,False,False,899.25,baseline,-7,0,True
+Product D_QI_160,Quality Inspection,Product D,Quality Team 3,2025-08-26T07:30:00,2025-08-26T08:15:00,45,2,1st,199,[],False,False,False,890.5,baseline,-7,0,True
+Product D_79,Production,Product D,Mechanic Team 3,2025-08-26T07:45:00,2025-08-26T08:25:00,40,1,1st,200,[],False,False,False,900.5,baseline,-7,0,True
+Product C_72,Production,Product C,Mechanic Team 5,2025-08-26T09:00:00,2025-08-26T11:00:00,120,4,1st,201,[],False,False,False,728.25,baseline,-7,0,True
+Product D_QI_172,Quality Inspection,Product D,Quality Team 5,2025-08-26T09:00:00,2025-08-26T09:45:00,45,2,1st,202,[],False,False,False,892.0,baseline,-7,0,True
+Product C_QI_172,Quality Inspection,Product C,Quality Team 5,2025-08-26T11:00:00,2025-08-26T11:45:00,45,2,1st,203,[],False,False,False,746.0,baseline,-7,0,True
+Product D_88,Production,Product D,Mechanic Team 5,2025-08-26T11:00:00,2025-08-26T13:00:00,120,3,1st,204,[],False,False,False,889.5,baseline,-7,0,True
+Product C_88,Production,Product C,Mechanic Team 5,2025-08-26T13:00:00,2025-08-26T15:00:00,120,3,1st,205,[],False,False,False,743.5,baseline,-7,0,True
+Product D_QI_188,Quality Inspection,Product D,Quality Team 5,2025-08-26T13:00:00,2025-08-26T13:45:00,45,2,1st,206,[],False,False,False,896.5,baseline,-7,0,True
+Product C_70,Production,Product C,Mechanic Team 6,2025-08-26T14:30:00,2025-08-26T15:30:00,60,2,2nd,207,[],False,False,False,713.0,baseline,-7,0,True
+Product C_71,Production,Product C,Mechanic Team 2,2025-08-26T14:30:00,2025-08-26T15:10:00,40,1,2nd,208,[],False,False,False,722.25,baseline,-7,0,True
+Product C_86,Production,Product C,Mechanic Team 2,2025-08-26T14:30:00,2025-08-26T15:30:00,60,2,2nd,209,[],False,False,False,741.5,baseline,-7,0,True
+Product D_70,Production,Product D,Mechanic Team 6,2025-08-26T14:30:00,2025-08-26T15:30:00,60,2,2nd,210,[],False,False,False,857.0,baseline,-7,0,True
+Product D_74,Production,Product D,Mechanic Team 6,2025-08-26T14:30:00,2025-08-26T15:30:00,60,2,2nd,211,[],False,False,False,880.0,baseline,-7,0,True
+Product D_86,Production,Product D,Mechanic Team 2,2025-08-26T14:30:00,2025-08-26T15:30:00,60,2,2nd,212,[],False,False,False,885.5,baseline,-7,0,True
+Product C_QI_170,Quality Inspection,Product C,Quality Team 6,2025-08-26T15:30:00,2025-08-26T16:15:00,45,1,2nd,213,[],False,False,False,738.5,baseline,-7,0,True
+Product D_57,Production,Product D,Mechanic Team 6,2025-08-26T15:30:00,2025-08-26T15:50:00,20,1,2nd,214,[],False,False,False,873.25,baseline,-7,0,True
+Product D_QI_170,Quality Inspection,Product D,Quality Team 6,2025-08-26T15:30:00,2025-08-26T16:15:00,45,1,2nd,215,[],False,False,False,882.5,baseline,-7,0,True
+Product D_80,Production,Product D,Mechanic Team 6,2025-08-26T15:30:00,2025-08-26T17:30:00,120,4,2nd,216,[],False,False,False,886.0,baseline,-7,0,True
+Product D_77,Production,Product D,Mechanic Team 2,2025-08-26T15:50:00,2025-08-26T16:40:00,50,1,2nd,217,[],False,False,False,889.9166666666666,baseline,-7,0,True
+Product A_92,Production,Product A,Mechanic Team 6,2025-08-26T17:30:00,2025-08-26T19:00:00,90,3,2nd,218,[],False,False,False,525.5,baseline,-7,0,True
+Product B_92,Production,Product B,Mechanic Team 6,2025-08-26T17:30:00,2025-08-26T19:00:00,90,3,2nd,219,[],False,False,False,669.5,baseline,-7,0,True
+Product D_QI_180,Quality Inspection,Product D,Quality Team 6,2025-08-26T17:30:00,2025-08-26T18:15:00,45,2,2nd,220,[],False,False,False,886.25,baseline,-7,0,True
+Product A_QI_192,Quality Inspection,Product A,Quality Team 6,2025-08-26T19:00:00,2025-08-26T19:45:00,45,2,2nd,221,[],False,False,False,526.25,baseline,-7,0,True
+Product B_QI_192,Quality Inspection,Product B,Quality Team 6,2025-08-26T19:00:00,2025-08-26T19:45:00,45,2,2nd,222,[],False,False,False,670.25,baseline,-7,0,True
+Product A_QI_196,Quality Inspection,Product A,Quality Team 4,2025-08-26T23:00:00,2025-08-26T23:45:00,45,2,3rd,223,[],False,False,False,529.0,baseline,-7,0,True
+Product C_84,Production,Product C,Mechanic Team 4,2025-08-26T23:00:00,2025-08-27T00:30:00,90,3,3rd,224,[],False,False,False,725.25,baseline,-7,0,True
+Product C_85,Production,Product C,Mechanic Team 7,2025-08-26T23:00:00,2025-08-26T23:40:00,40,1,3rd,225,[],False,False,False,730.75,baseline,-7,0,True
+Product C_83,Production,Product C,Mechanic Team 7,2025-08-26T23:00:00,2025-08-26T23:30:00,30,1,3rd,226,[],False,False,False,732.5,baseline,-7,0,True
+Product C_87,Production,Product C,Mechanic Team 7,2025-08-26T23:00:00,2025-08-26T23:50:00,50,1,3rd,227,[],False,False,False,736.5,baseline,-7,0,True
+Product D_84,Production,Product D,Mechanic Team 4,2025-08-26T23:00:00,2025-08-27T00:30:00,90,3,3rd,228,[],False,False,False,869.25,baseline,-7,0,True
+Product D_83,Production,Product D,Mechanic Team 7,2025-08-26T23:00:00,2025-08-26T23:30:00,30,1,3rd,229,[],False,False,False,876.5,baseline,-7,0,True
+Product D_87,Production,Product D,Mechanic Team 7,2025-08-26T23:00:00,2025-08-26T23:50:00,50,1,3rd,230,[],False,False,False,880.5,baseline,-7,0,True
+Product D_93,Production,Product D,Mechanic Team 7,2025-08-26T23:00:00,2025-08-26T23:40:00,40,1,3rd,231,[],False,False,False,886.5,baseline,-7,0,True
+Product D_95,Production,Product D,Mechanic Team 7,2025-08-26T23:00:00,2025-08-26T23:30:00,30,1,3rd,232,[],False,False,False,886.75,baseline,-7,0,True
+Product D_89,Production,Product D,Mechanic Team 7,2025-08-26T23:30:00,2025-08-26T23:50:00,20,1,3rd,233,[],False,False,False,887.5,baseline,-7,0,True
+Product D_QI_195,Quality Inspection,Product D,Quality Team 7,2025-08-26T23:30:00,2025-08-27T00:15:00,45,1,3rd,234,[],False,False,False,888.5,baseline,-7,0,True
+Product C_QI_187,Quality Inspection,Product C,Quality Team 7,2025-08-26T23:50:00,2025-08-27T00:35:00,45,1,3rd,235,[],False,False,False,743.1666666666666,baseline,-7,0,True
+Product D_QI_187,Quality Inspection,Product D,Quality Team 7,2025-08-26T23:50:00,2025-08-27T00:35:00,45,1,3rd,236,[],False,False,False,887.1666666666666,baseline,-7,0,True
+Product C_QI_184,Quality Inspection,Product C,Quality Team 4,2025-08-27T00:30:00,2025-08-27T01:15:00,45,2,3rd,237,[],False,False,False,739.5,baseline,-7,0,True
+Product D_QI_184,Quality Inspection,Product D,Quality Team 4,2025-08-27T00:30:00,2025-08-27T01:15:00,45,2,3rd,238,[],False,False,False,883.5,baseline,-7,0,True
+Product D_96,Production,Product D,Mechanic Team 4,2025-08-27T00:30:00,2025-08-27T02:30:00,120,4,3rd,239,[],False,False,False,885.25,baseline,-7,0,True
+Product D_97,Production,Product D,Mechanic Team 7,2025-08-27T00:35:00,2025-08-27T00:55:00,20,1,3rd,240,[],False,False,False,887.4166666666666,baseline,-7,0,True
+Product D_91,Production,Product D,Mechanic Team 7,2025-08-27T01:15:00,2025-08-27T01:45:00,30,1,3rd,241,[],False,False,False,884.25,baseline,-7,0,True
+Product D_QI_196,Quality Inspection,Product D,Quality Team 4,2025-08-27T02:30:00,2025-08-27T03:15:00,45,2,3rd,242,[],False,False,False,885.5,baseline,-7,0,True
+Product B_100,Production,Product B,Mechanic Team 5,2025-08-27T06:00:00,2025-08-27T07:30:00,90,3,1st,243,[],False,False,False,663.75,baseline,-7,0,True
+Product C_QI_188,Quality Inspection,Product C,Quality Team 5,2025-08-27T06:00:00,2025-08-27T06:45:00,45,2,1st,244,[],False,False,False,735.5,baseline,-7,0,True
+Product D_78,Production,Product D,Mechanic Team 5,2025-08-27T06:00:00,2025-08-27T07:00:00,60,2,1st,245,[],False,False,False,870.5,baseline,-7,0,True
+Product D_90,Production,Product D,Mechanic Team 3,2025-08-27T06:00:00,2025-08-27T07:00:00,60,2,1st,246,[],False,False,False,874.5,baseline,-7,0,True
+Product D_QI_190,Quality Inspection,Product D,Quality Team 3,2025-08-27T07:00:00,2025-08-27T07:45:00,45,1,1st,247,[],False,False,False,875.75,baseline,-7,0,True
+Product D_QI_178,Quality Inspection,Product D,Quality Team 5,2025-08-27T07:00:00,2025-08-27T07:45:00,45,1,1st,248,[],False,False,False,878.5,baseline,-7,0,True
+Product A_100,Production,Product A,Mechanic Team 5,2025-08-27T07:30:00,2025-08-27T09:00:00,90,3,1st,249,[],False,False,False,518.25,baseline,-7,0,True
+Product B_QI_200,Quality Inspection,Product B,Quality Team 5,2025-08-27T07:30:00,2025-08-27T08:15:00,45,2,1st,250,[],False,False,False,664.5,baseline,-7,0,True
+Product A_QI_200,Quality Inspection,Product A,Quality Team 5,2025-08-27T09:00:00,2025-08-27T09:45:00,45,2,1st,251,[],False,False,False,519.0,baseline,-7,0,True
+Product D_92,Production,Product D,Mechanic Team 6,2025-08-27T14:30:00,2025-08-27T16:00:00,90,3,2nd,252,[],False,False,False,864.5,baseline,-7,0,True
+Product D_98,Production,Product D,Mechanic Team 2,2025-08-27T14:30:00,2025-08-27T15:30:00,60,2,2nd,253,[],False,False,False,871.25,baseline,-7,0,True
+Product D_QI_198,Quality Inspection,Product D,Quality Team 2,2025-08-27T15:30:00,2025-08-27T16:15:00,45,1,2nd,254,[],False,False,False,872.5,baseline,-7,0,True
+Product D_QI_192,Quality Inspection,Product D,Quality Team 6,2025-08-27T16:00:00,2025-08-27T16:45:00,45,2,2nd,255,[],False,False,False,865.25,baseline,-7,0,True
+Product D_99,Production,Product D,Mechanic Team 7,2025-08-27T23:00:00,2025-08-27T23:50:00,50,1,3rd,256,[],False,False,False,865.0,baseline,-7,0,True
+Product D_100,Production,Product D,Mechanic Team 5,2025-08-28T06:00:00,2025-08-28T07:30:00,90,3,1st,257,[],False,False,False,855.75,baseline,-7,0,True
+Product D_QI_200,Quality Inspection,Product D,Quality Team 5,2025-08-28T07:30:00,2025-08-28T08:15:00,45,2,1st,258,[],False,False,False,856.5,baseline,-7,0,True
+LP_305,Late Part,Product D,Mechanic Team 2,2025-08-29T14:30:00,2025-08-29T17:30:00,180,2,2nd,259,[],True,False,False,825.5,baseline,-7,0,True
+LP_301,Late Part,Product E,Mechanic Team 1,2025-09-02T06:00:00,2025-09-02T08:00:00,120,2,1st,260,[],True,False,False,318.2,baseline,-7,0,True
+Product E_2,Production,Product E,Mechanic Team 1,2025-09-02T08:00:00,2025-09-02T09:00:00,60,2,1st,261,[],False,False,False,319.2,baseline,-7,0,True
+Product E_6,Production,Product E,Mechanic Team 3,2025-09-02T08:00:00,2025-09-02T09:30:00,90,2,1st,262,[],False,False,False,357.7,baseline,-7,0,True
+Product E_4,Production,Product E,Mechanic Team 1,2025-09-02T09:00:00,2025-09-02T11:00:00,120,3,1st,263,[],False,False,False,361.7,baseline,-7,0,True
+Product E_9,Production,Product E,Mechanic Team 3,2025-09-02T09:00:00,2025-09-02T09:50:00,50,1,1st,264,[],False,False,False,454.2,baseline,-7,0,True
+Product E_QI_106,Quality Inspection,Product E,Quality Team 3,2025-09-02T09:30:00,2025-09-02T10:15:00,45,1,1st,265,[],False,False,False,384.45,baseline,-7,0,True
+Product E_19,Production,Product E,Mechanic Team 5,2025-09-02T09:30:00,2025-09-02T09:50:00,20,1,1st,266,[],False,False,False,488.25,baseline,-7,0,True
+Product E_12,Production,Product E,Mechanic Team 3,2025-09-02T10:15:00,2025-09-02T11:15:00,60,2,1st,267,[],False,False,False,386.7,baseline,-7,0,True
+Product E_QI_104,Quality Inspection,Product E,Quality Team 1,2025-09-02T11:00:00,2025-09-02T11:45:00,45,2,1st,268,[],False,False,False,400.0,baseline,-7,0,True
+Product E_QI_112,Quality Inspection,Product E,Quality Team 3,2025-09-02T11:15:00,2025-09-02T12:00:00,45,1,1st,269,[],False,False,False,441.45,baseline,-7,0,True
+Product E_24,Production,Product E,Mechanic Team 3,2025-09-02T12:00:00,2025-09-02T14:00:00,120,4,1st,270,[],False,False,False,446.7,baseline,-7,0,True
+Product E_QI_124,Quality Inspection,Product E,Quality Team 3,2025-09-02T14:00:00,2025-09-02T14:45:00,45,2,1st,271,[],False,False,False,500.2,baseline,-7,0,True
+Product E_13,Production,Product E,Mechanic Team 4,2025-09-02T23:00:00,2025-09-02T23:30:00,30,1,3rd,272,[],False,False,False,441.2,baseline,-7,0,True
+Product E_31,Production,Product E,Mechanic Team 1,2025-09-03T06:00:00,2025-09-03T06:30:00,30,1,1st,273,[],False,False,False,485.7,baseline,-7,0,True
+LP_302,Late Part,Product E,Mechanic Team 2,2025-09-03T14:30:00,2025-09-03T16:00:00,90,1,2nd,274,[],True,False,False,496.45,baseline,-7,0,True
+Product E_18,Production,Product E,Mechanic Team 3,2025-09-04T06:00:00,2025-09-04T08:00:00,120,3,1st,275,[],False,False,False,486.95,baseline,-7,0,True
+Product E_QI_118,Quality Inspection,Product E,Quality Team 3,2025-09-04T08:00:00,2025-09-04T08:45:00,45,2,1st,276,[],False,False,False,512.95,baseline,-7,0,True
+LP_308,Late Part,Product B,Mechanic Team 2,2025-09-04T14:30:00,2025-09-04T15:45:00,75,1,2nd,277,[],True,False,False,465.5,baseline,-7,0,True
+LP_303,Late Part,Product E,Mechanic Team 1,2025-09-08T06:00:00,2025-09-08T08:30:00,150,3,1st,278,[],True,False,False,177.2,baseline,-7,0,True
+Product E_5,Production,Product E,Mechanic Team 2,2025-09-08T14:30:00,2025-09-08T15:10:00,40,1,2nd,279,[],False,False,False,170.7,baseline,-7,0,True
+Product E_28,Production,Product E,Mechanic Team 2,2025-09-08T22:50:00,2025-09-09T00:20:00,90,3,2nd,280,[],False,False,False,307.1666666666667,baseline,-7,0,True
+Product E_11,Production,Product E,Mechanic Team 4,2025-09-08T23:00:00,2025-09-08T23:20:00,20,1,3rd,281,[],False,False,False,201.2,baseline,-7,0,True
+Product E_22,Production,Product E,Mechanic Team 4,2025-09-08T23:20:00,2025-09-09T00:20:00,60,2,3rd,282,[],False,False,False,275.4166666666667,baseline,-7,0,True
+Product E_QI_122,Quality Inspection,Product E,Quality Team 4,2025-09-09T00:20:00,2025-09-09T01:05:00,45,1,3rd,283,[],False,False,False,357.6666666666667,baseline,-7,0,True
+Product E_27,Production,Product E,Mechanic Team 4,2025-09-09T01:05:00,2025-09-09T01:25:00,20,1,3rd,284,[],False,False,False,357.9166666666667,baseline,-7,0,True
+Product E_QI_127,Quality Inspection,Product E,Quality Team 4,2025-09-09T01:25:00,2025-09-09T02:10:00,45,1,3rd,285,[],False,False,False,425.3333333333333,baseline,-7,0,True
+Product E_37,Production,Product E,Mechanic Team 4,2025-09-09T02:10:00,2025-09-09T02:40:00,30,1,3rd,286,[],False,False,False,426.0833333333333,baseline,-7,0,True
+Product E_23,Production,Product E,Mechanic Team 5,2025-09-09T06:00:00,2025-09-09T06:30:00,30,1,1st,287,[],False,False,False,227.95,baseline,-7,0,True
+Product E_10,Production,Product E,Mechanic Team 1,2025-09-09T06:00:00,2025-09-09T08:00:00,120,4,1st,288,[],False,False,False,235.45,baseline,-7,0,True
+Product E_30,Production,Product E,Mechanic Team 3,2025-09-09T06:00:00,2025-09-09T07:00:00,60,2,1st,289,[],False,False,False,287.5,baseline,-7,0,True
+Product E_44,Production,Product E,Mechanic Team 5,2025-09-09T06:00:00,2025-09-09T07:30:00,90,3,1st,290,[],False,False,False,368.5,baseline,-7,0,True
+LP_306,Late Part,Product D,Mechanic Team 1,2025-09-09T06:00:00,2025-09-09T06:45:00,45,1,1st,291,[],True,False,False,570.0,baseline,-7,0,True
+Product E_29,Production,Product E,Mechanic Team 5,2025-09-09T06:30:00,2025-09-09T07:10:00,40,1,1st,292,[],False,False,False,289.95,baseline,-7,0,True
+Product E_QI_130,Quality Inspection,Product E,Quality Team 3,2025-09-09T07:00:00,2025-09-09T07:45:00,45,1,1st,293,[],False,False,False,303.75,baseline,-7,0,True
+Product E_QI_144,Quality Inspection,Product E,Quality Team 5,2025-09-09T07:30:00,2025-09-09T08:15:00,45,2,1st,294,[],False,False,False,405.5,baseline,-7,0,True
+Product E_QI_110,Quality Inspection,Product E,Quality Team 1,2025-09-09T08:00:00,2025-09-09T08:45:00,45,2,1st,295,[],False,False,False,313.95,baseline,-7,0,True
+Product E_20,Production,Product E,Mechanic Team 1,2025-09-09T08:45:00,2025-09-09T10:15:00,90,2,1st,296,[],False,False,False,317.7,baseline,-7,0,True
+Product E_41,Production,Product E,Mechanic Team 1,2025-09-09T08:45:00,2025-09-09T09:05:00,20,1,1st,297,[],False,False,False,338.95,baseline,-7,0,True
+Product E_46,Production,Product E,Mechanic Team 1,2025-09-09T08:45:00,2025-09-09T09:45:00,60,2,1st,298,[],False,False,False,398.95,baseline,-7,0,True
+Product E_45,Production,Product E,Mechanic Team 3,2025-09-09T09:05:00,2025-09-09T09:55:00,50,1,1st,299,[],False,False,False,369.4166666666667,baseline,-7,0,True
+Product E_QI_120,Quality Inspection,Product E,Quality Team 1,2025-09-09T10:15:00,2025-09-09T11:00:00,45,2,1st,300,[],False,False,False,355.25,baseline,-7,0,True
+Product E_40,Production,Product E,Mechanic Team 3,2025-09-09T11:00:00,2025-09-09T13:00:00,120,4,1st,301,[],False,False,False,360.5,baseline,-7,0,True
+Product E_QI_140,Quality Inspection,Product E,Quality Team 3,2025-09-09T13:00:00,2025-09-09T13:45:00,45,2,1st,302,[],False,False,False,379.25,baseline,-7,0,True
+Product E_21,Production,Product E,Mechanic Team 2,2025-09-09T14:30:00,2025-09-09T15:10:00,40,1,2nd,303,[],False,False,False,252.7,baseline,-7,0,True
+Product E_43,Production,Product E,Mechanic Team 2,2025-09-09T14:30:00,2025-09-09T15:00:00,30,1,2nd,304,[],False,False,False,297.75,baseline,-7,0,True
+Product E_QI_128,Quality Inspection,Product E,Quality Team 2,2025-09-09T14:30:00,2025-09-09T15:15:00,45,2,2nd,305,[],False,False,False,361.25,baseline,-7,0,True
+Product E_38,Production,Product E,Mechanic Team 2,2025-09-09T14:30:00,2025-09-09T15:30:00,60,2,2nd,306,[],False,False,False,375.5,baseline,-7,0,True
+Product E_25,Production,Product E,Mechanic Team 2,2025-09-09T15:10:00,2025-09-09T16:00:00,50,1,2nd,307,[],False,False,False,284.8333333333333,baseline,-7,0,True
+Product E_QI_138,Quality Inspection,Product E,Quality Team 2,2025-09-09T15:30:00,2025-09-09T16:15:00,45,1,2nd,308,[],False,False,False,406.25,baseline,-7,0,True
+Product E_42,Production,Product E,Mechanic Team 4,2025-09-09T23:00:00,2025-09-10T00:00:00,60,2,3rd,309,[],False,False,False,330.25,baseline,-7,0,True
+Product E_QI_142,Quality Inspection,Product E,Quality Team 4,2025-09-10T00:00:00,2025-09-10T00:45:00,45,1,3rd,310,[],False,False,False,400.0,baseline,-7,0,True
+Product E_26,Production,Product E,Mechanic Team 1,2025-09-10T06:00:00,2025-09-10T07:00:00,60,2,1st,311,[],False,False,False,311.7,baseline,-7,0,True
+Product E_39,Production,Product E,Mechanic Team 5,2025-09-10T06:00:00,2025-09-10T06:40:00,40,1,1st,312,[],False,False,False,347.75,baseline,-7,0,True
+Product E_36,Production,Product E,Mechanic Team 1,2025-09-10T06:00:00,2025-09-10T07:30:00,90,3,1st,313,[],False,False,False,375.45,baseline,-7,0,True
+Product E_56,Production,Product E,Mechanic Team 5,2025-09-10T06:20:00,2025-09-10T07:30:00,70,3,1st,314,[],False,False,False,410.6666666666667,baseline,-7,0,True
+Product E_QI_136,Quality Inspection,Product E,Quality Team 1,2025-09-10T07:30:00,2025-09-10T08:15:00,45,2,1st,315,[],False,False,False,409.45,baseline,-7,0,True
+Product E_QI_156,Quality Inspection,Product E,Quality Team 5,2025-09-10T07:30:00,2025-09-10T08:15:00,45,2,1st,316,[],False,False,False,430.5,baseline,-7,0,True
+Product E_55,Production,Product E,Mechanic Team 5,2025-09-10T08:15:00,2025-09-10T09:11:00,56,2,1st,317,[],False,False,False,411.5,baseline,-7,0,True
+Product E_QI_155,Quality Inspection,Product E,Quality Team 5,2025-09-10T09:11:00,2025-09-10T09:56:00,45,1,1st,318,[],False,False,False,433.31666666666666,baseline,-7,0,True
+LP_304,Late Part,Product E,Mechanic Team 3,2025-09-12T06:00:00,2025-09-12T07:00:00,60,1,1st,319,[],True,False,False,165.0,baseline,-7,0,True
+Product E_35,Production,Product E,Mechanic Team 3,2025-09-12T06:40:00,2025-09-12T07:30:00,50,1,1st,320,[],False,False,False,297.5833333333333,baseline,-7,0,True
+Product E_8,Production,Product E,Mechanic Team 1,2025-09-12T07:00:00,2025-09-12T08:00:00,60,2,1st,321,[],False,False,False,167.0,baseline,-7,0,True
+Product E_17,Production,Product E,Mechanic Team 5,2025-09-12T07:00:00,2025-09-12T07:30:00,30,1,1st,322,[],False,False,False,235.5,baseline,-7,0,True
+Product E_52,Production,Product E,Mechanic Team 1,2025-09-12T07:00:00,2025-09-12T08:30:00,90,3,1st,323,[],False,False,False,341.75,baseline,-7,0,True
+Product E_34,Production,Product E,Mechanic Team 5,2025-09-12T07:30:00,2025-09-12T08:30:00,60,2,1st,324,[],False,False,False,297.25,baseline,-7,0,True
+Product E_QI_135,Quality Inspection,Product E,Quality Team 3,2025-09-12T07:30:00,2025-09-12T08:15:00,45,1,1st,325,[],False,False,False,312.25,baseline,-7,0,True
+Product E_QI_108,Quality Inspection,Product E,Quality Team 1,2025-09-12T08:00:00,2025-09-12T08:45:00,45,2,1st,326,[],False,False,False,190.75,baseline,-7,0,True
+Product E_16,Production,Product E,Mechanic Team 1,2025-09-12T08:45:00,2025-09-12T09:45:00,60,2,1st,327,[],False,False,False,193.0,baseline,-7,0,True
+Product E_QI_152,Quality Inspection,Product E,Quality Team 1,2025-09-12T08:45:00,2025-09-12T09:30:00,45,2,1st,328,[],False,False,False,371.25,baseline,-7,0,True
+Product E_QI_116,Quality Inspection,Product E,Quality Team 1,2025-09-12T09:45:00,2025-09-12T10:30:00,45,2,1st,329,[],False,False,False,265.5,baseline,-7,0,True
+Product E_33,Production,Product E,Mechanic Team 2,2025-09-12T14:30:00,2025-09-12T14:50:00,20,1,2nd,330,[],False,False,False,225.75,baseline,-7,0,True
+Product E_53,Production,Product E,Mechanic Team 6,2025-09-12T14:30:00,2025-09-12T15:10:00,40,1,2nd,331,[],False,False,False,307.25,baseline,-7,0,True
+Product E_51,Production,Product E,Mechanic Team 6,2025-09-12T14:30:00,2025-09-12T15:00:00,30,1,2nd,332,[],False,False,False,328.0,baseline,-7,0,True
+Product E_32,Production,Product E,Mechanic Team 4,2025-09-12T23:00:00,2025-09-13T01:00:00,120,3,3rd,333,[],False,False,False,258.25,baseline,-7,0,True
+Product E_54,Production,Product E,Mechanic Team 4,2025-09-12T23:00:00,2025-09-13T00:00:00,60,2,3rd,334,[],False,False,False,324.25,baseline,-7,0,True
+LP_309,Late Part,Product C,Mechanic Team 1,2025-09-15T06:00:00,2025-09-15T08:00:00,120,2,1st,335,[],True,False,False,215.0,baseline,-7,0,True
+Product E_50,Production,Product E,Mechanic Team 3,2025-09-15T06:00:00,2025-09-15T07:00:00,60,2,1st,336,[],False,False,False,221.5,baseline,-7,0,True
+Product E_49,Production,Product E,Mechanic Team 5,2025-09-15T06:00:00,2025-09-15T06:20:00,20,1,1st,337,[],False,False,False,227.75,baseline,-7,0,True
+Product E_61,Production,Product E,Mechanic Team 1,2025-09-15T06:20:00,2025-09-15T07:00:00,40,1,1st,338,[],False,False,False,264.1666666666667,baseline,-7,0,True
+Product E_QI_150,Quality Inspection,Product E,Quality Team 3,2025-09-15T07:00:00,2025-09-15T07:45:00,45,1,1st,339,[],False,False,False,241.25,baseline,-7,0,True
+Product E_65,Production,Product E,Mechanic Team 5,2025-09-15T07:00:00,2025-09-15T07:20:00,20,1,1st,340,[],False,False,False,295.0,baseline,-7,0,True
+Product E_73,Production,Product E,Mechanic Team 3,2025-09-15T07:20:00,2025-09-15T07:40:00,20,1,1st,341,[],False,False,False,316.1666666666667,baseline,-7,0,True
+Product E_68,Production,Product E,Mechanic Team 1,2025-09-15T14:00:00,2025-09-15T15:30:00,90,3,1st,342,[],False,False,False,297.5,baseline,-7,0,True
+Product C_51,Production,Product C,Mechanic Team 6,2025-09-15T14:30:00,2025-09-15T15:00:00,30,1,2nd,343,[],False,False,False,208.0,baseline,-7,0,True
+Product E_48,Production,Product E,Mechanic Team 2,2025-09-15T14:30:00,2025-09-15T16:30:00,120,3,2nd,344,[],False,False,False,231.5,baseline,-7,0,True
+Product E_64,Production,Product E,Mechanic Team 2,2025-09-15T14:30:00,2025-09-15T16:30:00,120,3,2nd,345,[],False,False,False,258.5,baseline,-7,0,True
+Product E_62,Production,Product E,Mechanic Team 6,2025-09-15T14:30:00,2025-09-15T15:30:00,60,2,2nd,346,[],False,False,False,262.25,baseline,-7,0,True
+Product E_74,Production,Product E,Mechanic Team 6,2025-09-15T14:30:00,2025-09-15T15:30:00,60,2,2nd,347,[],False,False,False,304.0,baseline,-7,0,True
+Product E_66,Production,Product E,Mechanic Team 6,2025-09-15T15:00:00,2025-09-15T16:00:00,60,2,2nd,348,[],False,False,False,284.25,baseline,-7,0,True
+Product C_66,Production,Product C,Mechanic Team 6,2025-09-15T15:30:00,2025-09-15T16:30:00,60,2,2nd,349,[],False,False,False,235.75,baseline,-7,0,True
+Product E_QI_162,Quality Inspection,Product E,Quality Team 6,2025-09-15T15:30:00,2025-09-15T16:15:00,45,1,2nd,350,[],False,False,False,292.5,baseline,-7,0,True
+Product E_QI_148,Quality Inspection,Product E,Quality Team 2,2025-09-15T16:30:00,2025-09-15T17:15:00,45,2,2nd,351,[],False,False,False,261.25,baseline,-7,0,True
+Product E_59,Production,Product E,Mechanic Team 6,2025-09-15T17:15:00,2025-09-15T17:45:00,30,1,2nd,352,[],False,False,False,262.0,baseline,-7,0,True
+Product E_QI_164,Quality Inspection,Product E,Quality Team 2,2025-09-15T17:15:00,2025-09-15T18:00:00,45,2,2nd,353,[],False,False,False,285.5,baseline,-7,0,True
+Product E_71,Production,Product E,Mechanic Team 2,2025-09-15T18:00:00,2025-09-15T18:40:00,40,1,2nd,354,[],False,False,False,286.75,baseline,-7,0,True
+Product E_63,Production,Product E,Mechanic Team 4,2025-09-15T23:00:00,2025-09-15T23:30:00,30,1,3rd,355,[],False,False,False,226.75,baseline,-7,0,True
+Product E_QI_132,Quality Inspection,Product E,Quality Team 4,2025-09-15T23:00:00,2025-09-15T23:45:00,45,2,3rd,356,[],False,False,False,257.0,baseline,-7,0,True
+Product E_76,Production,Product E,Mechanic Team 4,2025-09-15T23:00:00,2025-09-16T00:30:00,90,3,3rd,357,[],False,False,False,298.75,baseline,-7,0,True
+Product E_69,Production,Product E,Mechanic Team 4,2025-09-15T23:30:00,2025-09-16T00:00:00,30,1,3rd,358,[],False,False,False,255.75,baseline,-7,0,True
+Product E_47,Production,Product E,Mechanic Team 4,2025-09-15T23:45:00,2025-09-16T00:25:00,40,1,3rd,359,[],False,False,False,258.25,baseline,-7,0,True
+Product C_76,Production,Product C,Mechanic Team 4,2025-09-16T00:00:00,2025-09-16T01:30:00,90,3,3rd,360,[],False,False,False,249.75,baseline,-7,0,True
+Product E_81,Production,Product E,Mechanic Team 7,2025-09-16T00:00:00,2025-09-16T00:20:00,20,1,3rd,361,[],False,False,False,280.75,baseline,-7,0,True
+Product E_85,Production,Product E,Mechanic Team 7,2025-09-16T00:20:00,2025-09-16T01:00:00,40,1,3rd,362,[],False,False,False,297.4166666666667,baseline,-7,0,True
+Product E_QI_147,Quality Inspection,Product E,Quality Team 4,2025-09-16T00:25:00,2025-09-16T01:10:00,45,1,3rd,363,[],False,False,False,287.3333333333333,baseline,-7,0,True
+Product C_96,Production,Product C,Mechanic Team 4,2025-09-16T00:30:00,2025-09-16T02:30:00,120,4,3rd,364,[],False,False,False,261.25,baseline,-7,0,True
+Product E_QI_176,Quality Inspection,Product E,Quality Team 4,2025-09-16T00:30:00,2025-09-16T01:15:00,45,2,3rd,365,[],False,False,False,307.75,baseline,-7,0,True
+Product C_QI_176,Quality Inspection,Product C,Quality Team 4,2025-09-16T01:30:00,2025-09-16T02:15:00,45,2,3rd,366,[],False,False,False,258.75,baseline,-7,0,True
+Product C_95,Production,Product C,Mechanic Team 7,2025-09-16T02:15:00,2025-09-16T02:45:00,30,1,3rd,367,[],False,False,False,259.5,baseline,-7,0,True
+Product C_QI_196,Quality Inspection,Product C,Quality Team 4,2025-09-16T02:30:00,2025-09-16T03:15:00,45,2,3rd,368,[],False,False,False,261.5,baseline,-7,0,True
+Product C_QI_195,Quality Inspection,Product C,Quality Team 7,2025-09-16T02:45:00,2025-09-16T03:30:00,45,1,3rd,369,[],False,False,False,261.25,baseline,-7,0,True
+Product C_65,Production,Product C,Mechanic Team 5,2025-09-16T06:00:00,2025-09-16T06:20:00,20,1,1st,370,[],False,False,False,224.0,baseline,-7,0,True
+Product C_75,Production,Product C,Mechanic Team 1,2025-09-16T06:00:00,2025-09-16T06:30:00,30,1,1st,371,[],False,False,False,241.5,baseline,-7,0,True
+Product C_94,Production,Product C,Mechanic Team 1,2025-09-16T06:00:00,2025-09-16T07:00:00,60,2,1st,372,[],False,False,False,251.25,baseline,-7,0,True
+LP_307,Late Part,Product C,Mechanic Team 3,2025-09-16T06:00:00,2025-09-16T07:40:00,100,2,1st,373,[],True,False,False,258.0,baseline,-7,0,True
+Product E_60,Production,Product E,Mechanic Team 3,2025-09-16T06:00:00,2025-09-16T07:30:00,90,3,1st,374,[],False,False,False,265.5,baseline,-7,0,True
+Product E_82,Production,Product E,Mechanic Team 1,2025-09-16T06:00:00,2025-09-16T07:00:00,60,2,1st,375,[],False,False,False,275.25,baseline,-7,0,True
+Product E_58,Production,Product E,Mechanic Team 5,2025-09-16T06:00:00,2025-09-16T07:00:00,60,2,1st,376,[],False,False,False,281.5,baseline,-7,0,True
+Product E_75,Production,Product E,Mechanic Team 1,2025-09-16T06:00:00,2025-09-16T06:30:00,30,1,1st,377,[],False,False,False,289.5,baseline,-7,0,True
+Product E_94,Production,Product E,Mechanic Team 1,2025-09-16T06:00:00,2025-09-16T07:00:00,60,2,1st,378,[],False,False,False,299.25,baseline,-7,0,True
+Product E_QI_168,Quality Inspection,Product E,Quality Team 1,2025-09-16T06:00:00,2025-09-16T06:45:00,45,2,1st,379,[],False,False,False,300.25,baseline,-7,0,True
+Product E_QI_175,Quality Inspection,Product E,Quality Team 1,2025-09-16T06:30:00,2025-09-16T07:15:00,45,1,1st,380,[],False,False,False,301.0,baseline,-7,0,True
+Product C_QI_175,Quality Inspection,Product C,Quality Team 1,2025-09-16T06:45:00,2025-09-16T07:30:00,45,1,1st,381,[],False,False,False,252.75,baseline,-7,0,True
+Product E_72,Production,Product E,Mechanic Team 5,2025-09-16T07:00:00,2025-09-16T09:00:00,120,4,1st,382,[],False,False,False,274.25,baseline,-7,0,True
+Product E_QI_182,Quality Inspection,Product E,Quality Team 1,2025-09-16T07:00:00,2025-09-16T07:45:00,45,1,1st,383,[],False,False,False,294.0,baseline,-7,0,True
+Product E_QI_158,Quality Inspection,Product E,Quality Team 5,2025-09-16T07:00:00,2025-09-16T07:45:00,45,1,1st,384,[],False,False,False,299.25,baseline,-7,0,True
+Product C_73,Production,Product C,Mechanic Team 3,2025-09-16T07:30:00,2025-09-16T07:50:00,20,1,1st,385,[],False,False,False,244.0,baseline,-7,0,True
+Product E_67,Production,Product E,Mechanic Team 3,2025-09-16T07:30:00,2025-09-16T08:20:00,50,1,1st,386,[],False,False,False,279.0,baseline,-7,0,True
+Product E_QI_160,Quality Inspection,Product E,Quality Team 3,2025-09-16T07:30:00,2025-09-16T08:15:00,45,2,1st,387,[],False,False,False,290.5,baseline,-7,0,True
+Product C_90,Production,Product C,Mechanic Team 3,2025-09-16T07:40:00,2025-09-16T08:40:00,60,2,1st,388,[],False,False,False,248.83333333333334,baseline,-7,0,True
+Product E_79,Production,Product E,Mechanic Team 3,2025-09-16T07:45:00,2025-09-16T08:25:00,40,1,1st,389,[],False,False,False,300.5,baseline,-7,0,True
+Product E_QI_167,Quality Inspection,Product E,Quality Team 3,2025-09-16T08:20:00,2025-09-16T09:05:00,45,1,1st,390,[],False,False,False,294.9166666666667,baseline,-7,0,True
+Product C_QI_190,Quality Inspection,Product C,Quality Team 3,2025-09-16T08:40:00,2025-09-16T09:25:00,45,1,1st,391,[],False,False,False,250.08333333333334,baseline,-7,0,True
+Product E_88,Production,Product E,Mechanic Team 5,2025-09-16T09:00:00,2025-09-16T11:00:00,120,3,1st,392,[],False,False,False,291.5,baseline,-7,0,True
+Product E_QI_172,Quality Inspection,Product E,Quality Team 5,2025-09-16T09:00:00,2025-09-16T09:45:00,45,2,1st,393,[],False,False,False,292.0,baseline,-7,0,True
+Product E_QI_188,Quality Inspection,Product E,Quality Team 5,2025-09-16T11:00:00,2025-09-16T11:45:00,45,2,1st,394,[],False,False,False,298.5,baseline,-7,0,True
+Product E_70,Production,Product E,Mechanic Team 6,2025-09-16T14:30:00,2025-09-16T15:30:00,60,2,2nd,395,[],False,False,False,257.0,baseline,-7,0,True
+Product E_86,Production,Product E,Mechanic Team 2,2025-09-16T14:30:00,2025-09-16T15:30:00,60,2,2nd,396,[],False,False,False,285.5,baseline,-7,0,True
+Product E_80,Production,Product E,Mechanic Team 6,2025-09-16T14:30:00,2025-09-16T16:30:00,120,4,2nd,397,[],False,False,False,287.0,baseline,-7,0,True
+Product C_74,Production,Product C,Mechanic Team 6,2025-09-16T15:30:00,2025-09-16T16:30:00,60,2,2nd,398,[],False,False,False,231.0,baseline,-7,0,True
+Product E_QI_170,Quality Inspection,Product E,Quality Team 6,2025-09-16T15:30:00,2025-09-16T16:15:00,45,1,2nd,399,[],False,False,False,282.5,baseline,-7,0,True
+Product C_92,Production,Product C,Mechanic Team 6,2025-09-16T16:30:00,2025-09-16T18:00:00,90,3,2nd,400,[],False,False,False,238.5,baseline,-7,0,True
+Product E_57,Production,Product E,Mechanic Team 6,2025-09-16T16:30:00,2025-09-16T16:50:00,20,1,2nd,401,[],False,False,False,272.25,baseline,-7,0,True
+Product E_QI_180,Quality Inspection,Product E,Quality Team 6,2025-09-16T16:30:00,2025-09-16T17:15:00,45,2,2nd,402,[],False,False,False,287.25,baseline,-7,0,True
+Product E_77,Production,Product E,Mechanic Team 2,2025-09-16T16:50:00,2025-09-16T17:40:00,50,1,2nd,403,[],False,False,False,288.9166666666667,baseline,-7,0,True
+Product C_QI_192,Quality Inspection,Product C,Quality Team 6,2025-09-16T18:00:00,2025-09-16T18:45:00,45,2,2nd,404,[],False,False,False,239.25,baseline,-7,0,True
+Product C_93,Production,Product C,Mechanic Team 7,2025-09-16T23:00:00,2025-09-16T23:40:00,40,1,3rd,405,[],False,False,False,238.5,baseline,-7,0,True
+Product C_91,Production,Product C,Mechanic Team 7,2025-09-16T23:00:00,2025-09-16T23:30:00,30,1,3rd,406,[],False,False,False,238.5,baseline,-7,0,True
+Product C_89,Production,Product C,Mechanic Team 7,2025-09-16T23:00:00,2025-09-16T23:20:00,20,1,3rd,407,[],False,False,False,240.0,baseline,-7,0,True
+Product E_84,Production,Product E,Mechanic Team 4,2025-09-16T23:00:00,2025-09-17T00:30:00,90,3,3rd,408,[],False,False,False,269.25,baseline,-7,0,True
+Product E_83,Production,Product E,Mechanic Team 7,2025-09-16T23:00:00,2025-09-16T23:30:00,30,1,3rd,409,[],False,False,False,276.5,baseline,-7,0,True
+Product E_87,Production,Product E,Mechanic Team 7,2025-09-16T23:00:00,2025-09-16T23:50:00,50,1,3rd,410,[],False,False,False,280.5,baseline,-7,0,True
+Product E_93,Production,Product E,Mechanic Team 7,2025-09-16T23:00:00,2025-09-16T23:40:00,40,1,3rd,411,[],False,False,False,286.5,baseline,-7,0,True
+Product E_96,Production,Product E,Mechanic Team 4,2025-09-16T23:00:00,2025-09-17T01:00:00,120,4,3rd,412,[],False,False,False,286.75,baseline,-7,0,True
+Product E_95,Production,Product E,Mechanic Team 7,2025-09-16T23:00:00,2025-09-16T23:30:00,30,1,3rd,413,[],False,False,False,286.75,baseline,-7,0,True
+Product E_89,Production,Product E,Mechanic Team 7,2025-09-16T23:30:00,2025-09-16T23:50:00,20,1,3rd,414,[],False,False,False,287.5,baseline,-7,0,True
+Product E_QI_195,Quality Inspection,Product E,Quality Team 7,2025-09-16T23:30:00,2025-09-17T00:15:00,45,1,3rd,415,[],False,False,False,288.5,baseline,-7,0,True
+Product E_QI_187,Quality Inspection,Product E,Quality Team 7,2025-09-16T23:50:00,2025-09-17T00:35:00,45,1,3rd,416,[],False,False,False,287.1666666666667,baseline,-7,0,True
+Product E_QI_184,Quality Inspection,Product E,Quality Team 4,2025-09-17T00:30:00,2025-09-17T01:15:00,45,2,3rd,417,[],False,False,False,283.5,baseline,-7,0,True
+Product E_97,Production,Product E,Mechanic Team 7,2025-09-17T00:35:00,2025-09-17T00:55:00,20,1,3rd,418,[],False,False,False,287.4166666666667,baseline,-7,0,True
+Product E_QI_196,Quality Inspection,Product E,Quality Team 4,2025-09-17T01:00:00,2025-09-17T01:45:00,45,2,3rd,419,[],False,False,False,287.0,baseline,-7,0,True
+Product E_91,Production,Product E,Mechanic Team 7,2025-09-17T01:15:00,2025-09-17T01:45:00,30,1,3rd,420,[],False,False,False,284.25,baseline,-7,0,True
+Product E_78,Production,Product E,Mechanic Team 5,2025-09-17T06:00:00,2025-09-17T07:00:00,60,2,1st,421,[],False,False,False,270.5,baseline,-7,0,True
+Product E_90,Production,Product E,Mechanic Team 3,2025-09-17T06:00:00,2025-09-17T07:00:00,60,2,1st,422,[],False,False,False,274.5,baseline,-7,0,True
+Product E_QI_190,Quality Inspection,Product E,Quality Team 3,2025-09-17T07:00:00,2025-09-17T07:45:00,45,1,1st,423,[],False,False,False,275.75,baseline,-7,0,True
+Product E_QI_178,Quality Inspection,Product E,Quality Team 5,2025-09-17T07:00:00,2025-09-17T07:45:00,45,1,1st,424,[],False,False,False,278.5,baseline,-7,0,True
+Product E_92,Production,Product E,Mechanic Team 6,2025-09-17T14:30:00,2025-09-17T16:00:00,90,3,2nd,425,[],False,False,False,264.5,baseline,-7,0,True
+Product E_98,Production,Product E,Mechanic Team 2,2025-09-17T14:30:00,2025-09-17T15:30:00,60,2,2nd,426,[],False,False,False,271.25,baseline,-7,0,True
+Product E_QI_198,Quality Inspection,Product E,Quality Team 2,2025-09-17T15:30:00,2025-09-17T16:15:00,45,1,2nd,427,[],False,False,False,272.5,baseline,-7,0,True
+Product E_QI_192,Quality Inspection,Product E,Quality Team 6,2025-09-17T16:00:00,2025-09-17T16:45:00,45,2,2nd,428,[],False,False,False,265.25,baseline,-7,0,True
+Product E_99,Production,Product E,Mechanic Team 7,2025-09-17T23:00:00,2025-09-17T23:50:00,50,1,3rd,429,[],False,False,False,265.0,baseline,-7,0,True
+Product E_100,Production,Product E,Mechanic Team 5,2025-09-18T06:00:00,2025-09-18T07:30:00,90,3,1st,430,[],False,False,False,255.75,baseline,-7,0,True
+Product E_QI_200,Quality Inspection,Product E,Quality Team 5,2025-09-18T07:30:00,2025-09-18T08:15:00,45,2,1st,431,[],False,False,False,256.5,baseline,-7,0,True
+LP_310,Late Part,Product C,Mechanic Team 3,2025-09-22T06:00:00,2025-09-22T07:30:00,90,1,1st,432,[],True,False,False,86.0,baseline,-7,0,True
+Product C_100,Production,Product C,Mechanic Team 5,2025-09-22T07:00:00,2025-09-22T08:30:00,90,3,1st,433,[],False,False,False,110.75,baseline,-7,0,True
+Product C_67,Production,Product C,Mechanic Team 3,2025-09-22T07:30:00,2025-09-22T08:20:00,50,1,1st,434,[],False,False,False,87.0,baseline,-7,0,True
+Product C_78,Production,Product C,Mechanic Team 5,2025-09-22T07:30:00,2025-09-22T08:30:00,60,2,1st,435,[],False,False,False,101.0,baseline,-7,0,True
+Product C_QI_167,Quality Inspection,Product C,Quality Team 3,2025-09-22T08:20:00,2025-09-22T09:05:00,45,1,1st,436,[],False,False,False,102.91666666666667,baseline,-7,0,True
+Product C_QI_178,Quality Inspection,Product C,Quality Team 5,2025-09-22T08:30:00,2025-09-22T09:15:00,45,1,1st,437,[],False,False,False,109.0,baseline,-7,0,True
+Product C_QI_200,Quality Inspection,Product C,Quality Team 5,2025-09-22T08:30:00,2025-09-22T09:15:00,45,2,1st,438,[],False,False,False,111.5,baseline,-7,0,True
+Product C_77,Production,Product C,Mechanic Team 2,2025-09-22T14:30:00,2025-09-22T15:20:00,50,1,2nd,439,[],False,False,False,99.25,baseline,-7,0,True
+Product C_98,Production,Product C,Mechanic Team 2,2025-09-22T14:30:00,2025-09-22T15:30:00,60,2,2nd,440,[],False,False,False,103.25,baseline,-7,0,True
+Product C_QI_198,Quality Inspection,Product C,Quality Team 2,2025-09-22T15:30:00,2025-09-22T16:15:00,45,1,2nd,441,[],False,False,False,104.5,baseline,-7,0,True
+Product C_99,Production,Product C,Mechanic Team 7,2025-09-22T23:00:00,2025-09-22T23:50:00,50,1,3rd,442,[],False,False,False,97.0,baseline,-7,0,True
+Product C_97,Production,Product C,Mechanic Team 7,2025-09-22T23:00:00,2025-09-22T23:20:00,20,1,3rd,443,[],False,False,False,97.0,baseline,-7,0,True

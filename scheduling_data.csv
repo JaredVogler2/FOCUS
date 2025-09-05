@@ -1,0 +1,523 @@
+==== TASK RELATIONSHIPS TABLE ====
+First,Second,Relationship
+1,2,Finish <= Start
+1,3,Start <= Start
+1,5,Finish <= Finish
+2,4,Finish <= Start
+2,6,Start <= Start
+2,8,Finish <= Finish
+3,5,Finish <= Start
+3,7,Start <= Start
+4,8,Finish <= Start
+4,9,Start <= Start
+5,10,Finish <= Start
+5,11,Finish <= Finish
+6,12,Finish <= Start
+6,13,Start <= Start
+7,14,Finish <= Start
+7,15,Finish <= Finish
+8,16,Finish <= Start
+8,17,Start <= Start
+9,18,Finish <= Start
+9,19,Finish <= Finish
+10,20,Finish <= Start
+10,21,Start <= Start
+11,22,Finish <= Start
+11,23,Finish <= Finish
+12,24,Finish <= Start
+12,25,Start <= Start
+13,26,Finish <= Start
+13,27,Finish <= Finish
+14,28,Finish <= Start
+14,29,Start <= Start
+15,30,Finish <= Start
+15,31,Finish <= Finish
+16,32,Finish <= Start
+16,33,Start <= Start
+17,34,Finish <= Start
+17,35,Finish <= Finish
+18,36,Finish <= Start
+18,37,Start <= Start
+19,38,Finish <= Start
+19,39,Finish <= Finish
+20,40,Finish <= Start
+20,41,Start <= Start
+21,25,Finish <= Start
+21,26,Start <= Start
+22,27,Finish <= Start
+22,28,Finish <= Finish
+23,29,Finish <= Start
+23,30,Start <= Start
+24,31,Finish <= Start
+24,32,Finish <= Finish
+25,33,Finish <= Start
+25,34,Start <= Start
+26,35,Finish <= Start
+26,36,Finish <= Finish
+27,37,Finish <= Start
+27,38,Start <= Start
+28,39,Finish <= Start
+28,40,Finish <= Finish
+29,41,Finish <= Start
+29,42,Start <= Start
+30,43,Finish <= Start
+30,44,Finish <= Finish
+31,45,Finish <= Start
+31,46,Start <= Start
+32,47,Finish <= Start
+32,48,Finish <= Finish
+33,49,Finish <= Start
+33,50,Start <= Start
+34,51,Finish <= Start
+34,52,Finish <= Finish
+35,53,Finish <= Start
+35,54,Start <= Start
+36,55,Finish <= Start
+36,56,Finish <= Finish
+37,57,Finish <= Start
+37,58,Start <= Start
+38,59,Finish <= Start
+38,60,Finish <= Finish
+39,61,Finish <= Start
+39,62,Start <= Start
+40,63,Finish <= Start
+40,64,Finish <= Finish
+41,45,Finish <= Start
+41,46,Start <= Start
+42,47,Finish <= Start
+42,48,Finish <= Finish
+43,49,Finish <= Start
+43,50,Start <= Start
+44,51,Finish <= Start
+44,52,Finish <= Finish
+45,53,Finish <= Start
+45,54,Start <= Start
+46,55,Finish <= Start
+46,56,Finish <= Finish
+47,57,Finish <= Start
+47,58,Start <= Start
+48,59,Finish <= Start
+48,60,Finish <= Finish
+49,61,Finish <= Start
+49,62,Start <= Start
+50,63,Finish <= Start
+50,64,Finish <= Finish
+51,65,Finish <= Start
+51,66,Start <= Start
+52,67,Finish <= Start
+52,68,Finish <= Finish
+53,69,Finish <= Start
+53,70,Start <= Start
+54,71,Finish <= Start
+54,72,Finish <= Finish
+55,73,Finish <= Start
+55,74,Start <= Start
+56,75,Finish <= Start
+56,76,Finish <= Finish
+57,77,Finish <= Start
+57,78,Start <= Start
+58,79,Finish <= Start
+58,80,Finish <= Finish
+59,81,Finish <= Start
+59,82,Start <= Start
+60,83,Finish <= Start
+60,84,Finish <= Finish
+61,65,Finish <= Start
+61,66,Start <= Start
+62,67,Finish <= Start
+62,68,Finish <= Finish
+63,69,Finish <= Start
+63,70,Start <= Start
+64,71,Finish <= Start
+64,72,Finish <= Finish
+65,73,Finish <= Start
+65,74,Start <= Start
+66,75,Finish <= Start
+66,76,Finish <= Finish
+67,77,Finish <= Start
+67,78,Start <= Start
+68,79,Finish <= Start
+68,80,Finish <= Finish
+69,81,Finish <= Start
+69,82,Start <= Start
+70,83,Finish <= Start
+70,84,Finish <= Finish
+71,85,Finish <= Start
+71,86,Start <= Start
+72,87,Finish <= Start
+72,88,Finish <= Finish
+73,89,Finish <= Start
+73,90,Start <= Start
+74,91,Finish <= Start
+74,92,Finish <= Finish
+75,93,Finish <= Start
+75,94,Start <= Start
+76,95,Finish <= Start
+76,96,Finish <= Finish
+77,97,Finish <= Start
+77,98,Start <= Start
+78,99,Finish <= Start
+78,100,Finish <= Finish
+79,95,Finish <= Start
+80,96,Finish <= Start
+81,85,Finish <= Start
+81,86,Start <= Start
+82,87,Finish <= Start
+82,88,Finish <= Finish
+83,89,Finish <= Start
+83,90,Start <= Start
+84,91,Finish <= Start
+84,92,Finish <= Finish
+85,93,Finish <= Start
+85,94,Start <= Start
+86,95,Finish <= Start
+86,96,Finish <= Finish
+87,97,Finish <= Start
+87,98,Start <= Start
+88,99,Finish <= Start
+88,100,Finish <= Finish
+89,97,Finish <= Start
+90,98,Finish <= Start
+91,99,Finish <= Start
+92,100,Finish <= Start
+93,99,Finish <= Start
+94,100,Finish <= Start
+
+==== TASK DURATION AND RESOURCE TABLE ====
+Task,Duration (minutes),Resource Type,Skill Code,Mechanics Required
+1,30,Mechanic Team 1,Skill 1,1
+2,60,Mechanic Team 1,Skill 2,2
+3,20,Mechanic Team 2,Skill 1,1
+4,120,Mechanic Team 1,Skill 1,3
+5,40,Mechanic Team 2,Skill 2,1
+6,90,Mechanic Team 3,Skill 1,2
+7,30,Mechanic Team 2,Skill 1,1
+8,60,Mechanic Team 1,Skill 2,1
+9,50,Mechanic Team 3,Skill 1,1
+10,120,Mechanic Team 1,Skill 1,2
+11,20,Mechanic Team 4,Skill 1,2
+12,60,Mechanic Team 3,Skill 2,4
+13,30,Mechanic Team 4,Skill 1,1
+14,90,Mechanic Team 2,Skill 3,1
+15,40,Mechanic Team 4,Skill 1,1
+16,60,Mechanic Team 1,Skill 2,1
+17,30,Mechanic Team 5,Skill 1,1
+18,120,Mechanic Team 3,Skill 3,1
+19,20,Mechanic Team 5,Skill 1,2
+20,90,Mechanic Team 1,Skill 2,1
+21,40,Mechanic Team 2,Skill 1,1
+22,60,Mechanic Team 4,Skill 2,2
+23,30,Mechanic Team 5,Skill 1,1
+24,120,Mechanic Team 3,Skill 2,3
+25,50,Mechanic Team 2,Skill 1,2
+26,60,Mechanic Team 1,Skill 2,4
+27,20,Mechanic Team 4,Skill 1,2
+28,90,Mechanic Team 2,Skill 3,1
+29,40,Mechanic Team 5,Skill 1,2
+30,60,Mechanic Team 3,Skill 2,4
+31,30,Mechanic Team 1,Skill 1,3
+32,120,Mechanic Team 4,Skill 3,2
+33,20,Mechanic Team 2,Skill 1,1
+34,60,Mechanic Team 5,Skill 2,2
+35,50,Mechanic Team 3,Skill 1,1
+36,90,Mechanic Team 1,Skill 3,4
+37,30,Mechanic Team 4,Skill 1,3
+38,60,Mechanic Team 2,Skill 2,2
+39,40,Mechanic Team 5,Skill 1,1
+40,120,Mechanic Team 3,Skill 3,1
+41,20,Mechanic Team 1,Skill 1,1
+42,60,Mechanic Team 4,Skill 2,1
+43,30,Mechanic Team 2,Skill 1,1
+44,90,Mechanic Team 5,Skill 3,1
+45,50,Mechanic Team 3,Skill 1,1
+46,60,Mechanic Team 1,Skill 2,1
+47,40,Mechanic Team 4,Skill 1,1
+48,120,Mechanic Team 2,Skill 3,1
+49,20,Mechanic Team 5,Skill 1,2
+50,60,Mechanic Team 3,Skill 2,3
+51,30,Mechanic Team 2,Skill 1,2
+52,90,Mechanic Team 1,Skill 3,1
+53,40,Mechanic Team 2,Skill 1,2
+54,60,Mechanic Team 4,Skill 2,3
+55,50,Mechanic Team 2,Skill 1,4
+56,120,Mechanic Team 2,Skill 1,2
+57,20,Mechanic Team 2,Skill 1,3
+58,60,Mechanic Team 5,Skill 2,2
+59,30,Mechanic Team 2,Skill 1,1
+60,90,Mechanic Team 3,Skill 3,2
+61,40,Mechanic Team 1,Skill 1,3
+62,60,Mechanic Team 2,Skill 2,2
+63,30,Mechanic Team 4,Skill 1,1
+64,120,Mechanic Team 2,Skill 3,1
+65,20,Mechanic Team 5,Skill 1,1
+66,60,Mechanic Team 2,Skill 2,1
+67,50,Mechanic Team 3,Skill 1,1
+68,90,Mechanic Team 1,Skill 3,1
+69,30,Mechanic Team 4,Skill 1,1
+70,60,Mechanic Team 2,Skill 2,1
+71,40,Mechanic Team 2,Skill 1,1
+72,120,Mechanic Team 5,Skill 2,1
+73,20,Mechanic Team 3,Skill 1,2
+74,60,Mechanic Team 2,Skill 2,3
+75,30,Mechanic Team 1,Skill 1,2
+76,90,Mechanic Team 4,Skill 3,3
+77,50,Mechanic Team 2,Skill 1,2
+78,60,Mechanic Team 5,Skill 2,3
+79,40,Mechanic Team 3,Skill 1,4
+80,120,Mechanic Team 2,Skill 1,3
+81,20,Mechanic Team 1,Skill 1,2
+82,60,Mechanic Team 1,Skill 2,1
+83,30,Mechanic Team 1,Skill 1,2
+84,90,Mechanic Team 4,Skill 3,3
+85,40,Mechanic Team 1,Skill 1,4
+86,60,Mechanic Team 2,Skill 2,3
+87,50,Mechanic Team 1,Skill 1,2
+88,120,Mechanic Team 5,Skill 3,1
+89,20,Mechanic Team 1,Skill 1,2
+90,60,Mechanic Team 3,Skill 2,3
+91,30,Mechanic Team 1,Skill 1,1
+92,90,Mechanic Team 2,Skill 3,1
+93,40,Mechanic Team 1,Skill 1,1
+94,60,Mechanic Team 1,Skill 2,2
+95,30,Mechanic Team 1,Skill 1,1
+96,120,Mechanic Team 4,Skill 1,4
+97,20,Mechanic Team 1,Skill 1,1
+98,60,Mechanic Team 2,Skill 2,2
+99,50,Mechanic Team 1,Skill 1,1
+100,90,Mechanic Team 5,Skill 3,3
+999,20,Mechanic Team 1,Skill 1,1
+998,60,Mechanic Team 2,Skill 2,2
+997,50,Mechanic Team 1,Skill 1,1
+996,90,Mechanic Team 5,Skill 3,3
+995,20,Mechanic Team 1,Skill 1,1
+994,60,Mechanic Team 2,Skill 2,2
+993,50,Mechanic Team 1,Skill 1,1
+992,90,Mechanic Team 5,Skill 3,3
+
+==== MECHANIC TEAM WORKING CALENDARS ====
+Mechanic Team,Working Shifts
+Mechanic Team 1,1st
+Mechanic Team 2,2nd
+Mechanic Team 3,3rd
+Mechanic Team 4,1st
+Mechanic Team 5,2nd
+Mechanic Team 6,3rd
+
+
+==== SHIFT WORKING HOURS ====
+Shift,Start Time,End Time,Duration
+1st,6:00,14:30,8.5 hours
+2nd,14:30,23:00,8.5 hours
+3rd,23:00,6:00,7 hours
+
+==== MECHANIC TEAM CAPACITY ====
+Mechanic Team,Total Capacity (People)
+Mechanic Team 1 (Skill 1),6
+Mechanic Team 1 (Skill 2),6
+Mechanic Team 1 (Skill 3),6
+Mechanic Team 1 (Skill 4),6
+Mechanic Team 2 (Skill 1),6
+Mechanic Team 2 (Skill 2),6
+Mechanic Team 2 (Skill 3),6
+Mechanic Team 2 (Skill 4),6
+Mechanic Team 3 (Skill 1),6
+Mechanic Team 3 (Skill 2),6
+Mechanic Team 3 (Skill 3),6
+Mechanic Team 3 (Skill 4),6
+Mechanic Team 4 (Skill 1),6
+Mechanic Team 4 (Skill 2),6
+Mechanic Team 4 (Skill 3),6
+Mechanic Team 4 (Skill 4),6
+Mechanic Team 5 (Skill 1),6
+Mechanic Team 5 (Skill 2),6
+Mechanic Team 5 (Skill 3),6
+Mechanic Team 5 (Skill 4),6
+Mechanic Team 6 (Skill 1),6
+Mechanic Team 6 (Skill 2),6
+Mechanic Team 6 (Skill 3),6
+Mechanic Team 6 (Skill 4),6
+
+
+==== PRODUCT LINE DELIVERY SCHEDULE ====
+Product Line,Delivery Date
+Product A,September 29 2025
+Product B,September 30 2025
+Product C,September 28 2025
+Product D,September 27 2025
+Product E,September 25 2025
+
+==== PRODUCT LINE JOBS ====
+Product Line,Task Start,Task End
+Product A,1,100
+Product B,1,100
+Product C,1,100
+Product D,1,100
+Product E,1,100
+
+==== PRODUCT LINE HOLIDAY CALENDAR ====
+Product Line,Date,Description
+Product A,9/1/2025,Labor Day
+Product A,9/22/2025,Maintenance Day
+Product A,10/3/2025,Special Shutdown
+Product B,9/1/2025,Labor Day
+Product B,10/13/2025,Columbus Day
+Product B,10/27/2025,Inventory Day
+Product C,9/1/2025,Labor Day
+Product C,11/11/2025,Veterans Day
+Product C,11/27/2025,Thanksgiving
+Product C,11/28/2025,Thanksgiving
+Product D,9/1/2025,Labor Day
+Product D,11/27/2025,Thanksgiving
+Product D,11/28/2025,Thanksgiving
+Product D,12/1/2025,Annual Planning Day
+Product E,9/1/2025,Labor Day
+Product E,11/27/2025,Thanksgiving
+Product E,11/28/2025,Thanksgiving
+Product E,12/15/2025,Pre-Holiday Maintenance
+
+==== QUALITY INSPECTION REQUIREMENTS ====
+Primary Task,Quality Task,Quality Headcount Required,Quality Duration (minutes)
+1,101,1,45
+4,104,2,45
+6,106,1,45
+8,108,2,45
+10,110,2,45
+12,112,1,45
+15,115,1,45
+16,116,2,45
+18,118,2,45
+20,120,2,45
+22,122,1,45
+24,124,2,45
+27,127,1,45
+28,128,2,45
+30,130,1,45
+32,132,2,45
+35,135,1,45
+36,136,2,45
+38,138,1,45
+40,140,2,45
+42,142,1,45
+44,144,2,45
+47,147,1,45
+48,148,2,45
+50,150,1,45
+52,152,2,45
+55,155,1,45
+56,156,2,45
+58,158,1,45
+60,160,2,45
+62,162,1,45
+64,164,2,45
+67,167,1,45
+68,168,2,45
+70,170,1,45
+72,172,2,45
+75,175,1,45
+76,176,2,45
+78,178,1,45
+80,180,2,45
+82,182,1,45
+84,184,2,45
+87,187,1,45
+88,188,2,45
+90,190,1,45
+92,192,2,45
+95,195,1,45
+96,196,2,45
+98,198,1,45
+100,200,2,45
+
+==== QUALITY TEAM CAPACITY ====
+Quality Team,Total Capacity (People)
+Quality Team 1,5
+Quality Team 2,5
+Quality Team 3,5
+Quality Team 4,5
+Quality Team 5,5
+Quality Team 6,5
+
+==== QUALITY TEAM WORKING CALENDARS ====
+Quality Team,Working Shifts
+Quality Team 1,1st
+Quality Team 2,2nd
+Quality Team 3,3rd
+Quality Team 4,1st
+Quality Team 5,2nd
+Quality Team 6,3rd
+
+==== LATE PARTS RELATIONSHIPS TABLE ====
+First,Second,Estimated On Dock Date,Product Line
+LP_300,RW_402,8/30/2025,Product E
+LP_301,2,8/30/2025,Product E
+LP_302,18,9/2/2025,Product E
+LP_303,5,9/5/2025,Product E
+LP_304,8,9/11/2025,Product E
+LP_305,15,8/28/2025,Product D
+LP_306,22,9/8/2025,Product D
+LP_307,35,9/15/2025,Product C
+LP_308,22,9/18/2025,Product D
+LP_309,22,9/19/2025,Product D
+LP_310,23,9/18/2025,Product D
+LP_311,10,9/17/2025,Product D
+
+==== LATE PARTS TASK DETAILS ====
+Task,Duration (minutes),Resource Type,Mechanics Required
+LP_301,120,Mechanic Team 1,2
+LP_302,90,Mechanic Team 2,1
+LP_303,150,Mechanic Team 1,3
+LP_304,60,Mechanic Team 3,1
+LP_305,180,Mechanic Team 2,2
+LP_306,45,Mechanic Team 1,1
+LP_307,100,Mechanic Team 3,2
+LP_308,75,Mechanic Team 2,1
+LP_309,120,Mechanic Team 1,2
+LP_310,90,Mechanic Team 3,1
+LP_311,60,Mechanic Team 1,1
+
+
+==== CUSTOMER INSPECTION REQUIREMENTS ====
+Primary Task,Customer Task,Customer Headcount Required,Quality Duration (minutes)
+1,CC_601,1,45
+4,CC_602,1,45
+6,CC_603,1,45
+8,CC_604,1,45
+
+==== CUSTOMER TEAM CAPACITY ====
+Customer Team,Total Capacity (People)
+Customer Team 1,2
+Customer Team 2,2
+Customer Team 3,2
+
+==== CUSTOMER TEAM WORKING CALENDARS ====
+Customer Team,Working Shifts
+Customer Team 1,1st
+Customer Team 2,2nd
+Customer Team 3,3rd
+
+
+==== REWORK RELATIONSHIPS TABLE ====
+First,Second,Relationship Type,Product Line
+RW_401,10,Finish <= Start,Product E
+RW_402,RW_401,Finish <= Start,Product E
+RW_403,25,Finish <= Start,Product D
+RW_404,30,Finish <= Start,Product D
+RW_405,RW_404,Finish <= Start,Product D
+RW_406,45,Finish <= Start,Product C
+RW_407,55,Finish <= Start,Product C
+RW_408,RW_407,Finish <= Start,Product C
+RW_409,60,Finish <= Start,Product B
+RW_410,70,Finish <= Start,Product A
+
+==== REWORK TASK DETAILS ====
+Task,Duration (minutes),Resource Type,Mechanics Required
+RW_401,60,Mechanic Team 1,2
+RW_402,45,Mechanic Team 1,1
+RW_403,90,Mechanic Team 2,2
+RW_404,30,Mechanic Team 3,1
+RW_405,75,Mechanic Team 3,2
+RW_406,120,Mechanic Team 2,3
+RW_407,50,Mechanic Team 1,1
+RW_408,40,Mechanic Team 1,1
+RW_409,80,Mechanic Team 2,2
+RW_410,100,Mechanic Team 3,2
