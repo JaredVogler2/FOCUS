@@ -1,0 +1,113 @@
+<!-- Project View -->
+<div id="project-view" class="view-content">
+    <!-- Gantt Chart Controls -->
+    <div class="gantt-controls-new" style="display: flex; gap: 15px; margin-bottom: 15px; align-items: center; flex-wrap: wrap; background: #f9fafb; padding: 15px; border-radius: 8px;">
+        <div class="filter-group">
+            <label>Product:</label>
+            <select id="ganttProductFilter">
+                <option value="all">All Products</option>
+            </select>
+        </div>
+        <div class="filter-group">
+            <label>Team:</label>
+            <select id="ganttTeamFilter">
+                <option value="all">All Teams</option>
+            </select>
+        </div>
+        <div class="filter-group">
+            <label>Critical Path:</label>
+            <select id="ganttCriticalFilter">
+                <option value="all">All Tasks</option>
+                <option value="critical">Critical Path Only</option>
+                <option value="non-critical">Non-Critical Only</option>
+            </select>
+        </div>
+        <div class="filter-group">
+            <label>View:</label>
+            <select id="ganttViewMode">
+                <option value="15min">15 Minutes</option>
+                <option value="30min">30 Minutes</option>
+                <option value="1hour">1 Hour</option>
+                <option value="4hour">4 Hours</option>
+                <option value="8hour">8 Hours</option>
+                <option value="1day" selected>1 Day</option>
+                <option value="1week">1 Week</option>
+                <option value="2weeks">2 Weeks</option>
+                <option value="1month">1 Month</option>
+            </select>
+        </div>
+        <div class="filter-group">
+            <label>Sort By:</label>
+            <select id="ganttSortBy">
+                <option value="startDate">Start Date</option>
+                <option value="product">Product</option>
+                <option value="team">Team</option>
+                <option value="priority">Priority</option>
+            </select>
+        </div>
+        <button class="btn btn-primary" onclick="refreshCustomGantt()">Refresh</button>
+        <button class="btn btn-secondary" onclick="exportCustomGantt()">Export</button>
+        <button class="btn btn-secondary" onclick="fitGanttToTasks()">Fit All</button>
+    </div>
+
+    <!-- Gantt Statistics -->
+    <div class="gantt-stats" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin-bottom: 15px;">
+        <div class="stat-card" style="background: white; padding: 15px; border-radius: 8px; border: 1px solid #e5e7eb; text-align: center;">
+            <h3 style="font-size: 12px; color: #6b7280; margin: 0 0 8px 0; text-transform: uppercase;">Total Tasks</h3>
+            <div class="value" id="ganttTotalTasks" style="font-size: 24px; font-weight: bold; color: #1f2937;">0</div>
+        </div>
+        <div class="stat-card" style="background: white; padding: 15px; border-radius: 8px; border: 1px solid #e5e7eb; text-align: center;">
+            <h3 style="font-size: 12px; color: #6b7280; margin: 0 0 8px 0; text-transform: uppercase;">Total Duration</h3>
+            <div class="value" id="ganttTotalDuration" style="font-size: 24px; font-weight: bold; color: #1f2937;">0 days</div>
+        </div>
+        <div class="stat-card" style="background: white; padding: 15px; border-radius: 8px; border: 1px solid #e5e7eb; text-align: center;">
+            <h3 style="font-size: 12px; color: #6b7280; margin: 0 0 8px 0; text-transform: uppercase;">Critical Tasks</h3>
+            <div class="value" id="ganttCriticalTasks" style="font-size: 24px; font-weight: bold; color: #ef4444;">0</div>
+        </div>
+        <div class="stat-card" style="background: white; padding: 15px; border-radius: 8px; border: 1px solid #e5e7eb; text-align: center;">
+            <h3 style="font-size: 12px; color: #6b7280; margin: 0 0 8px 0; text-transform: uppercase;">On Schedule</h3>
+            <div class="value" id="ganttCompletionRate" style="font-size: 24px; font-weight: bold; color: #10b981;">0%</div>
+        </div>
+    </div>
+
+    <!-- Custom Gantt Chart Container -->
+    <div class="gantt-container-new" style="width: 100%; overflow-x: auto; overflow-y: auto; max-height: 600px; border: 1px solid #e5e7eb; border-radius: 8px; background: white;">
+        <table class="gantt-table-new" id="ganttTableNew" style="width: 100%; min-width: 1200px; border-collapse: separate; border-spacing: 0; font-size: 12px;">
+            <thead class="gantt-header-new" id="ganttHeaderNew" style="background: #f8fafc; position: sticky; top: 0; z-index: 10;">
+                <!-- Headers will be dynamically generated -->
+            </thead>
+            <tbody id="ganttBodyNew">
+                <!-- Task rows will be dynamically generated -->
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Legend -->
+    <div class="gantt-legend" style="display: flex; gap: 20px; margin-top: 15px; flex-wrap: wrap; align-items: center;">
+        <div style="font-weight: 600; color: #374151;">Legend:</div>
+        <div style="display: flex; align-items: center; gap: 6px; font-size: 12px;">
+            <div style="width: 16px; height: 16px; border-radius: 3px; background: linear-gradient(135deg, #10b981, #059669);"></div>
+            <span>Production</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 6px; font-size: 12px;">
+            <div style="width: 16px; height: 16px; border-radius: 3px; background: linear-gradient(135deg, #3b82f6, #2563eb);"></div>
+            <span>Quality</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 6px; font-size: 12px;">
+            <div style="width: 16px; height: 16px; border-radius: 3px; background: linear-gradient(135deg, #ef4444, #dc2626);"></div>
+            <span>Rework</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 6px; font-size: 12px;">
+            <div style="width: 16px; height: 16px; border-radius: 3px; background: linear-gradient(135deg, #f59e0b, #d97706);"></div>
+            <span>Late Parts</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 6px; font-size: 12px;">
+            <div style="width: 16px; height: 16px; border-radius: 3px; background: linear-gradient(135deg, #8b5cf6, #7c3aed);"></div>
+            <span>Customer</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 6px; font-size: 12px;">
+            <div style="width: 16px; height: 16px; border: 2px solid #fbbf24; background: white;"></div>
+            <span>Critical Task</span>
+        </div>
+    </div>
+</div>

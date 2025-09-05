@@ -1,0 +1,101 @@
+<!-- Supply Chain View -->
+<div id="supply-chain-view" class="view-content">
+    <!-- Supply Chain Metrics Header -->
+    <div class="supply-chain-header">
+        <div class="metrics-grid">
+            <div class="metric-card">
+                <h3>Total Late Parts</h3>
+                <div class="metric-value" id="totalLateParts">0</div>
+                <div class="metric-label">across all products</div>
+            </div>
+            <div class="metric-card">
+                <h3>Affected Products</h3>
+                <div class="metric-value" id="affectedProducts">0</div>
+                <div class="metric-label">products with late parts</div>
+            </div>
+            <div class="metric-card">
+                <h3>Critical Path Impact</h3>
+                <div class="metric-value" id="criticalLateParts">0</div>
+                <div class="metric-label">late parts on critical path</div>
+            </div>
+            <div class="metric-card">
+                <h3>Avg Delay Impact</h3>
+                <div class="metric-value" id="avgDelayImpact">0</div>
+                <div class="metric-label">days average impact</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scenario Comparison Controls -->
+    <div class="supply-chain-controls">
+        <div class="filter-group">
+            <label>Compare Against:</label>
+            <div class="scenario-radios">
+                <label><input type="radio" name="scenario-compare" class="scenario-compare" value="baseline" checked> Baseline</label>
+                <label><input type="radio" name="scenario-compare" class="scenario-compare" value="scenario1"> Scenario 1</label>
+                <label><input type="radio" name="scenario-compare" class="scenario-compare" value="scenario2"> Scenario 2</label>
+                <label><input type="radio" name="scenario-compare" class="scenario-compare" value="scenario3"> Scenario 3</label>
+            </div>
+            <div id="comparisonNote" style="font-size: 12px; color: #6b7280; margin-top: 5px;">
+                Showing: Selected - Reference
+            </div>
+        </div>
+        <div class="filter-group">
+            <label>Filter Product:</label>
+            <select id="supplyChainProductFilter">
+                <option value="all">All Products</option>
+            </select>
+        </div>
+        <button class="btn btn-secondary" onclick="exportSupplyChainReport()">Export Report</button>
+    </div>
+
+    <!-- Late Parts Timeline -->
+    <div class="supply-chain-section">
+        <h3>Late Parts Schedule Comparison</h3>
+        <div id="latePartsTimeline" class="timeline-container">
+            <!-- Will be populated dynamically -->
+        </div>
+    </div>
+
+    <!-- Late Parts Impact Table -->
+    <div class="supply-chain-section">
+        <h3>Late Parts Impact Analysis</h3>
+        <div class="table-container">
+            <table id="latePartsImpactTable">
+                <thead>
+                    <tr>
+                        <th>Task ID</th>
+                        <th>Product</th>
+                        <th>Type</th>
+                        <th>Team</th>
+                        <th>Baseline Schedule</th>
+                        <th>Scenario 1</th>
+                        <th>Scenario 2</th>
+                        <th>Scenario 3</th>
+                        <th>Critical Path</th>
+                        <th>Downstream Impact</th>
+                    </tr>
+                </thead>
+                <tbody id="latePartsTableBody">
+                    <!-- Will be populated dynamically -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Product Impact Analysis -->
+    <div class="supply-chain-section">
+        <h3>Product Delivery Impact</h3>
+        <div id="productImpactGrid" class="product-impact-grid">
+            <!-- Will be populated dynamically -->
+        </div>
+    </div>
+
+    <!-- Risk Matrix -->
+    <div class="supply-chain-section">
+        <h3>Late Parts Risk Matrix</h3>
+        <div id="riskMatrix" class="risk-matrix-container">
+            <!-- Will be populated dynamically -->
+        </div>
+    </div>
+</div>

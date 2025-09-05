@@ -1,0 +1,108 @@
+<!-- Team Lead View -->
+<div id="team-lead-view" class="view-content active">
+    <div class="team-filters">
+        <div class="filter-group">
+            <label>Team:</label>
+            <select id="teamSelect">
+                <option value="all">All Teams</option>
+                <option value="all-mechanics">All Mechanic Teams</option>
+                <option value="all-quality">All Quality Teams</option>
+            </select>
+        </div>
+        <div class="filter-group">
+            <label>Skill:</label>
+            <select id="skillSelect">
+                <option value="all">All Skills</option>
+            </select>
+        </div>
+        <div class="filter-group">
+            <label>Shift:</label>
+            <select id="shiftSelect">
+                <option value="all">All Shifts</option>
+            </select>
+        </div>
+        <div class="filter-group">
+            <label>Product:</label>
+            <select id="productSelect">
+                <option value="all">All Products</option>
+            </select>
+        </div>
+    </div>
+
+    <div class="team-stats">
+        <div class="stat-card">
+            <h3>Team Capacity</h3>
+            <div class="value" id="teamCapacity">0</div>
+            <div class="subtext">mechanics available</div>
+        </div>
+        <div class="stat-card">
+            <h3>Tasks Today</h3>
+            <div class="value" id="tasksToday">0</div>
+            <div class="subtext">to be completed</div>
+        </div>
+        <div class="stat-card">
+            <h3>Utilization</h3>
+            <div class="value" id="teamUtilization">0%</div>
+            <div class="subtext">current shift</div>
+        </div>
+        <div class="stat-card">
+            <h3>Critical Tasks</h3>
+            <div class="value" id="criticalTasks">0</div>
+            <div class="subtext">high priority</div>
+        </div>
+    </div>
+
+    <!-- Task Table -->
+    <div class="task-table-container">
+        <div class="table-header">
+            <h3>Task Priority List</h3>
+            <div class="table-actions">
+                <button class="btn btn-primary" onclick="autoAssign()">Smart Auto-Assign</button>
+                <button class="btn btn-secondary" onclick="saveAssignmentsToStorage()">Save</button>
+                <button class="btn btn-secondary" onclick="loadAssignmentsFromStorage()">Load</button>
+                <button class="btn btn-secondary" onclick="exportTasks()">Export</button>
+            </div>
+        </div>
+        <table id="taskTable">
+            <thead>
+                <tr>
+                    <th width="60">Priority</th>
+                    <th width="80">Task ID</th>
+                    <th width="120">Type</th>
+                    <th width="100">Product</th>
+                    <th width="120">Start Time</th>
+                    <th width="80">Duration</th>
+                    <th width="80" style="text-align: center;">Resources<br>Needed</th>
+                    <th width="200">Assign Resources</th>
+                </tr>
+            </thead>
+            <tbody id="taskTableBody">
+                <!-- Tasks will be populated here by JavaScript -->
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Assignment Summary Panel -->
+    <div id="assignmentSummary" class="assignment-summary">
+        <h4>Assignment Status</h4>
+        <div class="stat-row">
+            <span class="stat-label">Total Tasks:</span>
+            <span class="stat-value" id="summaryTotal">0</span>
+        </div>
+        <div class="stat-row">
+            <span class="stat-label">Fully Assigned:</span>
+            <span class="stat-value" id="summaryComplete">0</span>
+        </div>
+        <div class="stat-row">
+            <span class="stat-label">Partially Assigned:</span>
+            <span class="stat-value" id="summaryPartial">0</span>
+        </div>
+        <div class="stat-row">
+            <span class="stat-label">Unassigned:</span>
+            <span class="stat-value" id="summaryUnassigned">0</span>
+        </div>
+        <div class="progress-bar">
+            <div class="progress-fill" id="summaryProgress" style="width: 0%"></div>
+        </div>
+    </div>
+</div>

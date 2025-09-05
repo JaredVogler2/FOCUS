@@ -1,0 +1,154 @@
+# src/scheduler/main.py
+
+from collections import defaultdict
+from . import data_loader, scenarios, metrics, utils, algorithms, validation, reporting, constraints
+
+class ProductionScheduler:
+    """
+    Production scheduling system orchestrator.
+    This class holds the state of the scheduler and delegates operations
+    to the various specialized modules.
+    """
+
+    def __init__(self, csv_file_path='scheduling_data.csv', debug=False, late_part_delay_days=1.0):
+        """Initialize scheduler with all its data structures."""
+        self.csv_file_path = utils.resource_path(csv_file_path)
+        self.debug = debug
+        self.late_part_delay_days = late_part_delay_days
+
+        # Data structures to hold scheduler state
+        self.tasks = {}
+        self.baseline_task_data = {}
+        self.task_instance_map = {}
+        self.instance_to_product = {}
+        self.instance_to_original_task = {}
+        self.quality_inspections = {}
+        self.quality_requirements = {}
+        self.customer_inspections = {}
+        self.customer_requirements = {}
+        self.customer_team_capacity = {}
+        self.customer_team_shifts = {}
+        self.precedence_constraints = []
+        self.late_part_constraints = []
+        self.rework_constraints = []
+        self.product_remaining_ranges = {}
+        self.late_part_tasks = {}
+        self.rework_tasks = {}
+        self.on_dock_dates = {}
+        self.team_shifts = {}
+        self.team_capacity = {}
+        self.quality_team_shifts = {}
+        self.quality_team_capacity = {}
+        self.shift_hours = {}
+        self.delivery_dates = {}
+        self.holidays = defaultdict(set)
+
+        # Scheduling results and caches
+        self.task_schedule = {}
+        self.global_priority_list = []
+        self._dynamic_constraints_cache = None
+        self._critical_path_cache = {}
+
+        # Original capacities for resets
+        self._original_team_capacity = {}
+        self._original_quality_capacity = {}
+        self._original_customer_capacity = {}
+
+        self._next_instance_id = 1
+
+    # --- Method Delegation ---
+
+    def load_data_from_csv(self):
+        data_loader.load_data_from_csv(self)
+
+    def generate_global_priority_list(self, allow_late_delivery=True, silent_mode=False):
+        algorithms.schedule_tasks(self, allow_late_delivery=allow_late_delivery, silent_mode=silent_mode)
+
+        conflicts = validation.check_resource_conflicts(self)
+        if conflicts and not silent_mode:
+            print(f"\n[WARNING] Found {len(conflicts)} resource conflicts")
+
+        priority_data = []
+        for task_instance_id, schedule in self.task_schedule.items():
+            slack = metrics.calculate_slack_time(self, task_instance_id)
+            task_type = schedule['task_type']
+            original_task_id = schedule.get('original_task_id')
+            product = schedule.get('product', 'Unknown')
+            criticality = algorithms.classify_task_criticality(self, task_instance_id)
+
+            if task_type == 'Quality Inspection':
+                primary_task = self.quality_inspections.get(task_instance_id, {}).get('primary_task')
+                if primary_task:
+                    primary_original = self.instance_to_original_task.get(primary_task, primary_task)
+                    display_name = f"{product} QI for Task {primary_original}"
+                else:
+                    display_name = f"{product} QI {original_task_id}"
+            elif task_type == 'Late Part':
+                display_name = f"{product} Late Part {original_task_id}"
+            elif task_type == 'Rework':
+                display_name = f"{product} Rework {original_task_id}"
+            else:
+                display_name = f"{product} Task {original_task_id}"
+
+            criticality_symbol = {'CRITICAL': '🔴', 'BUFFER': '🟡', 'FLEXIBLE': '🟢'}.get(criticality, '')
+            display_name_with_criticality = f"{criticality_symbol} {display_name} [{criticality}]"
+
+            priority_data.append({
+                'task_instance_id': task_instance_id, 'task_type': task_type,
+                'display_name': display_name, 'display_name_with_criticality': display_name_with_criticality,
+                'criticality': criticality, 'product_line': product, 'original_task_id': original_task_id,
+                'team': schedule['team'], 'scheduled_start': schedule['start_time'],
+                'scheduled_end': schedule['end_time'], 'duration_minutes': schedule['duration'],
+                'mechanics_required': schedule['mechanics_required'], 'slack_hours': slack,
+                'slack_days': slack / 24, 'priority_score': algorithms.calculate_task_priority(self, task_instance_id),
+                'shift': schedule['shift']
+            })
+
+        priority_data.sort(key=lambda x: (x['scheduled_start'], x['slack_hours']))
+        for i, task in enumerate(priority_data, 1):
+            task['global_priority'] = i
+
+        self.global_priority_list = priority_data
+        return priority_data
+
+    def build_dynamic_dependencies(self):
+        return constraints.build_dynamic_dependencies(self)
+
+    def get_successors(self, task_id):
+        return constraints.get_successors(self, task_id)
+
+    def get_predecessors(self, task_id):
+        return constraints.get_predecessors(self, task_id)
+
+    def is_working_day(self, date, product_line):
+        return utils.is_working_day(self, date, product_line)
+
+    def print_delivery_analysis(self, scenario_name=""):
+        return reporting.print_delivery_analysis(self, scenario_name)
+
+    def scenario_1_csv_headcount(self):
+        return scenarios.scenario_1_csv_headcount(self)
+
+    def scenario_2_minimize_makespan(self, min_mechanics=1, max_mechanics=100, min_quality=1, max_quality=50):
+        return scenarios.scenario_2_minimize_makespan(self, min_mechanics, max_mechanics, min_quality, max_quality)
+
+    def scenario_3_simulated_annealing(self, target_earliness=-1, max_iterations=300, initial_temp=100, cooling_rate=0.95):
+        return scenarios.scenario_3_simulated_annealing(self, target_earliness, max_iterations, initial_temp, cooling_rate)
+
+    def validate_dag(self):
+        return validation.validate_dag(self)
+
+    def run_diagnostic(self):
+        return debug.run_diagnostic(self)
+
+    def map_mechanic_to_quality_team(self, mechanic_team):
+        return data_loader.map_mechanic_to_quality_team(self, mechanic_team)
+
+    def _parse_shift_time(self, time_str):
+        return utils.parse_shift_time(time_str)
+
+    def calculate_lateness_metrics(self):
+        return metrics.calculate_lateness_metrics(self)
+
+    def calculate_makespan(self):
+        return metrics.calculate_makespan(self)

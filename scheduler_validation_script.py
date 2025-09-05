@@ -19,10 +19,10 @@ import pandas as pd
 
 # Import your scheduler - adjust path as needed
 try:
-    from scheduler import ProductionScheduler
+    from src.scheduler.main import ProductionScheduler
 except ImportError:
-    print("Error: Could not import ProductionScheduler from scheduler.py")
-    print("Make sure scheduler.py is in the same directory or adjust the import path")
+    print("Error: Could not import ProductionScheduler from src/scheduler/main.py")
+    print("Make sure the path is correct and the file exists.")
     sys.exit(1)
 
 
@@ -107,7 +107,7 @@ class SchedulerValidator:
         
         capacity_violations = []
         for team, timeline in team_usage_timeline.items():
-            capacity = self.scheduler.team_capacity.get(team, 0) or self.scheduler.quality_team_capacity.get(team, 0)
+            capacity = self.scheduler.team_capacity.get(team, 0) or self.scheduler.quality_team_capacity.get(team, 0) or self.scheduler.customer_team_capacity.get(team, 0)
             
             for time_point, tasks_at_time in timeline.items():
                 total_usage = sum(t['mechanics'] for t in tasks_at_time)
@@ -246,7 +246,7 @@ class SchedulerValidator:
             mechanics_needed = task_info['mechanics_required']
             
             # Check if team has enough capacity
-            capacity = self.scheduler.team_capacity.get(team, 0) or self.scheduler.quality_team_capacity.get(team, 0)
+            capacity = self.scheduler.team_capacity.get(team, 0) or self.scheduler.quality_team_capacity.get(team, 0) or self.scheduler.customer_team_capacity.get(team, 0)
             
             if mechanics_needed > capacity:
                 resource_requirement_violations.append({
@@ -317,8 +317,8 @@ class SchedulerValidator:
         
         # Calculate utilization
         team_utilization = {}
-        for team in list(self.scheduler.team_capacity.keys()) + list(self.scheduler.quality_team_capacity.keys()):
-            capacity = self.scheduler.team_capacity.get(team, 0) or self.scheduler.quality_team_capacity.get(team, 0)
+        for team in list(self.scheduler.team_capacity.keys()) + list(self.scheduler.quality_team_capacity.keys()) + list(self.scheduler.customer_team_capacity.keys()):
+            capacity = self.scheduler.team_capacity.get(team, 0) or self.scheduler.quality_team_capacity.get(team, 0) or self.scheduler.customer_team_capacity.get(team, 0)
             if capacity > 0:
                 total_work = sum(
                     sched['duration'] * sched['mechanics_required']

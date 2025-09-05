@@ -1,0 +1,39 @@
+<!-- Management View -->
+<div id="management-view" class="view-content">
+    <div class="metrics-grid">
+        <div class="metric-card">
+            <h3>Total Workforce</h3>
+            <div class="metric-value" id="totalWorkforce">0</div>
+            <div class="metric-label">mechanics & quality inspectors</div>
+        </div>
+        <div class="metric-card">
+            <h3>Makespan</h3>
+            <div class="metric-value" id="makespan">0</div>
+            <div class="metric-label">working days</div>
+        </div>
+        <div class="metric-card">
+            <h3>On-Time Delivery</h3>
+            <div class="metric-value" id="onTimeRate">0%</div>
+            <div class="metric-label">of products</div>
+        </div>
+        <div class="metric-card">
+            <h3>Avg Utilization</h3>
+            <div class="metric-value" id="avgUtilization">0%</div>
+            <div class="metric-label">across all teams</div>
+        </div>
+    </div>
+
+    <h3 style="margin: 25px 0 15px; font-size: 18px; color: var(--dark);">Product Delivery Status</h3>
+    <div class="product-grid" id="productGrid">
+        <!-- Product cards will be populated here -->
+    </div>
+
+    <div class="chart-container">
+        <div class="chart-header">
+            <div class="chart-title">Team Utilization Analysis</div>
+        </div>
+        <div class="utilization-bars" id="utilizationChart">
+            <!-- Utilization bars will be populated here -->
+        </div>
+    </div>
+</div>
