@@ -56,6 +56,41 @@ class ProductionScheduler:
 
         self._next_instance_id = 1
 
+    def calculate_minimum_team_requirements(self):
+        """Calculate the minimum required capacity for each team based on task requirements"""
+        min_requirements = {}
+
+        # Initialize with all teams from capacity tables
+        for team in self.team_capacity:
+            min_requirements[team] = 0
+        for team in self.quality_team_capacity:
+            min_requirements[team] = 0
+
+        # Check all tasks for their team_skill requirements
+        for task_id, task_info in self.tasks.items():
+            # Use team_skill if available, otherwise team
+            team = task_info.get('team_skill', task_info.get('team'))
+            mechanics_required = task_info.get('mechanics_required', 0)
+
+            if team:
+                if team in min_requirements:
+                    min_requirements[team] = max(min_requirements[team], mechanics_required)
+                else:
+                    # Team not in capacity tables - this is a problem
+                    if self.debug:
+                        print(f"[WARNING] Task {task_id} requires team {team} not in capacity tables")
+
+        # Check quality inspections
+        for qi_id, qi_info in self.quality_inspections.items():
+            headcount = qi_info.get('headcount', 0)
+            # QI tasks should have their team assigned during loading
+            if qi_id in self.tasks:
+                team = self.tasks[qi_id].get('team')
+                if team and team in min_requirements:
+                    min_requirements[team] = max(min_requirements[team], headcount)
+
+        return min_requirements
+
     # --- Method Delegation ---
 
     def load_data_from_csv(self):
