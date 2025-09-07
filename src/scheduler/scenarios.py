@@ -4,7 +4,10 @@ from collections import defaultdict
 import copy
 import random
 import math
-from .main import ProductionScheduler
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from .main import ProductionScheduler
 
 def scenario_1_csv_headcount(scheduler):
     """Scenario 1: Use CSV-defined headcount"""
@@ -916,7 +919,7 @@ def make_large_adjustment(config, iteration):
     return new_config
 
 
-def initialize_moderate_capacity(scheduler: ProductionScheduler):
+def initialize_moderate_capacity(scheduler: "ProductionScheduler"):
     """Initialize with moderate capacity for all teams"""
     config = {'mechanic': {}, 'quality': {}}
 
