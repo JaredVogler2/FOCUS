@@ -79,25 +79,10 @@ def create_app():
         scenario_results['scenario1'] = export_scenario_with_capacities(scheduler, 'scenario1')
         print(f"✓ Scenario 1 complete: {scenario_results['scenario1']['makespan']} days makespan")
 
-        # Scenario 2
-        result2 = scheduler.scenario_2_minimize_makespan(min_mechanics=1, max_mechanics=30, min_quality=1, max_quality=10)
-        if result2:
-            scheduler._scenario2_optimal_mechanics = result2['optimal_mechanics']
-            scheduler._scenario2_optimal_quality = result2['optimal_quality']
-            for team in scheduler.team_capacity: scheduler.team_capacity[team] = result2['optimal_mechanics']
-            for team in scheduler.quality_team_capacity: scheduler.quality_team_capacity[team] = result2['optimal_quality']
-            scheduler.generate_global_priority_list(allow_late_delivery=True, silent_mode=True)
-            scenario_results['scenario2'] = export_scenario_with_capacities(scheduler, 'scenario2')
-            scenario_results['scenario2']['optimalMechanics'] = result2['optimal_mechanics']
-            scenario_results['scenario2']['optimalQuality'] = result2['optimal_quality']
-        print(f"✓ Scenario 2 complete: {scenario_results.get('scenario2', {}).get('makespan', 'N/A')} days makespan")
-
         # Scenario 3
-        result3 = scheduler.scenario_3_simulated_annealing(target_earliness=-1, max_iterations=100, initial_temp=100, cooling_rate=0.95)
+        result3 = scheduler.scenario_3_optimal_schedule()
         if result3:
-            for team, capacity in result3['config']['mechanic'].items(): scheduler.team_capacity[team] = capacity
-            for team, capacity in result3['config']['quality'].items(): scheduler.quality_team_capacity[team] = capacity
-            scheduler.generate_global_priority_list(allow_late_delivery=True, silent_mode=True)
+            # The new scenario will directly modify the scheduler's state
             scenario_results['scenario3'] = export_scenario_with_capacities(scheduler, 'scenario3')
             print(f"✓ Scenario 3 complete: {scenario_results.get('scenario3', {}).get('makespan', 'N/A')} days makespan")
         else:

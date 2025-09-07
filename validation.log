@@ -1,0 +1,270 @@
+Production Scheduler Validator
+================================================================================
+Loading data from scheduling_data.csv...
+
+[DEBUG] Starting to load data from /app/scheduling_data.csv
+[DEBUG] Found 18 sections in CSV file
+[DEBUG] Loaded shift hours for 3 shifts:
+  - 1st: 6:00 to 14:30
+  - 2nd: 14:30 to 23:00
+  - 3rd: 23:00 to 6:00
+[DEBUG] Loaded capacity for 30 mechanic teams (including aggregated base teams)
+[DEBUG] Mechanic Team 4 capacity: 24
+[DEBUG] Loaded capacity for 6 quality teams
+[DEBUG] Loaded 6 mechanic team schedules
+[DEBUG] Loaded 6 quality team schedules
+[DEBUG] Inherited shifts for 24 skill-specific mechanic teams
+[DEBUG] Final shift assignments:
+  - Mechanic teams with shifts: 30
+  - Quality teams with shifts: 6
+[DEBUG] Loaded capacity for 3 customer teams (including aggregated base teams)
+[DEBUG] Loaded 3 customer team schedules
+[DEBUG] Loaded 182 baseline task relationships
+[DEBUG] Skill Code column detected in task definitions
+[DEBUG] Loaded 108 baseline task definitions
+[DEBUG] Task distribution across team-skill combinations:
+  - Mechanic Team 1 (Skill 1): 21 tasks
+  - Mechanic Team 1 (Skill 2): 8 tasks
+  - Mechanic Team 1 (Skill 3): 3 tasks
+  - Mechanic Team 2 (Skill 1): 15 tasks
+  - Mechanic Team 2 (Skill 2): 10 tasks
+  - Mechanic Team 2 (Skill 3): 5 tasks
+  - Mechanic Team 3 (Skill 1): 7 tasks
+  - Mechanic Team 3 (Skill 2): 5 tasks
+  - Mechanic Team 3 (Skill 3): 3 tasks
+  - Mechanic Team 4 (Skill 1): 9 tasks
+  - Mechanic Team 4 (Skill 2): 3 tasks
+  - Mechanic Team 4 (Skill 3): 3 tasks
+  - Mechanic Team 5 (Skill 1): 7 tasks
+  - Mechanic Team 5 (Skill 2): 4 tasks
+  - Mechanic Team 5 (Skill 3): 5 tasks
+[DEBUG] Loaded delivery dates for 5 product lines
+
+[DEBUG] Creating task instances for each product...
+[DEBUG]   Product A: Created 100 instances (tasks 1-100)
+           Already completed: tasks 1-0
+[DEBUG]   Product B: Created 100 instances (tasks 1-100)
+           Already completed: tasks 1-0
+[DEBUG]   Product C: Created 100 instances (tasks 1-100)
+           Already completed: tasks 1-0
+[DEBUG]   Product D: Created 100 instances (tasks 1-100)
+           Already completed: tasks 1-0
+[DEBUG]   Product E: Created 100 instances (tasks 1-100)
+           Already completed: tasks 1-0
+[DEBUG] Total baseline task instances created: 500
+
+[DEBUG] Instance distribution by team-skill:
+  - Mechanic Team 1 (Skill 1): 85 instances
+  - Mechanic Team 1 (Skill 2): 40 instances
+  - Mechanic Team 1 (Skill 3): 15 instances
+  - Mechanic Team 2 (Skill 1): 75 instances
+  - Mechanic Team 2 (Skill 2): 40 instances
+  - Mechanic Team 2 (Skill 3): 25 instances
+  - Mechanic Team 3 (Skill 1): 35 instances
+  - Mechanic Team 3 (Skill 2): 25 instances
+  - Mechanic Team 3 (Skill 3): 15 instances
+  - Mechanic Team 4 (Skill 1): 45 instances
+[DEBUG] Created 250 quality inspection instances
+[DEBUG] Created 20 customer inspection instances
+[DEBUG] Loaded 12 late part relationships
+[DEBUG] Loaded 10 rework relationships
+[DEBUG] Created 11 late part task instances (11 inherited team/skill)
+[DEBUG] Created 10 rework task instances (10 inherited team/skill)
+[DEBUG] Created 10 quality inspections for rework tasks
+[DEBUG] Loaded 18 holiday entries
+
+================================================================================
+DATA LOADING SUMMARY
+================================================================================
+
+[DEBUG] Task Instance Summary:
+Total task instances: 801
+
+Breakdown by type:
+  - Customer: 20
+  - Late Part: 11
+  - Production: 500
+  - Quality Inspection: 260
+  - Rework: 10
+
+[DEBUG] Task instances per product:
+  - Product A: 156 instances (baseline tasks 1-100)
+  - Product B: 156 instances (baseline tasks 1-100)
+  - Product C: 161 instances (baseline tasks 1-100)
+  - Product D: 166 instances (baseline tasks 1-100)
+  - Product E: 162 instances (baseline tasks 1-100)
+
+[DEBUG] Late Part Tasks:
+  - Total late part tasks: 11
+  - Late part constraints: 12
+    Product C: 1 late part tasks
+    Product D: 6 late part tasks
+    Product E: 4 late part tasks
+
+[DEBUG] Rework Tasks:
+  - Total rework tasks: 10
+  - Rework constraints: 10
+    Product A: 1 rework tasks
+    Product B: 1 rework tasks
+    Product C: 3 rework tasks
+    Product D: 3 rework tasks
+    Product E: 2 rework tasks
+
+[DEBUG] Quality Inspections:
+  - Total QI instances: 260
+  - Tasks requiring QI: 260
+
+[DEBUG] Resources:
+  - Mechanic teams: 30
+    Total mechanic capacity: 288
+    Mechanic Team 1: 24 people, shifts: ['1st']
+    Mechanic Team 1 (Skill 1): 6 people, shifts: ['1st']
+    Mechanic Team 1 (Skill 2): 6 people, shifts: ['1st']
+    Mechanic Team 1 (Skill 3): 6 people, shifts: ['1st']
+    Mechanic Team 1 (Skill 4): 6 people, shifts: ['1st']
+    Mechanic Team 2: 24 people, shifts: ['2nd']
+    Mechanic Team 2 (Skill 1): 6 people, shifts: ['2nd']
+    Mechanic Team 2 (Skill 2): 6 people, shifts: ['2nd']
+    Mechanic Team 2 (Skill 3): 6 people, shifts: ['2nd']
+    Mechanic Team 2 (Skill 4): 6 people, shifts: ['2nd']
+    Mechanic Team 3: 24 people, shifts: ['3rd']
+    Mechanic Team 3 (Skill 1): 6 people, shifts: ['3rd']
+    Mechanic Team 3 (Skill 2): 6 people, shifts: ['3rd']
+    Mechanic Team 3 (Skill 3): 6 people, shifts: ['3rd']
+    Mechanic Team 3 (Skill 4): 6 people, shifts: ['3rd']
+    Mechanic Team 4: 24 people, shifts: ['1st']
+    Mechanic Team 4 (Skill 1): 6 people, shifts: ['1st']
+    Mechanic Team 4 (Skill 2): 6 people, shifts: ['1st']
+    Mechanic Team 4 (Skill 3): 6 people, shifts: ['1st']
+    Mechanic Team 4 (Skill 4): 6 people, shifts: ['1st']
+    Mechanic Team 5: 24 people, shifts: ['2nd']
+    Mechanic Team 5 (Skill 1): 6 people, shifts: ['2nd']
+    Mechanic Team 5 (Skill 2): 6 people, shifts: ['2nd']
+    Mechanic Team 5 (Skill 3): 6 people, shifts: ['2nd']
+    Mechanic Team 5 (Skill 4): 6 people, shifts: ['2nd']
+    Mechanic Team 6: 24 people, shifts: ['3rd']
+    Mechanic Team 6 (Skill 1): 6 people, shifts: ['3rd']
+    Mechanic Team 6 (Skill 2): 6 people, shifts: ['3rd']
+    Mechanic Team 6 (Skill 3): 6 people, shifts: ['3rd']
+    Mechanic Team 6 (Skill 4): 6 people, shifts: ['3rd']
+  - Quality teams: 6
+    Total quality capacity: 30
+    Quality Team 1: 5 people, shifts: ['1st']
+    Quality Team 2: 5 people, shifts: ['2nd']
+    Quality Team 3: 5 people, shifts: ['3rd']
+    Quality Team 4: 5 people, shifts: ['1st']
+    Quality Team 5: 5 people, shifts: ['2nd']
+    Quality Team 6: 5 people, shifts: ['3rd']
+
+[DEBUG] Delivery Schedule:
+  - Product A: 2025-09-29
+  - Product B: 2025-09-30
+  - Product C: 2025-09-28
+  - Product D: 2025-09-27
+  - Product E: 2025-09-25
+
+[DEBUG] Holidays:
+  - Total holiday entries: 18
+    Product A: 3 holidays
+    Product B: 3 holidays
+    Product C: 4 holidays
+    Product D: 4 holidays
+    Product E: 4 holidays
+
+[DEBUG] Constraints Summary:
+  - Baseline precedence constraints: 182
+  - Late part constraints: 12
+  - Rework constraints: 10
+  - Total constraints defined: 204
+================================================================================
+✓ Loaded 801 task instances
+✓ Loaded 5 product lines
+
+================================================================================
+VALIDATING SCENARIO 3
+================================================================================
+Running Scenario 3: Optimal Schedule (CP-SAT)...
+
+================================================================================
+SCENARIO 3: Optimal Schedule and Resource Allocation (CP-SAT)
+================================================================================
+Starting CP-SAT solver with a time limit of 90 seconds...
+Solver finished with status: OPTIMAL
+
+SCENARIO 3 OPTIMIZATION COMPLETE: Lateness=0 days, Workforce=34 people
+
+================================================================================
+COMPREHENSIVE SCHEDULE VALIDATION
+================================================================================
+
+1. Task Completion Check:
+----------------------------------------
+  ✓ All 801 tasks scheduled
+
+2. Resource Capacity Validation:
+----------------------------------------
+  ✓ All resource capacity constraints satisfied
+
+3. Precedence Constraint Validation:
+----------------------------------------
+  ✓ All 1405 precedence constraints satisfied
+
+4. Late Part Timing Validation:
+----------------------------------------
+  ✓ All 11 late part timing constraints satisfied
+
+5. Task Resource Requirement Validation:
+----------------------------------------
+  ✓ All task resource requirements satisfied
+
+6. Delivery Date Analysis:
+----------------------------------------
+  ✓ All products on time for delivery
+
+7. Schedule Statistics:
+----------------------------------------
+  Makespan: 22 working days
+  Team Utilization:
+    ✓ Customer Team 1 (0 people): 8.5%
+    ✓ Customer Team 2 (0 people): 0.0%
+    ✓ Customer Team 3 (0 people): 0.0%
+    ✓ Mechanic Team 1 (4 people): 34.9%
+    ✓ Mechanic Team 1 (Skill 1) (1 people): 0.0%
+    ✓ Mechanic Team 1 (Skill 2) (1 people): 0.0%
+    ✓ Mechanic Team 1 (Skill 3) (1 people): 0.0%
+    ✓ Mechanic Team 1 (Skill 4) (1 people): 0.0%
+    ✓ Mechanic Team 2 (4 people): 35.3%
+    ✓ Mechanic Team 2 (Skill 1) (1 people): 0.0%
+    ✓ Mechanic Team 2 (Skill 2) (1 people): 0.0%
+    ✓ Mechanic Team 2 (Skill 3) (1 people): 0.0%
+    ✓ Mechanic Team 2 (Skill 4) (1 people): 0.0%
+    ✓ Mechanic Team 3 (4 people): 28.4%
+    ✓ Mechanic Team 3 (Skill 1) (1 people): 0.0%
+    ✓ Mechanic Team 3 (Skill 2) (1 people): 0.0%
+    ✓ Mechanic Team 3 (Skill 3) (1 people): 0.0%
+    ✓ Mechanic Team 3 (Skill 4) (1 people): 0.0%
+    ✓ Mechanic Team 4 (4 people): 24.9%
+    ✓ Mechanic Team 4 (Skill 1) (1 people): 0.0%
+    ✓ Mechanic Team 4 (Skill 2) (1 people): 0.0%
+    ✓ Mechanic Team 4 (Skill 3) (1 people): 0.0%
+    ✓ Mechanic Team 4 (Skill 4) (1 people): 0.0%
+    ✓ Mechanic Team 5 (3 people): 20.8%
+    ✓ Mechanic Team 5 (Skill 1) (1 people): 0.0%
+    ✓ Mechanic Team 5 (Skill 2) (1 people): 0.0%
+    ✓ Mechanic Team 5 (Skill 3) (1 people): 0.0%
+    ✓ Mechanic Team 5 (Skill 4) (1 people): 0.0%
+    ✓ Mechanic Team 6 (1 people): 0.0%
+    ✓ Mechanic Team 6 (Skill 1) (1 people): 0.0%
+    ✓ Mechanic Team 6 (Skill 2) (1 people): 0.0%
+    ✓ Mechanic Team 6 (Skill 3) (1 people): 0.0%
+    ✓ Mechanic Team 6 (Skill 4) (1 people): 0.0%
+    ✓ Quality Team 1 (2 people): 22.7%
+    ✓ Quality Team 2 (2 people): 18.7%
+    ✓ Quality Team 3 (2 people): 16.5%
+    ✓ Quality Team 4 (2 people): 13.8%
+    ✓ Quality Team 5 (2 people): 10.7%
+    ✓ Quality Team 6 (1 people): 0.0%
+
+================================================================================
+✅ SCHEDULE IS VALID AND FEASIBLE
+================================================================================

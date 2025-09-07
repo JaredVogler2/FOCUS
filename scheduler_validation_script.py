@@ -460,19 +460,9 @@ class SchedulerValidator:
             if scenario_num == 1:
                 print("Running Scenario 1: CSV-defined Headcount...")
                 results = self.scheduler.scenario_1_csv_headcount()
-            elif scenario_num == 2:
-                print("Running Scenario 2: Minimize Makespan...")
-                results = self.scheduler.scenario_2_minimize_makespan(min_mechanics=1, max_mechanics=30, min_quality=1,
-                                                                      max_quality=10)
             elif scenario_num == 3:
-                print("Running Scenario 3: Multi-dimensional Optimization...")
-                # First get scenario 2 results for bounds
-                s2_results = self.scheduler.scenario_2_minimize_makespan(min_mechanics=1, max_mechanics=30,
-                                                                         min_quality=1, max_quality=10)
-                results = self.scheduler.scenario_3_multidimensional_optimization(
-                    scenario2_results=s2_results,
-                    max_iterations=300
-                )
+                print("Running Scenario 3: Optimal Schedule (CP-SAT)...")
+                results = self.scheduler.scenario_3_optimal_schedule()
             else:
                 print(f"Invalid scenario number: {scenario_num}")
                 return None
@@ -512,7 +502,7 @@ class SchedulerValidator:
         
         all_results = {}
         
-        for scenario_num in [1, 2, 3]:
+        for scenario_num in [1, 3]:
             validation = self.validate_scenario(scenario_num)
             all_results[f'scenario_{scenario_num}'] = validation
             
@@ -530,7 +520,7 @@ class SchedulerValidator:
         print("VALIDATION SUMMARY")
         print("="*80)
         
-        for scenario_num in [1, 2, 3]:
+        for scenario_num in [1, 3]:
             result = all_results.get(f'scenario_{scenario_num}')
             if result:
                 if result['is_valid']:

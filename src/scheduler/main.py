@@ -164,11 +164,8 @@ class ProductionScheduler:
     def scenario_1_csv_headcount(self):
         return scenarios.scenario_1_csv_headcount(self)
 
-    def scenario_2_minimize_makespan(self, min_mechanics=1, max_mechanics=100, min_quality=1, max_quality=50):
-        return scenarios.scenario_2_minimize_makespan(self, min_mechanics, max_mechanics, min_quality, max_quality)
-
-    def scenario_3_simulated_annealing(self, target_earliness=-1, max_iterations=300, initial_temp=100, cooling_rate=0.95):
-        return scenarios.scenario_3_simulated_annealing(self, target_earliness, max_iterations, initial_temp, cooling_rate)
+    def scenario_3_optimal_schedule(self):
+        return scenarios.scenario_3_optimal_schedule(self)
 
     def validate_dag(self):
         return validation.validate_dag(self)
