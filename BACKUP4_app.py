@@ -12,11 +12,10 @@ from collections import defaultdict
 import traceback
 
 # Import the corrected scheduler
-from src.scheduler.main import ProductionScheduler
+from scheduler import ProductionScheduler
 
 app = Flask(__name__)
 CORS(app)  # Enable CORS for API calls
-
 
 app.config['TEMPLATES_AUTO_RELOAD'] = True
 app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
@@ -27,7 +26,6 @@ app.jinja_env.cache = {}
 scheduler = None
 scenario_results = {}  # Make sure this is initialized as empty dict, not None
 mechanic_assignments = {}  # Store assignments per scenario for conflict-free scheduling
-
 
 
 def ensure_all_teams_have_capacity(scheduler):
@@ -169,7 +167,7 @@ def initialize_scheduler():
         # Run scenario 3 simulated annealing optimization
         result3 = scheduler.scenario_3_simulated_annealing(
             target_earliness=-1,  # Target 1 day early
-            max_iterations=100,
+            max_iterations=300,
             initial_temp=100,
             cooling_rate=0.95
         )
@@ -281,7 +279,6 @@ def export_scenario_with_capacities(scheduler, scenario_name):
     team_capacities = {}
     team_capacities.update(scheduler.team_capacity.copy())
     team_capacities.update(scheduler.quality_team_capacity.copy())
-    team_capacities.update(scheduler.customer_team_capacity.copy())  # Add customer teams
 
     # Get team shifts information
     team_shifts = {}
@@ -293,10 +290,6 @@ def export_scenario_with_capacities(scheduler, scenario_name):
     # Add quality team shifts
     for team in scheduler.quality_team_shifts:
         team_shifts[team] = scheduler.quality_team_shifts[team]
-
-    # Add customer team shifts
-    for team in scheduler.customer_team_shifts:
-        team_shifts[team] = scheduler.customer_team_shifts[team]
 
     # Create task list for export
     tasks = []
@@ -342,8 +335,6 @@ def export_scenario_with_capacities(scheduler, scenario_name):
                     'dependencies': [],  # Could be populated from constraints
                     'isLatePartTask': task_instance_id in scheduler.late_part_tasks,
                     'isReworkTask': task_instance_id in scheduler.rework_tasks,
-                    'isQualityTask': schedule.get('is_quality', False),
-                    'isCustomerTask': schedule.get('is_customer', False),  # Add customer flag
                     'isCritical': priority_item.get('slack_hours', 999) < 24,
                     'slackHours': priority_item.get('slack_hours', 999)
                 })
@@ -374,8 +365,6 @@ def export_scenario_with_capacities(scheduler, scenario_name):
                 'dependencies': [],
                 'isLatePartTask': task_instance_id in scheduler.late_part_tasks,
                 'isReworkTask': task_instance_id in scheduler.rework_tasks,
-                'isQualityTask': schedule.get('is_quality', False),
-                'isCustomerTask': schedule.get('is_customer', False),  # Add customer flag
                 'isCritical': False,
                 'slackHours': 999
             })
@@ -394,6 +383,7 @@ def export_scenario_with_capacities(scheduler, scenario_name):
     team_task_minutes = {}
 
     # Calculate total scheduled minutes per team (using team_skill for proper accounting)
+    # NOTE: This uses ALL tasks for accurate metrics, not just the limited dashboard set
     for task_id, schedule in scheduler.task_schedule.items():
         # Use team_skill for utilization calculation to properly account for skill-specific scheduling
         team_for_util = schedule.get('team_skill', schedule.get('team'))
@@ -428,8 +418,6 @@ def export_scenario_with_capacities(scheduler, scenario_name):
             'completedTasks': 0,  # Would need tracking
             'latePartsCount': metrics['task_breakdown'].get('Late Part', 0),
             'reworkCount': metrics['task_breakdown'].get('Rework', 0),
-            'qualityCount': metrics['task_breakdown'].get('Quality Inspection', 0),
-            'customerCount': metrics['task_breakdown'].get('Customer Inspection', 0),  # Add customer count
             'deliveryDate': metrics['delivery_date'].isoformat() if metrics['delivery_date'] else '',
             'projectedCompletion': metrics['projected_completion'].isoformat() if metrics[
                 'projected_completion'] else '',
@@ -447,14 +435,10 @@ def export_scenario_with_capacities(scheduler, scenario_name):
     # Calculate max lateness
     max_lateness = max((p['latenessDays'] for p in products if p['latenessDays'] < 999999), default=0)
 
-    # Count total workforce - now including customer teams
+    # Count total workforce - now properly accounting for skill-specific teams
     total_workforce = sum(team_capacities.values())
-    total_mechanics = sum(cap for team, cap in team_capacities.items()
-                          if 'Quality' not in team and 'Customer' not in team)
-    total_quality = sum(cap for team, cap in team_capacities.items()
-                        if 'Quality' in team)
-    total_customer = sum(cap for team, cap in team_capacities.items()
-                         if 'Customer' in team)
+    total_mechanics = sum(cap for team, cap in team_capacities.items() if 'Quality' not in team)
+    total_quality = sum(cap for team, cap in team_capacities.items() if 'Quality' in team)
 
     # Build the complete scenario data
     scenario_data = {
@@ -468,24 +452,21 @@ def export_scenario_with_capacities(scheduler, scenario_name):
         'totalWorkforce': total_workforce,
         'totalMechanics': total_mechanics,
         'totalQuality': total_quality,
-        'totalCustomer': total_customer,  # Add total customer workforce
         'avgUtilization': round(avg_utilization, 1),
         'makespan': makespan,
         'onTimeRate': on_time_rate,
         'maxLateness': max_lateness,
         'totalTasks': total_tasks_available if total_tasks_available > 0 else len(scheduler.task_schedule),
+        # Report actual total
         'displayedTasks': len(tasks),  # How many are being sent to dashboard
         'truncated': total_tasks_available > MAX_TASKS_FOR_DASHBOARD,  # Indicate if data was truncated
         'metrics': {
             'totalMechanics': total_mechanics,
             'totalQuality': total_quality,
-            'totalCustomer': total_customer,  # Add to metrics
             'totalCapacity': total_workforce,
             'criticalTaskCount': sum(1 for t in tasks if t['isCritical']),
             'latePartTaskCount': sum(1 for t in tasks if t['isLatePartTask']),
-            'reworkTaskCount': sum(1 for t in tasks if t['isReworkTask']),
-            'qualityTaskCount': sum(1 for t in tasks if t.get('isQualityTask', False)),
-            'customerTaskCount': sum(1 for t in tasks if t.get('isCustomerTask', False))  # Add customer task count
+            'reworkTaskCount': sum(1 for t in tasks if t['isReworkTask'])
         }
     }
 
@@ -500,7 +481,6 @@ def export_scenario_with_capacities(scheduler, scenario_name):
         if hasattr(scheduler, '_scenario2_optimal_mechanics'):
             scenario_data['optimalMechanics'] = scheduler._scenario2_optimal_mechanics
             scenario_data['optimalQuality'] = scheduler._scenario2_optimal_quality
-            # Note: May want to add optimalCustomer if scenario 2 optimizes customer teams too
     elif scenario_name == 'scenario3':
         scenario_data['description'] = 'Scenario 3: Multi-Dimensional optimization'
         # Add achieved lateness if available
@@ -567,35 +547,18 @@ def auto_assign_tasks():
     for team, capacity in sorted(team_capacities.items()):
         # Filter based on team selection
         if team_filter == 'all' or \
-                (
-                        team_filter == 'all-mechanics' and 'Mechanic' in team and 'Quality' not in team and 'Customer' not in team) or \
+                (team_filter == 'all-mechanics' and 'Mechanic' in team) or \
                 (team_filter == 'all-quality' and 'Quality' in team) or \
-                (team_filter == 'all-customer' and 'Customer' in team) or \
                 team_filter == team:
 
             is_quality = 'Quality' in team
-            is_customer = 'Customer' in team
-
-            # Determine role name based on team type
-            if is_customer:
-                role_name = 'Customer'  # Customer inspectors
-                id_prefix = 'cust'
-            elif is_quality:
-                role_name = 'QC'  # Quality control
-                id_prefix = 'qual'
-            else:
-                role_name = 'Mechanic'
-                id_prefix = 'mech'
-
             for i in range(capacity):
                 mechanic_info = {
-                    'id': f"{id_prefix}_{mechanic_id}",
-                    'name': f"{role_name} {mechanic_id}",
+                    'id': f"{'qual' if is_quality else 'mech'}_{mechanic_id}",
+                    'name': f"{'Inspector' if is_quality else 'Mechanic'} {mechanic_id}",
                     'team': team,
                     'busy_until': None,  # Track when mechanic becomes available
-                    'assigned_tasks': [],
-                    'is_quality': is_quality,
-                    'is_customer': is_customer
+                    'assigned_tasks': []
                 }
                 available_mechanics.append(mechanic_info)
                 mechanic_id += 1
@@ -603,24 +566,12 @@ def auto_assign_tasks():
     # Get tasks to assign (filtered by team)
     tasks_to_assign = []
     for task in scenario_data.get('tasks', []):
-        # Check team filter matches
-        task_team = task.get('team', '')
-        include_task = False
-
-        if team_filter == 'all':
-            include_task = True
-        elif team_filter == 'all-mechanics':
-            include_task = ('Mechanic' in task_team and
-                            'Quality' not in task_team and
-                            'Customer' not in task_team)
-        elif team_filter == 'all-quality':
-            include_task = 'Quality' in task_team
-        elif team_filter == 'all-customer':
-            include_task = 'Customer' in task_team
-        elif task_team == team_filter:
-            include_task = True
-
-        if include_task:
+        if team_filter == 'all' or \
+                (team_filter == 'all-mechanics' and task['team'] in [m['team'] for m in available_mechanics if
+                                                                     'Mechanic' in m['team']]) or \
+                (team_filter == 'all-quality' and task['team'] in [m['team'] for m in available_mechanics if
+                                                                   'Quality' in m['team']]) or \
+                task['team'] == team_filter:
             tasks_to_assign.append(task)
 
     # Sort tasks by start time and priority
@@ -658,9 +609,7 @@ def auto_assign_tasks():
                     'endTime': task['endTime'],
                     'duration': task['duration'],
                     'type': task['type'],
-                    'product': task['product'],
-                    'isQualityTask': task.get('isQualityTask', False),
-                    'isCustomerTask': task.get('isCustomerTask', False)
+                    'product': task['product']
                 })
                 assigned_names.append(mech['id'])
 
@@ -676,121 +625,56 @@ def auto_assign_tasks():
                     'endTime': task['endTime'],
                     'duration': task['duration'],
                     'team': task['team'],
-                    'shift': task.get('shift', '1st'),
-                    'isQualityTask': task.get('isQualityTask', False),
-                    'isCustomerTask': task.get('isCustomerTask', False)
+                    'shift': task.get('shift', '1st')
                 })
 
             assignments.append({
                 'taskId': task['taskId'],
                 'mechanics': assigned_names,
                 'startTime': task['startTime'],
-                'conflict': False,
-                'taskType': task['type'],
-                'team': task['team']
+                'conflict': False
             })
         else:
             # Record conflict - not enough free mechanics
             conflicts.append({
                 'taskId': task['taskId'],
-                'reason': f'Need {mechanics_needed} {task["team"]} personnel but only {len(free_mechanics)} available',
-                'startTime': task['startTime'],
-                'team': task['team'],
-                'available': len(free_mechanics),
-                'needed': mechanics_needed
+                'reason': f'Need {mechanics_needed} mechanics but only {len(free_mechanics)} available',
+                'startTime': task['startTime']
             })
 
-            # Try to assign whatever mechanics are available (partial assignment)
+            # Try to assign whatever mechanics are available
             if free_mechanics:
-                assigned_names = []
                 for mech in free_mechanics:
                     mech['busy_until'] = task_end
                     mech['assigned_tasks'].append({
                         'taskId': task['taskId'],
-                        'conflict': True,
-                        'partial': True
+                        'conflict': True
                     })
-                    assigned_names.append(mech['id'])
-
-                    if mech['id'] not in mechanic_assignments[scenario_id]:
-                        mechanic_assignments[scenario_id][mech['id']] = []
-
-                    mechanic_assignments[scenario_id][mech['id']].append({
-                        'taskId': task['taskId'],
-                        'taskType': task['type'],
-                        'product': task['product'],
-                        'startTime': task['startTime'],
-                        'endTime': task['endTime'],
-                        'duration': task['duration'],
-                        'team': task['team'],
-                        'shift': task.get('shift', '1st'),
-                        'partial': True,
-                        'isQualityTask': task.get('isQualityTask', False),
-                        'isCustomerTask': task.get('isCustomerTask', False)
-                    })
-
-                assignments.append({
-                    'taskId': task['taskId'],
-                    'mechanics': assigned_names,
-                    'startTime': task['startTime'],
-                    'conflict': True,
-                    'partial': True,
-                    'taskType': task['type'],
-                    'team': task['team']
-                })
 
     # Calculate statistics
-    total_assigned = len([a for a in assignments if not a.get('conflict', False)])
-    partial_assigned = len([a for a in assignments if a.get('partial', False)])
+    total_assigned = len(assignments)
     total_conflicts = len(conflicts)
 
     # Build mechanic summary
     mechanic_summary = []
     for mech in available_mechanics:
         if mech['assigned_tasks']:
-            # Count different task types
-            quality_tasks = sum(1 for t in mech['assigned_tasks'] if t.get('isQualityTask', False))
-            customer_tasks = sum(1 for t in mech['assigned_tasks'] if t.get('isCustomerTask', False))
-            regular_tasks = len(mech['assigned_tasks']) - quality_tasks - customer_tasks
-
             mechanic_summary.append({
                 'id': mech['id'],
                 'name': mech['name'],
                 'team': mech['team'],
                 'tasksAssigned': len(mech['assigned_tasks']),
-                'regularTasks': regular_tasks,
-                'qualityTasks': quality_tasks,
-                'customerTasks': customer_tasks,
-                'lastTaskEnd': mech['busy_until'].isoformat() if mech['busy_until'] else None,
-                'utilizationHours': sum(t.get('duration', 0) for t in mech['assigned_tasks']) / 60
+                'lastTaskEnd': mech['busy_until'].isoformat() if mech['busy_until'] else None
             })
-
-    # Sort mechanic summary by utilization
-    mechanic_summary.sort(key=lambda x: x['utilizationHours'], reverse=True)
-
-    # Calculate team statistics
-    team_stats = {}
-    for team in team_capacities.keys():
-        team_tasks = [a for a in assignments if a['team'] == team]
-        team_conflicts = [c for c in conflicts if c['team'] == team]
-
-        team_stats[team] = {
-            'capacity': team_capacities[team],
-            'tasksAssigned': len(team_tasks),
-            'conflicts': len(team_conflicts),
-            'successRate': (len(team_tasks) - len(team_conflicts)) / len(team_tasks) * 100 if team_tasks else 0
-        }
 
     return jsonify({
         'success': True,
         'totalAssigned': total_assigned,
-        'partialAssigned': partial_assigned,
         'totalConflicts': total_conflicts,
         'assignments': assignments[:50],  # Return first 50 for display
         'conflicts': conflicts[:20],  # Return first 20 conflicts
         'mechanicSummary': mechanic_summary,
-        'teamStatistics': team_stats,
-        'message': f'Assigned {total_assigned} tasks fully, {partial_assigned} partially, with {total_conflicts} conflicts'
+        'message': f'Assigned {total_assigned} tasks with {total_conflicts} conflicts'
     })
 
 
@@ -845,15 +729,11 @@ def get_mechanic_assigned_tasks(mechanic_id):
 
 # ========== FLASK ROUTES ==========
 
-# Landing page - serves as the default route
 @app.route('/')
-def landing_page():
-    return render_template('landing_page.html')
-
-@app.route('/dashboard')
 def index():
     """Serve the main dashboard page"""
     return render_template('dashboard2.html')
+
 
 @app.route('/api/scenarios')
 def get_scenarios():
@@ -881,12 +761,8 @@ def get_scenarios():
                 'description': 'Optimize per-team capacity using simulated annealing to achieve target delivery (1 day early)'
             }
         ],
-        'architecture': 'Product-Task Instances with Customer Inspections',
-        'totalInstances': len(scheduler.tasks) if scheduler else 0,
-        'inspectionLayers': {
-            'quality': len(scheduler.quality_team_capacity) if scheduler else 0,
-            'customer': len(scheduler.customer_team_capacity) if scheduler else 0
-        }
+        'architecture': 'Product-Task Instances',
+        'totalInstances': len(scheduler.tasks) if scheduler else 0
     })
 
 
@@ -1020,68 +896,82 @@ def internal_error(error):
 # ========== MAIN EXECUTION ==========
 
 import sys
+import socket
 import os
-import platform
 import subprocess
-import socket
-import threading
+import platform
 
-
-import psutil
-import socket
-import sys
-import time
 
 def kill_port(port=5000):
+    """Kill any process using the specified port"""
     system = platform.system()
+
     try:
         if system == 'Windows':
+            # Find process using the port
             command = f'netstat -ano | findstr :{port}'
             result = subprocess.run(command, shell=True, capture_output=True, text=True)
+
             if result.stdout:
                 lines = result.stdout.strip().split('\n')
                 for line in lines:
                     if f':{port}' in line and 'LISTENING' in line:
+                        # Extract PID (last column)
                         parts = line.split()
                         pid = parts[-1]
+
+                        # Kill the process
                         kill_command = f'taskkill /F /PID {pid}'
                         subprocess.run(kill_command, shell=True, capture_output=True)
-                        print(f"Killed process {pid} using port {port}")
+                        print(f"✓ Killed process {pid} using port {port}")
+
+                        # Give it a moment to release the port
+                        import time
                         time.sleep(1)
-        else:
+
+        else:  # Linux/Mac
+            # Find and kill process using lsof
             command = f'lsof -ti:{port}'
             result = subprocess.run(command, shell=True, capture_output=True, text=True)
+
             if result.stdout:
                 pid = result.stdout.strip()
                 kill_command = f'kill -9 {pid}'
                 subprocess.run(kill_command, shell=True)
-                print(f"Killed process {pid} using port {port}")
+                print(f"✓ Killed process {pid} using port {port}")
+
+                # Give it a moment to release the port
+                import time
                 time.sleep(1)
+
     except Exception as e:
         print(f"Warning: Could not auto-kill port {port}: {e}")
+        print("You may need to manually kill the process if the port is in use.")
+
 
 def check_and_kill_port(port=5000):
+    """Check if port is in use and kill the process if it is"""
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     result = sock.connect_ex(('127.0.0.1', port))
     sock.close()
+
     if result == 0:
         print(f"Port {port} is in use. Attempting to free it...")
         kill_port(port)
-        time.sleep(1)
+
+        # Double-check that the port is now free
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         result = sock.connect_ex(('127.0.0.1', port))
         sock.close()
+
         if result == 0:
-            print(f"Failed to free port {port}. Please manually kill the process.")
+            print(f"✗ Failed to free port {port}. Please manually kill the process.")
             sys.exit(1)
         else:
-            print(f"Port {port} successfully freed!")
+            print(f"✓ Port {port} successfully freed!")
+
 
 if __name__ == '__main__':
-    print("Starting server...")
-    if os.environ.get('WERKZEUG_RUN_MAIN') != 'true':
-        check_and_kill_port(5000)
-
     try:
         # Initialize scheduler on startup
         print("\nStarting Production Scheduling Dashboard Server...")
@@ -1141,8 +1031,11 @@ if __name__ == '__main__':
         print("Server ready! Open your browser to: http://localhost:5000")
         print("=" * 80 + "\n")
 
+        # Run Flask app
         app.run(debug=True, host='0.0.0.0', port=5000)
 
     except Exception as e:
         print(f"\n✗ Failed to start server: {str(e)}")
+        import traceback
+
         traceback.print_exc()

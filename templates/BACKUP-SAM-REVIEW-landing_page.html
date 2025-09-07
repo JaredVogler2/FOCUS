@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Production Dashboard - Welcome</title>
-    
+
     <style>
         * {
             margin: 0;
@@ -26,7 +26,7 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background-image: url('/static/images/Negative-mask-effect.gif');
+            background-image: url('/static/images/focus-2.png');
             background-size: contain;
             background-position: center;
             background-repeat: no-repeat;
@@ -215,18 +215,18 @@
         }
 
         /* Responsive design */
-        @media (max-width: 768px) {            
+        @media (max-width: 768px) {
             .user-selection {
                 bottom: 1rem;
                 right: 1rem;
                 transform: scale(0.65);
             }
-            
+
             .user-role-container {
                 min-width: 280px;
                 padding: 1.5rem;
             }
-            
+
             .enter-button {
                 padding: 14px 30px;
                 font-size: 1.1rem;
@@ -240,17 +240,17 @@
                 right: 0.5rem;
                 transform: scale(0.55);
             }
-            
+
             .selection-title {
                 font-size: 1.2rem;
                 margin-bottom: 1.5rem;
             }
-            
+
             .user-role-container {
                 min-width: 250px;
                 padding: 1rem;
             }
-            
+
             .role-badge {
                 padding: 10px 20px;
                 font-size: 1rem;
@@ -262,7 +262,7 @@
     <!-- Background with overlay -->
     <div class="hero-background"></div>
     <div class="hero-overlay"></div>
-    
+
     <!-- Floating particles -->
     <div class="particles" id="particles"></div>
 
@@ -306,7 +306,7 @@
 
         // Start particle animation
         createParticles();
-        
+
         // Recreate particles periodically
         setInterval(createParticles, 3000);
 

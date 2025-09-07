@@ -12,11 +12,10 @@ from collections import defaultdict
 import traceback
 
 # Import the corrected scheduler
-from src.scheduler.main import ProductionScheduler
+from scheduler import ProductionScheduler
 
 app = Flask(__name__)
 CORS(app)  # Enable CORS for API calls
-
 
 app.config['TEMPLATES_AUTO_RELOAD'] = True
 app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
@@ -27,7 +26,6 @@ app.jinja_env.cache = {}
 scheduler = None
 scenario_results = {}  # Make sure this is initialized as empty dict, not None
 mechanic_assignments = {}  # Store assignments per scenario for conflict-free scheduling
-
 
 
 def ensure_all_teams_have_capacity(scheduler):
@@ -1020,68 +1018,82 @@ def internal_error(error):
 # ========== MAIN EXECUTION ==========
 
 import sys
+import socket
 import os
-import platform
 import subprocess
-import socket
-import threading
+import platform
 
-
-import psutil
-import socket
-import sys
-import time
 
 def kill_port(port=5000):
+    """Kill any process using the specified port"""
     system = platform.system()
+
     try:
         if system == 'Windows':
+            # Find process using the port
             command = f'netstat -ano | findstr :{port}'
             result = subprocess.run(command, shell=True, capture_output=True, text=True)
+
             if result.stdout:
                 lines = result.stdout.strip().split('\n')
                 for line in lines:
                     if f':{port}' in line and 'LISTENING' in line:
+                        # Extract PID (last column)
                         parts = line.split()
                         pid = parts[-1]
+
+                        # Kill the process
                         kill_command = f'taskkill /F /PID {pid}'
                         subprocess.run(kill_command, shell=True, capture_output=True)
-                        print(f"Killed process {pid} using port {port}")
+                        print(f"✓ Killed process {pid} using port {port}")
+
+                        # Give it a moment to release the port
+                        import time
                         time.sleep(1)
-        else:
+
+        else:  # Linux/Mac
+            # Find and kill process using lsof
             command = f'lsof -ti:{port}'
             result = subprocess.run(command, shell=True, capture_output=True, text=True)
+
             if result.stdout:
                 pid = result.stdout.strip()
                 kill_command = f'kill -9 {pid}'
                 subprocess.run(kill_command, shell=True)
-                print(f"Killed process {pid} using port {port}")
+                print(f"✓ Killed process {pid} using port {port}")
+
+                # Give it a moment to release the port
+                import time
                 time.sleep(1)
+
     except Exception as e:
         print(f"Warning: Could not auto-kill port {port}: {e}")
+        print("You may need to manually kill the process if the port is in use.")
+
 
 def check_and_kill_port(port=5000):
+    """Check if port is in use and kill the process if it is"""
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     result = sock.connect_ex(('127.0.0.1', port))
     sock.close()
+
     if result == 0:
         print(f"Port {port} is in use. Attempting to free it...")
         kill_port(port)
-        time.sleep(1)
+
+        # Double-check that the port is now free
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         result = sock.connect_ex(('127.0.0.1', port))
         sock.close()
+
         if result == 0:
-            print(f"Failed to free port {port}. Please manually kill the process.")
+            print(f"✗ Failed to free port {port}. Please manually kill the process.")
             sys.exit(1)
         else:
-            print(f"Port {port} successfully freed!")
+            print(f"✓ Port {port} successfully freed!")
+
 
 if __name__ == '__main__':
-    print("Starting server...")
-    if os.environ.get('WERKZEUG_RUN_MAIN') != 'true':
-        check_and_kill_port(5000)
-
     try:
         # Initialize scheduler on startup
         print("\nStarting Production Scheduling Dashboard Server...")
@@ -1141,8 +1153,11 @@ if __name__ == '__main__':
         print("Server ready! Open your browser to: http://localhost:5000")
         print("=" * 80 + "\n")
 
+        # Run Flask app
         app.run(debug=True, host='0.0.0.0', port=5000)
 
     except Exception as e:
         print(f"\n✗ Failed to start server: {str(e)}")
+        import traceback
+
         traceback.print_exc()
