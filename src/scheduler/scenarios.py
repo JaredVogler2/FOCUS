@@ -116,18 +116,31 @@ def scenario_3_optimal_schedule(scheduler, time_limit_seconds=90):
         end_var = model.NewIntVar(0, horizon, f'end_{task_id}')
         task_intervals[task_id] = model.NewIntervalVar(start_var, duration, end_var, f'interval_{task_id}')
 
-    # --- Resource Modeling (BASE TEAMS ONLY) ---
-    all_teams_and_skills = list(scheduler.team_capacity.keys()) + list(scheduler.quality_team_capacity.keys()) + list(scheduler.customer_team_capacity.keys())
-    all_base_teams = sorted(list(set(t.split(' (')[0] for t in all_teams_and_skills)))
+    # --- Resource Modeling (Skill & Quality Specific) ---
+    # Model each specific mechanic skill team and each quality team as a distinct resource.
+    mechanic_skill_teams = sorted([team for team in scheduler.team_capacity if ' (Skill ' in team])
+    quality_teams = sorted(list(scheduler.quality_team_capacity.keys()))
+    customer_teams = sorted(list(scheduler.customer_team_capacity.keys()))
 
+    all_resource_teams = mechanic_skill_teams + quality_teams + customer_teams
     team_capacity_vars = {}
-    for base_team in all_base_teams:
+
+    for team in all_resource_teams:
+        # Determine the minimum required capacity for the team based on any single task's requirement
         min_req = 1
         for task in tasks.values():
-            task_base_team = (task.get('team_skill') or task.get('team', '')).split(' (')[0]
-            if task_base_team == base_team:
+            # Match mechanic tasks to their specific skill team
+            if not task.get('is_quality', False) and not task.get('is_customer', False):
+                 if task.get('team_skill') == team:
+                    min_req = max(min_req, task.get('mechanics_required', 1))
+            # Match quality tasks to their quality team
+            elif task.get('is_quality', False) and task.get('team') == team:
                 min_req = max(min_req, task.get('mechanics_required', 1))
-        team_capacity_vars[base_team] = model.NewIntVar(min_req, 100, f'capacity_{base_team}')
+            # Match customer tasks to their customer team
+            elif task.get('is_customer', False) and task.get('team') == team:
+                min_req = max(min_req, task.get('mechanics_required', 1))
+
+        team_capacity_vars[team] = model.NewIntVar(min_req, 100, f'capacity_{team}')
 
     # --- Constraints ---
     # 1. Precedence Constraints (using the dynamic dependency builder)
@@ -167,19 +180,32 @@ def scenario_3_optimal_schedule(scheduler, time_limit_seconds=90):
             print(f"[WARNING] Could not parse successor ID for late part constraint: {lp_constraint}")
 
 
-    # 3. Resource Cumulative Constraints (against BASE TEAMS)
-    for base_team in all_base_teams:
+    # 3. Resource Cumulative Constraints (Skill & Quality Specific)
+    for team in all_resource_teams:
         demands, intervals = [], []
+        is_quality_team = team in quality_teams
+        is_customer_team = team in customer_teams
+
         for task_id, task_info in tasks.items():
-            task_base_team = (task_info.get('team_skill') or task_info.get('team', '')).split(' (')[0]
-            if task_base_team == base_team:
+            # Check if the task belongs to the current resource team
+            task_assigned_team = None
+            if is_quality_team and task_info.get('is_quality', False):
+                task_assigned_team = task_info.get('team')
+            elif is_customer_team and task_info.get('is_customer', False):
+                task_assigned_team = task_info.get('team')
+            elif not is_quality_team and not is_customer_team:
+                # This is a mechanic team, so we match on team_skill
+                task_assigned_team = task_info.get('team_skill')
+
+            if task_assigned_team == team:
                 intervals.append(task_intervals[task_id])
                 demands.append(task_info.get('mechanics_required', 1))
+
         if intervals:
-            model.AddCumulative(intervals, demands, team_capacity_vars[base_team])
+            model.AddCumulative(intervals, demands, team_capacity_vars[team])
 
     # --- Objective Function ---
-    total_workforce = model.NewIntVar(0, 100 * len(all_base_teams), 'total_workforce')
+    total_workforce = model.NewIntVar(0, 100 * len(all_resource_teams), 'total_workforce')
     model.Add(total_workforce == sum(team_capacity_vars.values()))
 
     lateness_vars = []
@@ -215,20 +241,15 @@ def scenario_3_optimal_schedule(scheduler, time_limit_seconds=90):
         print(f"Solver finished with status: {solver.StatusName(status)}")
         scheduler.task_schedule.clear()
 
-        # Update capacities for base and skill teams
-        for base_team, cap_var in team_capacity_vars.items():
+        # Update capacities for each specific team
+        for team, cap_var in team_capacity_vars.items():
             optimized_capacity = solver.Value(cap_var)
-            if base_team in scheduler.team_capacity: scheduler.team_capacity[base_team] = optimized_capacity
-            if base_team in scheduler.quality_team_capacity: scheduler.quality_team_capacity[base_team] = optimized_capacity
-            if base_team in scheduler.customer_team_capacity: scheduler.customer_team_capacity[base_team] = optimized_capacity
-
-            # Distribute capacity to skill teams proportionally
-            skill_teams = [t for t in all_teams_and_skills if t.startswith(base_team + ' (')]
-            original_skill_total = sum(scheduler._original_team_capacity.get(st, 0) for st in skill_teams)
-            if original_skill_total > 0:
-                for skill_team in skill_teams:
-                    proportion = scheduler._original_team_capacity.get(skill_team, 0) / original_skill_total
-                    scheduler.team_capacity[skill_team] = math.ceil(optimized_capacity * proportion)
+            if team in scheduler.team_capacity:
+                scheduler.team_capacity[team] = optimized_capacity
+            if team in scheduler.quality_team_capacity:
+                scheduler.quality_team_capacity[team] = optimized_capacity
+            if team in scheduler.customer_team_capacity:
+                scheduler.customer_team_capacity[team] = optimized_capacity
 
         # Update schedule
         for task_id, interval in task_intervals.items():
