@@ -110,14 +110,29 @@ def scenario_3_optimal_schedule(scheduler, time_limit_seconds=90):
     # --- Task Interval Variables ---
     tasks = scheduler.tasks
     task_intervals = {}
+    mechanic_blocking_intervals = {} # For combined mechanic + inspection work
+
     for task_id, task_info in tasks.items():
         duration = task_info.get('duration', 0) or 60
         start_var = model.NewIntVar(0, horizon, f'start_{task_id}')
         end_var = model.NewIntVar(0, horizon, f'end_{task_id}')
-        task_intervals[task_id] = model.NewIntervalVar(start_var, duration, end_var, f'interval_{task_id}')
+        interval = model.NewIntervalVar(start_var, duration, end_var, f'interval_{task_id}')
+        task_intervals[task_id] = interval
+
+        # If a mechanic task has a quality inspection, create a special "blocking" interval for the mechanic
+        if task_info.get('task_type') in ['Production', 'Rework', 'Late Part'] and task_id in scheduler.quality_requirements:
+            qi_task_id = scheduler.quality_requirements[task_id]
+            if qi_task_id in tasks:
+                qi_duration = tasks[qi_task_id].get('duration', 0)
+
+                # The mechanic is busy for their task + the inspection
+                blocking_duration = duration + qi_duration
+
+                blocking_end_var = model.NewIntVar(0, horizon, f'blocking_end_{task_id}')
+                blocking_interval = model.NewIntervalVar(start_var, blocking_duration, blocking_end_var, f'blocking_interval_{task_id}')
+                mechanic_blocking_intervals[task_id] = blocking_interval
 
     # --- Resource Modeling (Skill & Quality Specific) ---
-    # Model each specific mechanic skill team and each quality team as a distinct resource.
     mechanic_skill_teams = sorted([team for team in scheduler.team_capacity if ' (Skill ' in team])
     quality_teams = sorted(list(scheduler.quality_team_capacity.keys()))
     customer_teams = sorted(list(scheduler.customer_team_capacity.keys()))
@@ -126,20 +141,14 @@ def scenario_3_optimal_schedule(scheduler, time_limit_seconds=90):
     team_capacity_vars = {}
 
     for team in all_resource_teams:
-        # Determine the minimum required capacity for the team based on any single task's requirement
         min_req = 1
         for task in tasks.values():
-            # Match mechanic tasks to their specific skill team
-            if not task.get('is_quality', False) and not task.get('is_customer', False):
-                 if task.get('team_skill') == team:
-                    min_req = max(min_req, task.get('mechanics_required', 1))
-            # Match quality tasks to their quality team
+            if not task.get('is_quality', False) and not task.get('is_customer', False) and task.get('team_skill') == team:
+                min_req = max(min_req, task.get('mechanics_required', 1))
             elif task.get('is_quality', False) and task.get('team') == team:
                 min_req = max(min_req, task.get('mechanics_required', 1))
-            # Match customer tasks to their customer team
             elif task.get('is_customer', False) and task.get('team') == team:
                 min_req = max(min_req, task.get('mechanics_required', 1))
-
         team_capacity_vars[team] = model.NewIntVar(min_req, 100, f'capacity_{team}')
 
     # --- Constraints ---
@@ -182,27 +191,30 @@ def scenario_3_optimal_schedule(scheduler, time_limit_seconds=90):
 
     # 3. Resource Cumulative Constraints (Skill & Quality Specific)
     for team in all_resource_teams:
-        demands, intervals = [], []
+        demands = []
+        intervals_for_team = []
         is_quality_team = team in quality_teams
         is_customer_team = team in customer_teams
 
         for task_id, task_info in tasks.items():
-            # Check if the task belongs to the current resource team
             task_assigned_team = None
             if is_quality_team and task_info.get('is_quality', False):
                 task_assigned_team = task_info.get('team')
             elif is_customer_team and task_info.get('is_customer', False):
                 task_assigned_team = task_info.get('team')
             elif not is_quality_team and not is_customer_team:
-                # This is a mechanic team, so we match on team_skill
                 task_assigned_team = task_info.get('team_skill')
 
             if task_assigned_team == team:
-                intervals.append(task_intervals[task_id])
                 demands.append(task_info.get('mechanics_required', 1))
+                # Use the special blocking interval for mechanics if it exists
+                if not is_quality_team and not is_customer_team and task_id in mechanic_blocking_intervals:
+                    intervals_for_team.append(mechanic_blocking_intervals[task_id])
+                else: # Otherwise, use the standard task interval
+                    intervals_for_team.append(task_intervals[task_id])
 
-        if intervals:
-            model.AddCumulative(intervals, demands, team_capacity_vars[team])
+        if intervals_for_team:
+            model.AddCumulative(intervals_for_team, demands, team_capacity_vars[team])
 
     # --- Objective Function ---
     total_workforce = model.NewIntVar(0, 100 * len(all_resource_teams), 'total_workforce')

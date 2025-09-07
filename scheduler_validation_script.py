@@ -345,6 +345,36 @@ class SchedulerValidator:
                 status = "⚠ OVER" if util > 100 else "✓"
                 print(f"    {status} {team} ({capacity} people): {util:.1f}%")
         
+        # 8. QUALITY INSPECTION ASSIGNMENT VALIDATION
+        if verbose:
+            print("\n8. Quality Inspection Assignment Validation:")
+            print("-" * 40)
+
+        qi_tasks_checked = 0
+        for task_id, schedule in self.scheduler.task_schedule.items():
+            task_info = self.scheduler.tasks.get(task_id, {})
+            if task_info.get('is_quality'):
+                qi_tasks_checked += 1
+                primary_task_id = task_info.get('primary_task')
+                if not primary_task_id or primary_task_id not in self.scheduler.tasks:
+                    print(f"  - QI Task {task_id}: Primary task {primary_task_id} not found.")
+                    continue
+
+                primary_task_info = self.scheduler.tasks[primary_task_id]
+                mechanic_team = primary_task_info.get('team_skill', 'N/A')
+
+                # Print assignment details for user visibility
+                print(f"  - QI Task: {task_id} (for Primary: {primary_task_id})")
+                print(f"    - Inspector: Assigned to [{schedule.get('team')}] with {schedule.get('mechanics_required')} inspector(s).")
+                print(f"    - Assisting Mechanic: From [{mechanic_team}].")
+
+        if verbose:
+            if qi_tasks_checked > 0:
+                print(f"\n  ✓ Displayed assignment details for {qi_tasks_checked} QI tasks.")
+                print(f"  Note: Mechanic's availability during inspection is enforced by the model and validated in 'Resource Capacity Validation'.")
+            else:
+                print("  - No quality inspections to validate.")
+
         # FINAL VERDICT
         if verbose:
             print("\n" + "=" * 80)
