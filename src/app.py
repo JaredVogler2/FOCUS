@@ -99,7 +99,15 @@ def create_app():
             for team, capacity in result3['config']['quality'].items(): scheduler.quality_team_capacity[team] = capacity
             scheduler.generate_global_priority_list(allow_late_delivery=True, silent_mode=True)
             scenario_results['scenario3'] = export_scenario_with_capacities(scheduler, 'scenario3')
-        print(f"✓ Scenario 3 complete: {scenario_results.get('scenario3', {}).get('makespan', 'N/A')} days makespan")
+            print(f"✓ Scenario 3 complete: {scenario_results.get('scenario3', {}).get('makespan', 'N/A')} days makespan")
+        else:
+            print("✗ Scenario 3 failed to find a valid solution.")
+            # Optionally, create a placeholder result for the UI
+            scenario_results['scenario3'] = {
+                'scenarioId': 'scenario3', 'status': 'FAILED', 'tasks': [], 'products': [],
+                'teamCapacities': {}, 'teamShifts': {}, 'utilization': {}, 'totalWorkforce': 0,
+                'makespan': 'N/A', 'onTimeRate': 0, 'maxLateness': 'N/A'
+            }
 
         # Restore original capacities
         for team, capacity in scheduler._original_team_capacity.items(): scheduler.team_capacity[team] = capacity

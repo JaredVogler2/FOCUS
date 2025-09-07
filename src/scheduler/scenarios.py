@@ -284,12 +284,18 @@ def scenario_3_simulated_annealing(scheduler, target_earliness=-1, max_iteration
     for team, capacity in original_quality.items():
         scheduler.quality_team_capacity[team] = capacity
 
-    return {
-        'config': best_config,
-        'metrics': best_metrics,
-        'total_workforce': best_metrics['total_workforce'] if best_metrics else None,
-        'max_lateness': best_metrics['max_lateness'] if best_metrics else None
-    }
+    if best_metrics and best_metrics['scheduled_tasks'] == best_metrics['total_tasks']:
+        return {
+            'config': best_config,
+            'metrics': best_metrics,
+            'total_workforce': best_metrics['total_workforce'] if best_metrics else None,
+            'max_lateness': best_metrics['max_lateness'] if best_metrics else None
+        }
+    else:
+        print("\n" + "!" * 80)
+        print("! SCENARIO 3 FAILED: Could not find a valid schedule for any configuration.")
+        print("!" * 80)
+        return None
 
 
 def scenario_3_smart_optimization(scheduler, target_earliness=-1, max_iterations=500):
