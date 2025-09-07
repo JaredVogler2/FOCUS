@@ -1,7 +1,8 @@
 # src/scheduler/main.py
 
 from collections import defaultdict
-from . import data_loader, scenarios, metrics, utils, algorithms, validation, reporting, constraints
+from datetime import datetime
+from . import data_loader, scenarios, metrics, utils, algorithms, validation, reporting, constraints, cp_sat_solver
 
 class ProductionScheduler:
     """
@@ -15,6 +16,7 @@ class ProductionScheduler:
         self.csv_file_path = utils.resource_path(csv_file_path)
         self.debug = debug
         self.late_part_delay_days = late_part_delay_days
+        self.start_date = datetime(2025, 8, 22, 6, 0)
 
         # Data structures to hold scheduler state
         self.tasks = {}
@@ -97,7 +99,18 @@ class ProductionScheduler:
         data_loader.load_data_from_csv(self)
 
     def generate_global_priority_list(self, allow_late_delivery=True, silent_mode=False):
-        algorithms.schedule_tasks(self, allow_late_delivery=allow_late_delivery, silent_mode=silent_mode)
+        # algorithms.schedule_tasks(self, allow_late_delivery=allow_late_delivery, silent_mode=silent_mode)
+        print("\n[INFO] Instantiating and running CP-SAT solver...")
+        cp_scheduler = cp_sat_solver.CpSatScheduler(self)
+        new_schedule = cp_scheduler.solve()
+
+        if new_schedule:
+            self.task_schedule = new_schedule
+            print("[INFO] CP-SAT solver returned a valid schedule.")
+        else:
+            print("[ERROR] CP-SAT solver failed to find a solution. No schedule was generated.")
+            # Clear the schedule to indicate failure
+            self.task_schedule = {}
 
         conflicts = validation.check_resource_conflicts(self)
         if conflicts and not silent_mode:
@@ -132,11 +145,11 @@ class ProductionScheduler:
                 'task_instance_id': task_instance_id, 'task_type': task_type,
                 'display_name': display_name, 'display_name_with_criticality': display_name_with_criticality,
                 'criticality': criticality, 'product_line': product, 'original_task_id': original_task_id,
-                'team': schedule['team'], 'scheduled_start': schedule['start_time'],
-                'scheduled_end': schedule['end_time'], 'duration_minutes': schedule['duration'],
-                'mechanics_required': schedule['mechanics_required'], 'slack_hours': slack,
+                'team': schedule.get('team'), 'scheduled_start': schedule.get('start_time'),
+                'scheduled_end': schedule.get('end_time'), 'duration_minutes': schedule.get('duration'),
+                'mechanics_required': schedule.get('mechanics_required'), 'slack_hours': slack,
                 'slack_days': slack / 24, 'priority_score': algorithms.calculate_task_priority(self, task_instance_id),
-                'shift': schedule['shift']
+                'shift': schedule.get('shift', 'N/A')  # Use .get() for safety
             })
 
         priority_data.sort(key=lambda x: (x['scheduled_start'], x['slack_hours']))
