@@ -16,7 +16,7 @@ from src.scheduler.main import ProductionScheduler
 
 def create_app():
     """Create and configure an instance of the Flask application."""
-    app = Flask(__name__, template_folder='../../templates', static_folder='../../static')
+    app = Flask(__name__, template_folder='../templates', static_folder='../static')
     CORS(app)
 
     app.config['TEMPLATES_AUTO_RELOAD'] = True
@@ -128,3 +128,84 @@ def create_app():
         return jsonify({'error': 'Internal server error'}), 500
 
     return app
+
+
+def export_scenario_with_capacities(scheduler, scenario_name):
+    """Export scenario results including current team capacities and shift information"""
+    team_capacities = {**scheduler.team_capacity, **scheduler.quality_team_capacity, **scheduler.customer_team_capacity}
+    team_shifts = {**scheduler.team_shifts, **scheduler.quality_team_shifts, **scheduler.customer_team_shifts}
+
+    tasks = []
+    MAX_TASKS_FOR_DASHBOARD = 1000
+    total_tasks_available = len(scheduler.global_priority_list) if hasattr(scheduler, 'global_priority_list') else len(scheduler.task_schedule)
+
+    if hasattr(scheduler, 'global_priority_list') and scheduler.global_priority_list:
+        sorted_priority_items = sorted(scheduler.global_priority_list, key=lambda x: x.get('global_priority', 999))[:MAX_TASKS_FOR_DASHBOARD]
+        for item in sorted_priority_items:
+            task_id = item.get('task_instance_id')
+            if task_id in scheduler.task_schedule:
+                schedule = scheduler.task_schedule[task_id]
+                task_info = scheduler.tasks.get(task_id, {})
+                tasks.append({
+                    'taskId': task_id,
+                    'type': item.get('task_type', 'Production'),
+                    'product': item.get('product_line', 'Unknown'),
+                    'team': schedule.get('team', ''),
+                    'teamSkill': schedule.get('team_skill', ''),
+                    'skill': schedule.get('skill', ''),
+                    'startTime': schedule['start_time'].isoformat(),
+                    'endTime': schedule['end_time'].isoformat(),
+                    'duration': schedule.get('duration', 60),
+                    'mechanics': schedule.get('mechanics_required', 1),
+                    'shift': schedule.get('shift', '1st'),
+                    'priority': item.get('global_priority', 999),
+                    'isLatePartTask': task_id in scheduler.late_part_tasks,
+                    'isReworkTask': task_id in scheduler.rework_tasks,
+                    'isQualityTask': schedule.get('is_quality', False),
+                    'isCustomerTask': schedule.get('is_customer', False),
+                    'isCritical': item.get('slack_hours', 999) < 24,
+                    'slackHours': item.get('slack_hours', 999)
+                })
+
+    makespan = scheduler.calculate_makespan()
+    lateness_metrics = scheduler.calculate_lateness_metrics()
+
+    team_task_minutes = defaultdict(int)
+    for task_id, schedule in scheduler.task_schedule.items():
+        team_for_util = schedule.get('team_skill', schedule.get('team'))
+        if team_for_util:
+            team_task_minutes[team_for_util] += schedule.get('duration', 0) * schedule.get('mechanics_required', 1)
+
+    utilization = {team: min(100, round((team_task_minutes.get(team, 0) / (8 * 60 * makespan * capacity) * 100), 1)) if capacity > 0 and makespan > 0 else 0 for team, capacity in team_capacities.items()}
+
+    products = []
+    for product, metrics in lateness_metrics.items():
+        products.append({
+            'name': product,
+            'totalTasks': metrics['total_tasks'],
+            'deliveryDate': metrics['delivery_date'].isoformat(),
+            'projectedCompletion': metrics['projected_completion'].isoformat() if metrics['projected_completion'] else '',
+            'onTime': metrics['on_time'],
+            'latenessDays': metrics['lateness_days'] if metrics['lateness_days'] < 999999 else 0,
+        })
+
+    on_time_rate = round(sum(1 for p in products if p['onTime']) / len(products) * 100 if products else 0, 1)
+    max_lateness = max((p['latenessDays'] for p in products if p['latenessDays'] < 999999), default=0)
+    total_workforce = sum(team_capacities.values())
+
+    return {
+        'scenarioId': scenario_name,
+        'tasks': tasks,
+        'teamCapacities': team_capacities,
+        'teamShifts': team_shifts,
+        'products': products,
+        'utilization': utilization,
+        'totalWorkforce': total_workforce,
+        'avgUtilization': round(sum(utilization.values()) / len(utilization) if utilization else 0, 1),
+        'makespan': makespan,
+        'onTimeRate': on_time_rate,
+        'maxLateness': max_lateness,
+        'totalTasks': total_tasks_available,
+        'displayedTasks': len(tasks),
+        'truncated': total_tasks_available > MAX_TASKS_FOR_DASHBOARD
+    }
