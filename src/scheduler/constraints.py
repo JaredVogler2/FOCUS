@@ -5,111 +5,117 @@ from . import utils
 
 def build_dynamic_dependencies(scheduler):
     """
-    Build dependency graph with support for ALL relationship types and string task IDs
-    Including customer inspections with Finish = Start constraints
+    Builds a comprehensive dependency graph. It correctly chains Quality Inspection (QI)
+    and Customer (CC) tasks between a predecessor and its successor, using a unified
+    and simplified logic for all constraint types (baseline, rework, late-part).
     """
     if scheduler._dynamic_constraints_cache is not None:
         return scheduler._dynamic_constraints_cache
 
-    utils.debug_print(scheduler, f"\n[DEBUG] Building dynamic dependencies with all relationship types...")
+    utils.debug_print(scheduler, f"\n[DEBUG] Building dynamic dependencies with unified chaining logic...")
     dynamic_constraints = []
+    processed_predecessors = set()
 
-    # 1. Add baseline task constraints (product-specific)
-    for constraint in scheduler.precedence_constraints:
+    # Helper to get instance ID for any task type
+    def get_instance_id(task_id, product):
+        # Numeric IDs are baseline tasks and need the product prefix
+        if str(task_id).isdigit():
+            return scheduler.task_instance_map.get((product, int(task_id)))
+        # Non-numeric IDs (e.g., 'RW1', 'LP2') are unique and used directly
+        return str(task_id)
+
+    # Combine all constraints into one list for unified processing
+    all_constraints = (scheduler.precedence_constraints +
+                       scheduler.late_part_constraints +
+                       scheduler.rework_constraints)
+
+    for constraint in all_constraints:
         first_task_id = constraint['First']
         second_task_id = constraint['Second']
+        relationship = utils.normalize_relationship_type(constraint.get('Relationship', 'Finish <= Start'))
+        product_scope = [constraint['Product_Line']] if constraint.get('Product_Line') else scheduler.delivery_dates.keys()
 
-        relationship = constraint.get('Relationship Type') or constraint.get('Relationship', 'Finish <= Start')
-        relationship = utils.normalize_relationship_type(relationship)
+        for product in product_scope:
+            predecessor_instance = get_instance_id(first_task_id, product)
+            successor_instance = get_instance_id(second_task_id, product)
 
-        for product in scheduler.delivery_dates.keys():
-            first_instance = scheduler.task_instance_map.get((product, first_task_id))
-            second_instance = scheduler.task_instance_map.get((product, second_task_id))
+            if not predecessor_instance or not successor_instance:
+                continue
 
-            if first_instance and second_instance:
-                # Check if first task has quality and/or customer inspections
-                has_qi = first_instance in scheduler.quality_requirements
-                has_cc = first_instance in scheduler.customer_requirements
+            # Start the dependency chain
+            current_predecessor = predecessor_instance
+            processed_predecessors.add(predecessor_instance)
 
-                if has_qi and has_cc:
-                    # Chain: First -> QI -> CC -> Second
-                    qi_instance = scheduler.quality_requirements[first_instance]
-                    cc_instance = scheduler.customer_requirements[first_instance]
+            # Chain in Quality Inspection (QI) if it exists
+            if predecessor_instance in scheduler.quality_requirements:
+                qi_instance = scheduler.quality_requirements[predecessor_instance]
+                dynamic_constraints.append({
+                    'First': current_predecessor, 'Second': qi_instance,
+                    'Relationship': 'Finish <= Start', 'Product': product
+                })
+                current_predecessor = qi_instance
 
-                    dynamic_constraints.append({
-                        'First': first_instance, 'Second': qi_instance,
-                        'Relationship': 'Finish = Start', 'Product': product
-                    })
-                    dynamic_constraints.append({
-                        'First': qi_instance, 'Second': cc_instance,
-                        'Relationship': 'Finish = Start', 'Product': product
-                    })
-                    dynamic_constraints.append({
-                        'First': cc_instance, 'Second': second_instance,
-                        'Relationship': relationship, 'Product': product
-                    })
+            # Chain in Customer Inspection (CC) after QI if it exists
+            if predecessor_instance in scheduler.customer_requirements:
+                cc_instance = scheduler.customer_requirements[predecessor_instance]
+                dynamic_constraints.append({
+                    'First': current_predecessor, 'Second': cc_instance,
+                    'Relationship': 'Finish <= Start', 'Product': product
+                })
+                current_predecessor = cc_instance
 
-                elif has_qi:
-                    # Chain: First -> QI -> Second
-                    qi_instance = scheduler.quality_requirements[first_instance]
-                    dynamic_constraints.append({
-                        'First': first_instance, 'Second': qi_instance,
-                        'Relationship': 'Finish = Start', 'Product': product
-                    })
-                    dynamic_constraints.append({
-                        'First': qi_instance, 'Second': second_instance,
-                        'Relationship': relationship, 'Product': product
-                    })
+            # Add the final link from the end of the chain to the main successor
+            dynamic_constraints.append({
+                'First': current_predecessor, 'Second': successor_instance,
+                'Relationship': relationship, 'Product': product
+            })
 
-                elif has_cc:
-                    # Chain: First -> CC -> Second
-                    cc_instance = scheduler.customer_requirements[first_instance]
-                    dynamic_constraints.append({
-                        'First': first_instance, 'Second': cc_instance,
-                        'Relationship': 'Finish = Start', 'Product': product
-                    })
-                    dynamic_constraints.append({
-                        'First': cc_instance, 'Second': second_instance,
-                        'Relationship': relationship, 'Product': product
-                    })
+    # Add inspections for any "terminal" tasks (tasks that are never predecessors)
+    all_tasks_requiring_inspection = set(scheduler.quality_requirements.keys()) | set(scheduler.customer_requirements.keys())
+    for primary_task in all_tasks_requiring_inspection:
+        if primary_task not in processed_predecessors:
+            product = scheduler.instance_to_product.get(primary_task)
+            # This correctly handles QI, CC, or a QI->CC chain for terminal tasks
+            # by calling the helper function once per unique primary task.
+            add_chained_dependency(primary_task, None, 'Finish <= Start', product, dynamic_constraints, scheduler)
 
-                else:
-                    # No inspections, direct connection
-                    dynamic_constraints.append({
-                        'First': first_instance, 'Second': second_instance,
-                        'Relationship': relationship, 'Product': product
-                    })
 
-    # 2. Add late part constraints
-    for lp_constraint in scheduler.late_part_constraints:
-        # ... (logic for late part constraints)
-        pass
-
-    # 3. Add rework constraints
-    for rw_constraint in scheduler.rework_constraints:
-        # ... (logic for rework constraints)
-        pass
-
-    # 4. Add any remaining inspection constraints
-    for primary_instance, qi_instance in scheduler.quality_requirements.items():
-        # ... (logic for quality inspection constraints)
-        pass
-    for primary_instance, cc_instance in scheduler.customer_requirements.items():
-        # ... (logic for customer inspection constraints)
-        pass
-
-    utils.debug_print(scheduler, f"[DEBUG] Total dynamic constraints: {len(dynamic_constraints)}")
-
-    rel_counts = defaultdict(int)
-    for c in dynamic_constraints:
-        rel_counts[c['Relationship']] += 1
-
-    if scheduler.debug:
-        for rel_type, count in sorted(rel_counts.items()):
-            utils.debug_print(scheduler, f"  {rel_type}: {count}")
-
+    utils.debug_print(scheduler, f"[DEBUG] Total dynamic constraints built: {len(dynamic_constraints)}")
     scheduler._dynamic_constraints_cache = dynamic_constraints
     return dynamic_constraints
+
+
+def add_chained_dependency(predecessor_id, successor_id, relationship, product, constraints_list, scheduler):
+    """Helper to chain dependencies, including QI and CC tasks."""
+    if not predecessor_id:
+        return
+
+    current_predecessor = predecessor_id
+
+    # Chain in Quality Inspection (QI) if it exists
+    if predecessor_id in scheduler.quality_requirements:
+        qi_instance = scheduler.quality_requirements[predecessor_id]
+        constraints_list.append({
+            'First': current_predecessor, 'Second': qi_instance,
+            'Relationship': 'Finish <= Start', 'Product': product
+        })
+        current_predecessor = qi_instance
+
+    # Chain in Customer Inspection (CC) after QI if it exists
+    if predecessor_id in scheduler.customer_requirements:
+        cc_instance = scheduler.customer_requirements[predecessor_id]
+        constraints_list.append({
+            'First': current_predecessor, 'Second': cc_instance,
+            'Relationship': 'Finish <= Start', 'Product': product
+        })
+        current_predecessor = cc_instance
+
+    # Add the final link if a successor exists
+    if successor_id:
+        constraints_list.append({
+            'First': current_predecessor, 'Second': successor_id,
+            'Relationship': relationship, 'Product': product
+        })
 
 def get_successors(scheduler, task_id):
     """Get all immediate successor tasks for a given task"""

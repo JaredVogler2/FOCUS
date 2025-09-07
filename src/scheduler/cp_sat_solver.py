@@ -87,37 +87,60 @@ class CpSatScheduler:
 
     def _add_resource_constraints(self):
         """
-        Adds resource constraints to the model, including the QC bug fix.
+        Adds resource constraints with corrected logic for Quality Inspections.
+        This version fixes a double-counting bug and correctly models resource usage.
         """
-        print("[INFO] Adding resource constraints...")
+        print("[INFO] Adding resource constraints with corrected shared mechanic logic...")
         resource_to_tasks = defaultdict(lambda: {'intervals': [], 'demands': []})
+
         for task_id, task_info in self.scheduler.tasks.items():
             task_vars = self.task_vars[task_id]
+
             if task_info.get('is_quality', False):
+                # A Quality Inspection task consumes TWO resources simultaneously:
+                # 1. A Quality Inspector from the designated Quality Team.
                 quality_team = task_info.get('team')
                 if quality_team:
+                    # The 'mechanics_required' for a QI task is the number of QI personnel.
                     resource_to_tasks[quality_team]['intervals'].append(task_vars['interval'])
                     resource_to_tasks[quality_team]['demands'].append(task_info['mechanics_required'])
-                primary_task_id = self.scheduler.quality_inspections.get(task_id, {}).get('primary_task')
+
+                # 2. A Mechanic from the primary task's team.
+                primary_task_id = task_info.get('primary_task')
                 if primary_task_id and primary_task_id in self.scheduler.tasks:
-                    mechanic_team_resource = self.scheduler.tasks[primary_task_id].get('team_skill')
+                    primary_task_info = self.scheduler.tasks[primary_task_id]
+                    mechanic_team_resource = primary_task_info.get('team_skill')
                     if mechanic_team_resource:
+                        # The number of mechanics required for the inspection is also in the QI task's data.
+                        mechanic_headcount_for_qi = task_info.get('mechanics_required', 1)
                         resource_to_tasks[mechanic_team_resource]['intervals'].append(task_vars['interval'])
-                        resource_to_tasks[mechanic_team_resource]['demands'].append(1)
+                        resource_to_tasks[mechanic_team_resource]['demands'].append(mechanic_headcount_for_qi)
+
             elif task_info.get('is_customer', False):
+                # A Customer Inspection task consumes only a Customer resource.
                 customer_team = task_info.get('team')
                 if customer_team:
                     resource_to_tasks[customer_team]['intervals'].append(task_vars['interval'])
                     resource_to_tasks[customer_team]['demands'].append(task_info['mechanics_required'])
+
             else:
+                # This is a standard Production, Rework, or Late Part task.
+                # It only consumes a Mechanic resource.
                 mechanic_team_resource = task_info.get('team_skill')
                 if mechanic_team_resource:
                     resource_to_tasks[mechanic_team_resource]['intervals'].append(task_vars['interval'])
                     resource_to_tasks[mechanic_team_resource]['demands'].append(task_info['mechanics_required'])
+
+        # Add all the cumulative constraints to the model
         all_resources = {**self.scheduler.team_capacity, **self.scheduler.quality_team_capacity, **self.scheduler.customer_team_capacity}
         for resource_name, capacity in all_resources.items():
             if resource_name in resource_to_tasks and capacity > 0:
-                self.model.AddCumulative(resource_to_tasks[resource_name]['intervals'], resource_to_tasks[resource_name]['demands'], capacity)
+                intervals = resource_to_tasks[resource_name]['intervals']
+                demands = resource_to_tasks[resource_name]['demands']
+                self.model.AddCumulative(intervals, demands, capacity)
+                if self.scheduler.debug:
+                    print(f"  - Added cumulative constraint for '{resource_name}' with capacity {capacity} and {len(intervals)} tasks.")
+
         print(f"[INFO] Added cumulative constraints for {len(resource_to_tasks)} unique resources.")
 
     def _set_objective(self):
