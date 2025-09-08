@@ -1669,6 +1669,11 @@ function updateUtilizationDisplay() {
     utilizationData.forEach(data => {
         const item = document.createElement('div');
         item.className = 'utilization-item';
+        item.style.display = 'grid';
+        item.style.gridTemplateColumns = '300px 1fr';
+        item.style.gap = '10px';
+        item.style.alignItems = 'center';
+
         if (data.indent) {
             item.style.marginLeft = '20px';
         }
