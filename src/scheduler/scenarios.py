@@ -198,16 +198,46 @@ def scenario_1_csv_headcount(scheduler, time_limit_seconds=60):
             slack_hours = metrics.calculate_slack_time(scheduler, task_id)
             criticality = algorithms.classify_task_criticality(scheduler, task_id)
             task_info = scheduler.tasks.get(task_id, {})
+            task_type = task_info.get('task_type', 'Production')
+            product = task_info.get('product', 'Unknown')
+            original_task_id = scheduler.instance_to_original_task.get(task_id)
+
+            if task_type == 'Quality Inspection':
+                primary_task = scheduler.quality_inspections.get(task_id, {}).get('primary_task')
+                if primary_task:
+                    primary_original = scheduler.instance_to_original_task.get(primary_task, primary_task)
+                    display_name = f"{product} QI for Task {primary_original}"
+                else:
+                    display_name = f"{product} QI {original_task_id}"
+            elif task_type == 'Late Part':
+                display_name = f"{product} Late Part {original_task_id}"
+            elif task_type == 'Rework':
+                display_name = f"{product} Rework {original_task_id}"
+            else:
+                display_name = f"{product} Task {original_task_id}"
+
+            criticality_symbol = {'CRITICAL': '🔴', 'BUFFER': '🟡', 'FLEXIBLE': '🟢'}.get(criticality, '')
+            display_name_with_criticality = f"{criticality_symbol} {display_name} [{criticality}]"
 
             priority_data.append({
                 'task_instance_id': task_id,
-                'task_type': task_info.get('task_type', 'Production'),
-                'product_line': task_info.get('product', 'Unknown'),
-                'scheduled_start': schedule['start_time'],
+                'task_type': task_type,
+                'display_name': display_name,
+                'display_name_with_criticality': display_name_with_criticality,
+                'criticality': criticality,
+                'product_line': product,
+                'original_task_id': original_task_id,
+                'team': schedule.get('team'),
+                'scheduled_start': schedule.get('start_time'),
+                'scheduled_end': schedule.get('end_time'),
+                'duration_minutes': schedule.get('duration'),
+                'mechanics_required': schedule.get('mechanics_required'),
                 'slack_hours': slack_hours,
-                'criticality': criticality
+                'slack_days': slack_hours / 24 if slack_hours != float('inf') else float('inf'),
+                'priority_score': algorithms.calculate_task_priority(scheduler, task_id),
+                'shift': schedule.get('shift', 'N/A')
             })
-        priority_data.sort(key=lambda x: x['scheduled_start'])
+        priority_data.sort(key=lambda x: (x['scheduled_start'], x['slack_hours']))
         for i, task in enumerate(priority_data, 1): task['global_priority'] = i
         scheduler.global_priority_list = priority_data
 
