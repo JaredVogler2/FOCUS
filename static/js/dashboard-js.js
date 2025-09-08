@@ -7722,7 +7722,7 @@ function setupScenarioEventListeners() {
 }
 
 async function populateProductDropdown() {
-    const select = document.getElementById('productSelect');
+    const select = document.getElementById('scenarioProductSelect');
     if (!select) return;
 
     try {
@@ -7746,7 +7746,7 @@ async function populateProductDropdown() {
 }
 
 async function runWhatIfScenario() {
-    const productSelect = document.getElementById('productSelect');
+    const productSelect = document.getElementById('scenarioProductSelect');
     const selectedProduct = productSelect.value;
 
     if (!selectedProduct) {
