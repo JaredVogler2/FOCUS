@@ -242,8 +242,8 @@ class SchedulerValidator:
         for task_id, schedule in self.scheduler.task_schedule.items():
             task_info = self.scheduler.tasks[task_id]
             team = schedule['team']
-            mechanics_scheduled = schedule['mechanics_required']
-            mechanics_needed = task_info['mechanics_required']
+            mechanics_scheduled = schedule.get('mechanics_required') or schedule.get('personnel_required')
+            mechanics_needed = task_info.get('mechanics_required') or task_info.get('personnel_required')
             
             # Check if team has enough capacity
             capacity = self.scheduler.team_capacity.get(team, 0) or self.scheduler.quality_team_capacity.get(team, 0) or self.scheduler.customer_team_capacity.get(team, 0)
