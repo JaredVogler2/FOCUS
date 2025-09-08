@@ -83,8 +83,7 @@ def create_app():
         result3 = scheduler.scenario_3_optimal_schedule()
         if result3 and result3.get('status') == 'SUCCESS':
             # The new scenario will directly modify the scheduler's state
-            workforce_s3 = result3.get('workforce')
-            scenario_results['scenario3'] = export_scenario_with_capacities(scheduler, 'scenario3', override_workforce=workforce_s3)
+            scenario_results['scenario3'] = export_scenario_with_capacities(scheduler, 'scenario3')
             print(f"✓ Scenario 3 complete: {scenario_results.get('scenario3', {}).get('makespan', 'N/A')} days makespan")
         else:
             print("✗ Scenario 3 failed to find a valid solution.")
@@ -124,7 +123,7 @@ def create_app():
     return app
 
 
-def export_scenario_with_capacities(scheduler, scenario_name, override_workforce=None):
+def export_scenario_with_capacities(scheduler, scenario_name):
     """Export scenario results including current team capacities and shift information"""
     team_capacities = {**scheduler.team_capacity, **scheduler.quality_team_capacity, **scheduler.customer_team_capacity}
     team_shifts = {**scheduler.team_shifts, **scheduler.quality_team_shifts, **scheduler.customer_team_shifts}
@@ -187,9 +186,6 @@ def export_scenario_with_capacities(scheduler, scenario_name, override_workforce
     max_lateness = max((p['latenessDays'] for p in products if p['latenessDays'] < 999999), default=0)
     total_workforce = sum(team_capacities.values())
 
-    # Use override if provided, otherwise use calculated value
-    final_workforce = override_workforce if override_workforce is not None else total_workforce
-
     return {
         'scenarioId': scenario_name,
         'tasks': tasks,
@@ -197,7 +193,7 @@ def export_scenario_with_capacities(scheduler, scenario_name, override_workforce
         'teamShifts': team_shifts,
         'products': products,
         'utilization': utilization,
-        'totalWorkforce': final_workforce,
+        'totalWorkforce': total_workforce,
         'avgUtilization': round(sum(utilization.values()) / len(utilization) if utilization else 0, 1),
         'makespan': makespan,
         'onTimeRate': on_time_rate,

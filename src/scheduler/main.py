@@ -54,7 +54,7 @@ class ProductionScheduler:
         # Original capacities for resets
         self._original_team_capacity = {}
         self._original_quality_capacity = {}
-        self._original_customer_capacity = {}
+        self._original_customer_team_capacity = {}
 
         self._next_instance_id = 1
 

@@ -253,14 +253,19 @@ def scenario_3_optimal_schedule(scheduler, time_limit_seconds=90):
         print(f"Solver finished with status: {solver.StatusName(status)}")
         scheduler.task_schedule.clear()
 
-        # Update capacities for each specific team
+        # Clear old capacities and update with optimized values
+        scheduler.team_capacity.clear()
+        scheduler.quality_team_capacity.clear()
+        scheduler.customer_team_capacity.clear()
+
         for team, cap_var in team_capacity_vars.items():
             optimized_capacity = solver.Value(cap_var)
-            if team in scheduler.team_capacity:
+            # Check original dictionaries to determine team type
+            if team in scheduler._original_team_capacity:
                 scheduler.team_capacity[team] = optimized_capacity
-            if team in scheduler.quality_team_capacity:
+            elif team in scheduler._original_quality_capacity:
                 scheduler.quality_team_capacity[team] = optimized_capacity
-            if team in scheduler.customer_team_capacity:
+            elif team in scheduler._original_customer_team_capacity:
                 scheduler.customer_team_capacity[team] = optimized_capacity
 
         # Update schedule
@@ -290,9 +295,40 @@ def scenario_3_optimal_schedule(scheduler, time_limit_seconds=90):
         for i, task in enumerate(priority_data, 1): task['global_priority'] = i
         scheduler.global_priority_list = priority_data
 
-        workforce = solver.Value(total_workforce)
-        print(f"\nSCENARIO 3 OPTIMIZATION COMPLETE: Lateness={solver.Value(total_lateness_days)} days, Workforce={workforce} people")
-        return {'status': 'SUCCESS', 'workforce': workforce}
+        print(f"\nSCENARIO 3 OPTIMIZATION COMPLETE: Lateness={solver.Value(total_lateness_days)} days, Workforce={solver.Value(total_workforce)} people")
+
+        # --- Detailed Workforce Breakdown ---
+        print("\n" + "-" * 40)
+        print("Optimized Workforce Breakdown:")
+        print("-" * 40)
+
+        all_optimized_teams = {**scheduler.team_capacity, **scheduler.quality_team_capacity, **scheduler.customer_team_capacity}
+
+        # Group by shift for reporting
+        by_shift = defaultdict(lambda: defaultdict(list))
+        for team, capacity in all_optimized_teams.items():
+            if capacity > 0:
+                shifts = scheduler.team_shifts.get(team) or scheduler.quality_team_shifts.get(team) or scheduler.customer_team_shifts.get(team, ['Undefined'])
+                shift_str = ', '.join(shifts) if shifts else 'Undefined'
+
+                team_type = "Mechanic"
+                if team in scheduler.quality_team_capacity:
+                    team_type = "Quality"
+                elif team in scheduler.customer_team_capacity:
+                    team_type = "Customer"
+
+                by_shift[shift_str][team_type].append(f"  - {team}: {capacity} people")
+
+        for shift, types in sorted(by_shift.items()):
+            print(f"\nShift: {shift}")
+            for team_type, teams in sorted(types.items()):
+                print(f" {team_type} Teams:")
+                for team_line in sorted(teams):
+                    print(team_line)
+        print("-" * 40)
+
+
+        return {'status': 'SUCCESS'}
     else:
         print(f"Solver could not find a solution. Status: {solver.StatusName(status)}")
         return None

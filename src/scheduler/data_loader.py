@@ -320,7 +320,7 @@ def _load_customer_teams(scheduler, sections):
                 team = row[0].strip()
                 capacity = int(row[1].strip())
                 scheduler.customer_team_capacity[team] = capacity
-                scheduler._original_customer_capacity[team] = capacity
+                scheduler._original_customer_team_capacity[team] = capacity
 
                 # Aggregate into base team
                 base_team_name = team.split(' (')[0]
