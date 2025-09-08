@@ -54,6 +54,7 @@ def check_and_kill_port(port=5000):
 
 from collections import defaultdict
 import re
+from datetime import datetime
 
 
 def export_scenario_with_capacities(scheduler, scenario_name):
@@ -105,7 +106,28 @@ def export_scenario_with_capacities(scheduler, scenario_name):
     utilization = {team: min(100, round((team_task_minutes.get(team, 0) / (8 * 60 * makespan * capacity) * 100), 1)) if capacity > 0 and makespan > 0 else 0 for team, capacity in team_capacities.items()}
 
     products = []
+    today = datetime.now()
     for product, metrics in lateness_metrics.items():
+        # Calculate days remaining
+        days_remaining = 0
+        if metrics['projected_completion']:
+            days_remaining = (metrics['projected_completion'] - today).days
+            if days_remaining < 0:
+                days_remaining = 0
+
+        # Calculate critical path length for the product
+        critical_path_count = 0
+        if hasattr(scheduler, 'global_priority_list') and scheduler.global_priority_list:
+            for task in scheduler.global_priority_list:
+                if task.get('product_line') == product and task.get('criticality') == 'CRITICAL':
+                    critical_path_count += 1
+
+        # Calculate progress
+        tasks_for_product = [t for t in scheduler.task_schedule.values() if t.get('product') == product]
+        completed_tasks = [t for t in tasks_for_product if t['end_time'] < today]
+        progress = round(len(completed_tasks) / len(tasks_for_product) * 100) if tasks_for_product else 0
+
+
         products.append({
             'name': product,
             'totalTasks': metrics['total_tasks'],
@@ -113,6 +135,12 @@ def export_scenario_with_capacities(scheduler, scenario_name):
             'projectedCompletion': metrics['projected_completion'].isoformat() if metrics['projected_completion'] else '',
             'onTime': metrics['on_time'],
             'latenessDays': metrics['lateness_days'] if metrics['lateness_days'] < 999999 else 0,
+            'daysRemaining': days_remaining,
+            'criticalPath': critical_path_count,
+            'progress': progress,
+            'latePartsCount': metrics.get('task_breakdown', {}).get('Late Part', 0),
+            'reworkCount': metrics.get('task_breakdown', {}).get('Rework', 0),
+            'customerCount': metrics.get('task_breakdown', {}).get('Customer', 0)
         })
 
     on_time_rate = round(sum(1 for p in products if p['onTime']) / len(products) * 100 if products else 0, 1)
