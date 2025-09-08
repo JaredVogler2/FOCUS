@@ -290,8 +290,9 @@ def scenario_3_optimal_schedule(scheduler, time_limit_seconds=90):
         for i, task in enumerate(priority_data, 1): task['global_priority'] = i
         scheduler.global_priority_list = priority_data
 
-        print(f"\nSCENARIO 3 OPTIMIZATION COMPLETE: Lateness={solver.Value(total_lateness_days)} days, Workforce={solver.Value(total_workforce)} people")
-        return {'status': 'SUCCESS'}
+        workforce = solver.Value(total_workforce)
+        print(f"\nSCENARIO 3 OPTIMIZATION COMPLETE: Lateness={solver.Value(total_lateness_days)} days, Workforce={workforce} people")
+        return {'status': 'SUCCESS', 'workforce': workforce}
     else:
         print(f"Solver could not find a solution. Status: {solver.StatusName(status)}")
         return None
