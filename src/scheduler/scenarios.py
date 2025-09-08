@@ -386,7 +386,7 @@ def run_what_if_scenario(scheduler, prioritized_product, time_limit_seconds=60):
     # --- Resource Modeling (Use original capacities, not optimized vars) ---
     team_capacities = {**scheduler._original_team_capacity,
                        **scheduler._original_quality_capacity,
-                       **scheduler._original_customer_capacity}
+                       **scheduler._original_customer_team_capacity}
 
     # --- Constraints ---
     # 1. Precedence Constraints

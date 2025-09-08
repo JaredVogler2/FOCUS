@@ -583,12 +583,6 @@ function switchView(view) {
 
     // Call the main update function
     updateView();
-
-    // The updateView() -> initScenarioView() path seems unreliable for the scenario view.
-    // A direct call is added here to ensure the view initializes correctly.
-    if (view === 'scenario') {
-        initScenarioView();
-    }
 }
 
 // Update view based on current selection
@@ -7729,10 +7723,7 @@ function setupScenarioEventListeners() {
 
 async function populateProductDropdown() {
     const select = document.getElementById('scenarioProductSelect');
-    if (!select) {
-        console.error("CRITICAL: Could not find element with ID 'scenarioProductSelect'. Cannot populate dropdown.");
-        return;
-    }
+    if (!select) return;
 
     try {
         const response = await fetch('/api/products');
@@ -7781,23 +7772,9 @@ async function runWhatIfScenario() {
             body: JSON.stringify({ product_to_prioritize: selectedProduct }),
         });
 
-        // Check if the response is JSON before trying to parse it
-        const contentType = response.headers.get("content-type");
         if (!response.ok) {
-            let errorData;
-            if (contentType && contentType.indexOf("application/json") !== -1) {
-                errorData = await response.json();
-            } else {
-                const errorText = await response.text();
-                throw new Error(`Server returned non-JSON error: ${response.status} ${response.statusText}. Response: ${errorText}`);
-            }
-
-            // Construct a detailed error message
-            let errorMessage = `${errorData.error}\n\nDetails: ${errorData.details || 'N/A'}`;
-            if (errorData.trace) {
-                errorMessage += `\n\nTrace:\n${errorData.trace}`;
-            }
-            throw new Error(errorMessage);
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Scenario run failed.');
         }
 
         const data = await response.json();
@@ -7806,12 +7783,7 @@ async function runWhatIfScenario() {
 
     } catch (error) {
         console.error('Error running what-if scenario:', error);
-        // Use preformatted text in alert to preserve line breaks from the traceback
-        const alertContent = document.createElement('pre');
-        alertContent.style.whiteSpace = 'pre-wrap';
-        alertContent.textContent = `Error: ${error.message}`;
-        alert(alertContent.textContent);
-
+        alert(`Error: ${error.message}`);
     } finally {
         spinner.style.display = 'none';
         runBtn.disabled = false;

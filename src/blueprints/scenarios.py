@@ -4,7 +4,6 @@ from flask import Blueprint, jsonify, current_app, request
 from src.scheduler.scenarios import run_what_if_scenario
 from src.server_utils import export_scenario_with_capacities
 from datetime import datetime
-import traceback
 
 scenarios_bp = Blueprint('scenarios', __name__, url_prefix='/api')
 
@@ -104,50 +103,41 @@ def get_scenario_summary(scenario_id):
 @scenarios_bp.route('/scenarios/run_what_if', methods=['POST'])
 def run_what_if():
     """Run a what-if scenario by prioritizing a specific product."""
-    try:
-        data = request.get_json()
-        product_to_prioritize = data.get('product_to_prioritize')
+    data = request.get_json()
+    product_to_prioritize = data.get('product_to_prioritize')
 
-        if not product_to_prioritize:
-            return jsonify({'error': 'product_to_prioritize is required'}), 400
+    if not product_to_prioritize:
+        return jsonify({'error': 'product_to_prioritize is required'}), 400
 
-        scheduler = current_app.scheduler
-        if not scheduler:
-            return jsonify({'error': 'Scheduler not initialized'}), 500
+    scheduler = current_app.scheduler
+    if not scheduler:
+        return jsonify({'error': 'Scheduler not initialized'}), 500
 
-        # Run the what-if scenario
-        what_if_scheduler = run_what_if_scenario(scheduler, product_to_prioritize)
+    # Run the what-if scenario
+    what_if_scheduler = run_what_if_scenario(scheduler, product_to_prioritize)
 
-        if not what_if_scheduler:
-            return jsonify({'error': 'Failed to run what-if scenario.'}), 500
+    if not what_if_scheduler:
+        return jsonify({'error': 'Failed to run what-if scenario.'}), 500
 
-        # Export the results of the new scenario
-        what_if_results = export_scenario_with_capacities(what_if_scheduler, f"what_if_{product_to_prioritize}")
+    # Export the results of the new scenario
+    what_if_results = export_scenario_with_capacities(what_if_scheduler, f"what_if_{product_to_prioritize}")
 
-        # Get the baseline results for comparison
-        baseline_results = current_app.scenario_results.get('baseline')
+    # Get the baseline results for comparison
+    baseline_results = current_app.scenario_results.get('baseline')
 
-        # Structure for side-by-side comparison
-        comparison_data = {
-            'baseline': baseline_results,
-            'what_if': what_if_results,
-            'prioritized_product': product_to_prioritize,
-            'created_at': datetime.utcnow().isoformat()
-        }
+    # Structure for side-by-side comparison
+    comparison_data = {
+        'baseline': baseline_results,
+        'what_if': what_if_results,
+        'prioritized_product': product_to_prioritize,
+        'created_at': datetime.utcnow().isoformat()
+    }
 
-        # Save the scenario
-        scenario_id = f"whatif_{product_to_prioritize}_{datetime.utcnow().strftime('%Y%m%d%H%M%S')}"
-        current_app.saved_scenarios[scenario_id] = comparison_data
+    # Save the scenario
+    scenario_id = f"whatif_{product_to_prioritize}_{datetime.utcnow().strftime('%Y%m%d%H%M%S')}"
+    current_app.saved_scenarios[scenario_id] = comparison_data
 
-        return jsonify(comparison_data)
-    except Exception as e:
-        print(f"ERROR in run_what_if: {e}")
-        traceback.print_exc()
-        return jsonify({
-            'error': 'An unexpected error occurred on the server.',
-            'details': str(e),
-            'trace': traceback.format_exc()
-        }), 500
+    return jsonify(comparison_data)
 
 
 @scenarios_bp.route('/products')
