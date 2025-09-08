@@ -2,6 +2,8 @@
 // Compatible with product-specific late parts and rework tasks
 let mechanicOptionsCache = {};
 let lastFilterKey = null;
+let populateProductDropdownRetries = 0;
+const MAX_POPULATE_RETRIES = 10; // Try for 5 seconds
 let currentScenario = 'baseline';
 let currentView = 'team-lead';
 let selectedTeam = 'all';
@@ -7728,11 +7730,12 @@ function populateProductDropdown() {
         return;
     }
 
-    // Use the already loaded scenarioData.products, which powers the other product dropdowns
+    console.log(`(Attempt ${populateProductDropdownRetries + 1}) Populating scenario product dropdown...`);
+
     if (scenarioData && scenarioData.products && scenarioData.products.length > 0) {
+        console.log("`scenarioData.products` is available. Populating dropdown.");
         select.innerHTML = '<option value="">-- Select a Product --</option>';
 
-        // Sort products alphabetically by name
         const sortedProducts = [...scenarioData.products].sort((a, b) => a.name.localeCompare(b.name));
 
         sortedProducts.forEach(product => {
@@ -7741,11 +7744,19 @@ function populateProductDropdown() {
             option.textContent = product.name;
             select.appendChild(option);
         });
-        console.log(`Populated scenario product dropdown with ${sortedProducts.length} products from scenarioData.`);
+        console.log(`Successfully populated dropdown with ${sortedProducts.length} products.`);
+        populateProductDropdownRetries = 0; // Reset for next time
     } else {
-        // This case will be hit if the main scenario data hasn't loaded yet.
-        console.warn("scenarioData.products not available for populating scenario dropdown.");
-        select.innerHTML = '<option value="">No products loaded</option>';
+        if (populateProductDropdownRetries < MAX_POPULATE_RETRIES) {
+            populateProductDropdownRetries++;
+            console.warn(`scenarioData.products not available. Retrying in 500ms...`);
+            select.innerHTML = '<option value="">Loading product data...</option>';
+            setTimeout(populateProductDropdown, 500);
+        } else {
+            console.error("Failed to populate product dropdown after multiple retries. `scenarioData.products` is not available.");
+            select.innerHTML = '<option value="">Error: Could not load products</option>';
+            populateProductDropdownRetries = 0; // Reset for next time
+        }
     }
 }
 
