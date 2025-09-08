@@ -126,7 +126,11 @@ def run_what_if():
         what_if_results = export_scenario_with_capacities(what_if_scheduler, f"what_if_{product_to_prioritize}")
 
         # Get the baseline results for comparison
-        baseline_results = current_app.scenario_results.get('baseline')
+        baseline_scenario_id = data.get('baseline_scenario_id', 'baseline')
+        baseline_results = current_app.scenario_results.get(baseline_scenario_id)
+
+        if not baseline_results:
+            return jsonify({'error': f'Baseline scenario "{baseline_scenario_id}" not found.'}), 404
 
         # Structure for side-by-side comparison
         comparison_data = {

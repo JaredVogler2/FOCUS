@@ -7775,7 +7775,10 @@ async function runWhatIfScenario() {
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ product_to_prioritize: selectedProduct }),
+            body: JSON.stringify({
+                product_to_prioritize: selectedProduct,
+                baseline_scenario_id: currentScenario
+            }),
         });
 
         // The response is now guaranteed to be JSON, even on error, thanks to the backend fix.
