@@ -7723,25 +7723,49 @@ function setupScenarioEventListeners() {
 
 async function populateProductDropdown() {
     const select = document.getElementById('scenarioProductSelect');
-    if (!select) return;
+    if (!select) {
+        console.error('Could not find #scenarioProductSelect element.');
+        return;
+    }
+
+    console.log('Populating product dropdown...');
+    select.innerHTML = '<option>Loading products...</option>'; // Give user feedback
 
     try {
+        console.log('Fetching /api/products...');
         const response = await fetch('/api/products');
+        console.log('Response from /api/products:', response);
+
         if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
+            console.error('Response not OK', response.status, response.statusText);
+            const errorText = await response.text();
+            throw new Error(`Failed to fetch products: ${response.status} ${response.statusText}. Server says: ${errorText}`);
         }
+
         const products = await response.json();
+        console.log('Received products:', products);
+
+        if (!Array.isArray(products)) {
+             console.error('Data received from /api/products is not an array:', products);
+             throw new Error('Invalid data format for products.');
+        }
 
         select.innerHTML = '<option value="">-- Select a Product --</option>';
-        products.forEach(product => {
-            const option = document.createElement('option');
-            option.value = product;
-            option.textContent = product;
-            select.appendChild(option);
-        });
+        if (products.length === 0) {
+            console.warn('Received an empty list of products.');
+            select.innerHTML = '<option value="">No eligible products found</option>';
+        } else {
+            products.forEach(product => {
+                const option = document.createElement('option');
+                option.value = product;
+                option.textContent = product;
+                select.appendChild(option);
+            });
+            console.log(`Successfully populated dropdown with ${products.length} products.`);
+        }
     } catch (error) {
         console.error('Failed to load products:', error);
-        select.innerHTML = '<option value="">Error loading products</option>';
+        select.innerHTML = `<option value="">Error: ${error.message}</option>`;
     }
 }
 
