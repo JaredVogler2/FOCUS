@@ -67,16 +67,18 @@ class ProductionScheduler:
             min_requirements[team] = 0
         for team in self.quality_team_capacity:
             min_requirements[team] = 0
+        for team in self.customer_team_capacity:
+            min_requirements[team] = 0
 
         # Check all tasks for their team_skill requirements
         for task_id, task_info in self.tasks.items():
             # Use team_skill if available, otherwise team
             team = task_info.get('team_skill', task_info.get('team'))
-            mechanics_required = task_info.get('mechanics_required', 0)
+            resources_required = task_info.get('mechanics_required') or task_info.get('personnel_required') or 0
 
             if team:
                 if team in min_requirements:
-                    min_requirements[team] = max(min_requirements[team], mechanics_required)
+                    min_requirements[team] = max(min_requirements[team], resources_required)
                 else:
                     # Team not in capacity tables - this is a problem
                     if self.debug:
@@ -88,6 +90,14 @@ class ProductionScheduler:
             # QI tasks should have their team assigned during loading
             if qi_id in self.tasks:
                 team = self.tasks[qi_id].get('team')
+                if team and team in min_requirements:
+                    min_requirements[team] = max(min_requirements[team], headcount)
+
+        # Check customer inspections
+        for cc_id, cc_info in self.customer_inspections.items():
+            headcount = cc_info.get('headcount', 0)
+            if cc_id in self.tasks:
+                team = self.tasks[cc_id].get('team')
                 if team and team in min_requirements:
                     min_requirements[team] = max(min_requirements[team], headcount)
 

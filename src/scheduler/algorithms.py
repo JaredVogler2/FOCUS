@@ -116,7 +116,7 @@ def schedule_tasks(scheduler, allow_late_delivery=False, silent_mode=False):
 
         task_info = scheduler.tasks[task_instance_id]
         duration = task_info['duration']
-        mechanics_needed = task_info['mechanics_required']
+        resources_needed = task_info.get('mechanics_required') or task_info.get('personnel_required') or 1
         is_quality = task_info['is_quality']
         is_customer = task_info.get('is_customer', False)
         task_type = task_info['task_type']
@@ -166,10 +166,10 @@ def schedule_tasks(scheduler, allow_late_delivery=False, silent_mode=False):
 
                 # Try each customer team to find the earliest available slot
                 for team, capacity in scheduler.customer_team_capacity.items():
-                    if capacity >= mechanics_needed:
+                    if capacity >= resources_needed:
                         result = get_next_working_time_with_capacity(
                             scheduler, earliest_start, product, team,
-                            mechanics_needed, duration, is_quality=False, is_customer=True
+                            resources_needed, duration, is_quality=False, is_customer=True
                         )
 
                         if result and result[0] and result[0] < earliest_available:
@@ -217,7 +217,7 @@ def schedule_tasks(scheduler, allow_late_delivery=False, silent_mode=False):
 
                 result = get_next_working_time_with_capacity(
                     scheduler, earliest_start, product, quality_team,
-                    mechanics_needed, duration, is_quality=True, is_customer=False)
+                    resources_needed, duration, is_quality=True, is_customer=False)
 
                 if result is None or result[0] is None:
                     cannot_schedule.append(task_instance_id)
@@ -244,7 +244,7 @@ def schedule_tasks(scheduler, allow_late_delivery=False, silent_mode=False):
 
                 result = get_next_working_time_with_capacity(
                     scheduler, earliest_start, product, team_for_scheduling,
-                    mechanics_needed, duration, is_quality=False, is_customer=False)
+                    resources_needed, duration, is_quality=False, is_customer=False)
 
                 if result is None or result[0] is None:
                     cannot_schedule.append(task_instance_id)
@@ -280,7 +280,7 @@ def schedule_tasks(scheduler, allow_late_delivery=False, silent_mode=False):
                 'skill': task_info.get('skill'),
                 'product': product,
                 'duration': duration,
-                'mechanics_required': mechanics_needed,
+                'mechanics_required': resources_needed,
                 'is_quality': is_quality,
                 'is_customer': is_customer,
                 'task_type': task_type,
