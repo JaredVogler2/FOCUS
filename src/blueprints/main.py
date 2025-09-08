@@ -23,16 +23,6 @@ def index():
         main_bp.browser_opened = True
     return render_template('dashboard2.html')
 
-@main_bp.route('/api/products')
-def get_products():
-    """Get a list of all unique product lines."""
-    if scheduler := current_app.scheduler:
-        # Get products from the product_remaining_ranges, which is populated from the PRODUCT LINE JOBS table.
-        # This ensures all products with tasks are included, not just those with delivery dates.
-        product_list = list(scheduler.product_remaining_ranges.keys())
-        return jsonify(sorted(product_list))
-    return jsonify([])
-
 @main_bp.app_errorhandler(404)
 def not_found(error):
     return jsonify({'error': 'Not found'}), 404

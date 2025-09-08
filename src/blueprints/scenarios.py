@@ -140,6 +140,17 @@ def run_what_if():
     return jsonify(comparison_data)
 
 
+@scenarios_bp.route('/products')
+def get_products():
+    """Get a list of all unique product lines for scenario planning."""
+    if scheduler := current_app.scheduler:
+        # Get products from the product_remaining_ranges, which is populated from the PRODUCT LINE JOBS table.
+        # This ensures all products with tasks are included, not just those with delivery dates.
+        product_list = list(scheduler.product_remaining_ranges.keys())
+        return jsonify(sorted(product_list))
+    return jsonify([])
+
+
 @scenarios_bp.route('/scenarios/saved')
 def get_saved_scenarios():
     """Get a list of all saved what-if scenarios."""
