@@ -7721,51 +7721,31 @@ function setupScenarioEventListeners() {
     }
 }
 
-async function populateProductDropdown() {
+function populateProductDropdown() {
     const select = document.getElementById('scenarioProductSelect');
     if (!select) {
-        console.error('Could not find #scenarioProductSelect element.');
+        console.error("Could not find #scenarioProductSelect element.");
         return;
     }
 
-    console.log('Populating product dropdown...');
-    select.innerHTML = '<option>Loading products...</option>'; // Give user feedback
-
-    try {
-        console.log('Fetching /api/products...');
-        const response = await fetch('/api/products');
-        console.log('Response from /api/products:', response);
-
-        if (!response.ok) {
-            console.error('Response not OK', response.status, response.statusText);
-            const errorText = await response.text();
-            throw new Error(`Failed to fetch products: ${response.status} ${response.statusText}. Server says: ${errorText}`);
-        }
-
-        const products = await response.json();
-        console.log('Received products:', products);
-
-        if (!Array.isArray(products)) {
-             console.error('Data received from /api/products is not an array:', products);
-             throw new Error('Invalid data format for products.');
-        }
-
+    // Use the already loaded scenarioData.products, which powers the other product dropdowns
+    if (scenarioData && scenarioData.products && scenarioData.products.length > 0) {
         select.innerHTML = '<option value="">-- Select a Product --</option>';
-        if (products.length === 0) {
-            console.warn('Received an empty list of products.');
-            select.innerHTML = '<option value="">No eligible products found</option>';
-        } else {
-            products.forEach(product => {
-                const option = document.createElement('option');
-                option.value = product;
-                option.textContent = product;
-                select.appendChild(option);
-            });
-            console.log(`Successfully populated dropdown with ${products.length} products.`);
-        }
-    } catch (error) {
-        console.error('Failed to load products:', error);
-        select.innerHTML = `<option value="">Error: ${error.message}</option>`;
+
+        // Sort products alphabetically by name
+        const sortedProducts = [...scenarioData.products].sort((a, b) => a.name.localeCompare(b.name));
+
+        sortedProducts.forEach(product => {
+            const option = document.createElement('option');
+            option.value = product.name;
+            option.textContent = product.name;
+            select.appendChild(option);
+        });
+        console.log(`Populated scenario product dropdown with ${sortedProducts.length} products from scenarioData.`);
+    } else {
+        // This case will be hit if the main scenario data hasn't loaded yet.
+        console.warn("scenarioData.products not available for populating scenario dropdown.");
+        select.innerHTML = '<option value="">No products loaded</option>';
     }
 }
 
