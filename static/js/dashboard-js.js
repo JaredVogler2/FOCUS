@@ -7781,9 +7781,23 @@ async function runWhatIfScenario() {
             body: JSON.stringify({ product_to_prioritize: selectedProduct }),
         });
 
+        // Check if the response is JSON before trying to parse it
+        const contentType = response.headers.get("content-type");
         if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.error || 'Scenario run failed.');
+            let errorData;
+            if (contentType && contentType.indexOf("application/json") !== -1) {
+                errorData = await response.json();
+            } else {
+                const errorText = await response.text();
+                throw new Error(`Server returned non-JSON error: ${response.status} ${response.statusText}. Response: ${errorText}`);
+            }
+
+            // Construct a detailed error message
+            let errorMessage = `${errorData.error}\n\nDetails: ${errorData.details || 'N/A'}`;
+            if (errorData.trace) {
+                errorMessage += `\n\nTrace:\n${errorData.trace}`;
+            }
+            throw new Error(errorMessage);
         }
 
         const data = await response.json();
@@ -7792,7 +7806,12 @@ async function runWhatIfScenario() {
 
     } catch (error) {
         console.error('Error running what-if scenario:', error);
-        alert(`Error: ${error.message}`);
+        // Use preformatted text in alert to preserve line breaks from the traceback
+        const alertContent = document.createElement('pre');
+        alertContent.style.whiteSpace = 'pre-wrap';
+        alertContent.textContent = `Error: ${error.message}`;
+        alert(alertContent.textContent);
+
     } finally {
         spinner.style.display = 'none';
         runBtn.disabled = false;
