@@ -74,32 +74,24 @@ class ProductionScheduler:
         for task_id, task_info in self.tasks.items():
             # Use team_skill if available, otherwise team
             team = task_info.get('team_skill', task_info.get('team'))
-            resources_required = task_info.get('mechanics_required') or task_info.get('personnel_required') or 0
+
+            required = 0
+            if task_info.get('is_quality', False):
+                required = task_info.get('mechanics_required', 0) # For QI, this is quality headcount
+            elif task_info.get('is_customer', False):
+                required = task_info.get('personnel_required', 0)
+            else:
+                required = task_info.get('mechanics_required', 0)
+
 
             if team:
                 if team in min_requirements:
-                    min_requirements[team] = max(min_requirements[team], resources_required)
+                    min_requirements[team] = max(min_requirements[team], required)
                 else:
-                    # Team not in capacity tables - this is a problem
+                    # This can happen for skill-specific teams not in the base capacity list
+                    min_requirements[team] = required
                     if self.debug:
-                        print(f"[WARNING] Task {task_id} requires team {team} not in capacity tables")
-
-        # Check quality inspections
-        for qi_id, qi_info in self.quality_inspections.items():
-            headcount = qi_info.get('headcount', 0)
-            # QI tasks should have their team assigned during loading
-            if qi_id in self.tasks:
-                team = self.tasks[qi_id].get('team')
-                if team and team in min_requirements:
-                    min_requirements[team] = max(min_requirements[team], headcount)
-
-        # Check customer inspections
-        for cc_id, cc_info in self.customer_inspections.items():
-            headcount = cc_info.get('headcount', 0)
-            if cc_id in self.tasks:
-                team = self.tasks[cc_id].get('team')
-                if team and team in min_requirements:
-                    min_requirements[team] = max(min_requirements[team], headcount)
+                        print(f"[DEBUG] Adding new team '{team}' to min_requirements for task {task_id}")
 
         return min_requirements
 

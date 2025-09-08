@@ -94,7 +94,7 @@ class SchedulerValidator:
             team = schedule['team']
             start_time = schedule['start_time']
             end_time = schedule['end_time']
-            mechanics_required = schedule['mechanics_required']
+            mechanics_required = schedule.get('mechanics_required') or schedule.get('personnel_required') or 0
             
             # Sample check - every 15 minutes instead of every minute for performance
             current = start_time
@@ -242,8 +242,8 @@ class SchedulerValidator:
         for task_id, schedule in self.scheduler.task_schedule.items():
             task_info = self.scheduler.tasks[task_id]
             team = schedule['team']
-            mechanics_scheduled = schedule.get('mechanics_required') or schedule.get('personnel_required')
-            mechanics_needed = task_info.get('mechanics_required') or task_info.get('personnel_required')
+            mechanics_scheduled = schedule.get('mechanics_required') or schedule.get('personnel_required') or 0
+            mechanics_needed = task_info.get('mechanics_required') or task_info.get('personnel_required') or 0
             
             # Check if team has enough capacity
             capacity = self.scheduler.team_capacity.get(team, 0) or self.scheduler.quality_team_capacity.get(team, 0) or self.scheduler.customer_team_capacity.get(team, 0)
@@ -321,7 +321,7 @@ class SchedulerValidator:
             capacity = self.scheduler.team_capacity.get(team, 0) or self.scheduler.quality_team_capacity.get(team, 0) or self.scheduler.customer_team_capacity.get(team, 0)
             if capacity > 0:
                 total_work = sum(
-                    sched['duration'] * sched['mechanics_required']
+                    sched['duration'] * (sched.get('mechanics_required') or sched.get('personnel_required') or 0)
                     for sched in self.scheduler.task_schedule.values()
                     if sched.get('team') == team
                 )

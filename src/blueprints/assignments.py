@@ -128,12 +128,9 @@ def auto_assign_tasks():
     for task in tasks_to_assign[:100]:  # Limit to first 100 tasks for performance
         task_start = datetime.fromisoformat(task['startTime'])
         task_end = datetime.fromisoformat(task['endTime'])
-
-        # Use the new 'personnel' field for customer tasks, otherwise fallback to 'mechanics'
-        if task.get('isCustomerTask'):
-            resources_needed = task.get('personnel', 1) or 1
-        else:
-            resources_needed = task.get('mechanics', 1) or 1
+        mechanics_needed = task.get('mechanics', 1)
+        if task.get('isCustomerTask') and task.get('personnel_required') is not None:
+            mechanics_needed = task.get('personnel_required')
 
         # Find available mechanics from the same team as the task
         team_mechanics = [m for m in available_mechanics if m['team'] == task['team']]
@@ -144,9 +141,9 @@ def auto_assign_tasks():
             if mechanic['busy_until'] is None or mechanic['busy_until'] <= task_start:
                 free_mechanics.append(mechanic)
 
-        if len(free_mechanics) >= resources_needed:
+        if len(free_mechanics) >= mechanics_needed:
             # Assign the required number of mechanics
-            assigned_mechs = free_mechanics[:resources_needed]
+            assigned_mechs = free_mechanics[:mechanics_needed]
             assigned_names = []
 
             for mech in assigned_mechs:
@@ -193,11 +190,11 @@ def auto_assign_tasks():
             # Record conflict - not enough free mechanics
             conflicts.append({
                 'taskId': task['taskId'],
-                'reason': f'Need {resources_needed} {task["team"]} personnel but only {len(free_mechanics)} available',
+                'reason': f'Need {mechanics_needed} {task["team"]} personnel but only {len(free_mechanics)} available',
                 'startTime': task['startTime'],
                 'team': task['team'],
                 'available': len(free_mechanics),
-                'needed': resources_needed
+                'needed': mechanics_needed
             })
 
             # Try to assign whatever mechanics are available (partial assignment)
