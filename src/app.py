@@ -10,6 +10,7 @@ from datetime import datetime, timedelta
 import os
 from collections import defaultdict
 import traceback
+import re
 
 # Import the corrected scheduler
 from src.scheduler.main import ProductionScheduler
@@ -186,6 +187,33 @@ def export_scenario_with_capacities(scheduler, scenario_name):
     max_lateness = max((p['latenessDays'] for p in products if p['latenessDays'] < 999999), default=0)
     total_workforce = sum(team_capacities.values())
 
+    # --- Aggregated Stats for Dashboard Labels ---
+    agg_stats = {
+        'by_role': defaultdict(lambda: {'teams': 0, 'workers': 0}),
+        'by_skill': defaultdict(lambda: {'teams': 0, 'workers': 0}),
+    }
+
+    # Regex to extract skill from team names like "Mechanic Team 1 (Skill 1)"
+    skill_pattern = re.compile(r'.*\(Skill (\d+)\)')
+
+    for team, capacity in team_capacities.items():
+        # By Role
+        role = "Mechanic"
+        if "Quality" in team:
+            role = "Quality"
+        elif "Customer" in team:
+            role = "Customer"
+        agg_stats['by_role'][role]['teams'] += 1
+        agg_stats['by_role'][role]['workers'] += capacity
+
+        # By Skill
+        match = skill_pattern.match(team)
+        if match:
+            skill_num = match.group(1)
+            skill_name = f"Skill {skill_num}"
+            agg_stats['by_skill'][skill_name]['teams'] += 1
+            agg_stats['by_skill'][skill_name]['workers'] += capacity
+
     return {
         'scenarioId': scenario_name,
         'tasks': tasks,
@@ -200,5 +228,6 @@ def export_scenario_with_capacities(scheduler, scenario_name):
         'maxLateness': max_lateness,
         'totalTasks': total_tasks_available,
         'displayedTasks': len(tasks),
-        'truncated': total_tasks_available > MAX_TASKS_FOR_DASHBOARD
+        'truncated': total_tasks_available > MAX_TASKS_FOR_DASHBOARD,
+        'aggStats': agg_stats
     }

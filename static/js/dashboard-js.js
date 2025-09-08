@@ -1556,7 +1556,9 @@ function updateUtilizationDisplay() {
         // Show all teams individually
         Object.entries(scenarioData.utilization).forEach(([team, utilization]) => {
             if (utilization >= threshold) {
-                utilizationData.push({ name: team, utilization: utilization, type: getTeamType(team) });
+                const capacity = scenarioData.teamCapacities?.[team] || 0;
+                const label = `${team} (${capacity} worker${capacity !== 1 ? 's' : ''})`;
+                utilizationData.push({ name: label, utilization: utilization, type: getTeamType(team) });
             }
         });
     } else if (viewMode === 'role') {
@@ -1574,8 +1576,9 @@ function updateUtilizationDisplay() {
             if (utils.length > 0) {
                 const avgUtil = utils.reduce((a, b) => a + b, 0) / utils.length;
                 if (avgUtil >= threshold) {
+                    const stats = scenarioData.aggStats?.by_role?.[role] || { teams: utils.length, workers: 'N/A' };
                     utilizationData.push({
-                        name: `${role} Teams (${utils.length} teams)`,
+                        name: `${role} Teams (${stats.teams} teams, ${stats.workers} workers)`,
                         utilization: Math.round(avgUtil * 10) / 10,
                         type: role,
                         count: utils.length,
@@ -1602,8 +1605,9 @@ function updateUtilizationDisplay() {
         Object.entries(skillAggregation).forEach(([skill, utils]) => {
             const avgUtil = utils.reduce((a, b) => a + b, 0) / utils.length;
             if (avgUtil >= threshold) {
+                const stats = scenarioData.aggStats?.by_skill?.[skill] || { teams: utils.length, workers: 'N/A' };
                 utilizationData.push({
-                    name: `Skill: ${skill} (${utils.length} teams)`,
+                    name: `${skill} (${stats.teams} teams, ${stats.workers} workers)`,
                     utilization: Math.round(avgUtil * 10) / 10,
                     type: 'skill',
                     count: utils.length

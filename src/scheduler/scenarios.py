@@ -302,6 +302,13 @@ def scenario_3_optimal_schedule(scheduler, time_limit_seconds=90):
         print("Optimized Workforce Breakdown:")
         print("-" * 40)
 
+        makespan = scheduler.calculate_makespan()
+        team_work_minutes = defaultdict(float)
+        for task_id, schedule in scheduler.task_schedule.items():
+            team = schedule.get('team_skill', schedule.get('team'))
+            if team:
+                team_work_minutes[team] += schedule.get('duration', 0) * schedule.get('mechanics_required', 1)
+
         all_optimized_teams = {**scheduler.team_capacity, **scheduler.quality_team_capacity, **scheduler.customer_team_capacity}
 
         # Group by shift for reporting
@@ -317,7 +324,13 @@ def scenario_3_optimal_schedule(scheduler, time_limit_seconds=90):
                 elif team in scheduler.customer_team_capacity:
                     team_type = "Customer"
 
-                by_shift[shift_str][team_type].append(f"  - {team}: {capacity} people")
+                # Calculate utilization
+                total_work = team_work_minutes.get(team, 0.0)
+                # Assume 8-hour day for this calculation
+                available_minutes = capacity * makespan * 8 * 60
+                utilization = (total_work / available_minutes) * 100 if available_minutes > 0 else 0
+
+                by_shift[shift_str][team_type].append(f"  - {team}: {capacity} people ({utilization:.1f}% utilization)")
 
         for shift, types in sorted(by_shift.items()):
             print(f"\nShift: {shift}")
