@@ -96,13 +96,10 @@ def scenario_3_optimal_schedule(scheduler, time_limit_seconds=90):
                 cumulative_minutes += MINUTES_PER_DAY
 
     def date_to_minutes(d):
-        # If the target date is not a working day, find the next available working day.
         current_d = d.date()
         while current_d not in date_to_minutes_map:
             current_d += timedelta(days=1)
-            # Safeguard against an infinite loop if the date is far in the future
-            if (current_d - d.date()).days > 365:
-                return horizon # Return a very large number if no working day is found within a year
+            if (current_d - d.date()).days > 365: return horizon
         return date_to_minutes_map[current_d]
 
     def minutes_to_date(m): return minutes_to_date_map.get(m, project_start_date)
@@ -110,7 +107,7 @@ def scenario_3_optimal_schedule(scheduler, time_limit_seconds=90):
     # --- Task Interval Variables ---
     tasks = scheduler.tasks
     task_intervals = {}
-    mechanic_blocking_intervals = {} # For combined mechanic + inspection work
+    mechanic_blocking_intervals = {}
 
     for task_id, task_info in tasks.items():
         duration = task_info.get('duration', 0) or 60
@@ -119,15 +116,11 @@ def scenario_3_optimal_schedule(scheduler, time_limit_seconds=90):
         interval = model.NewIntervalVar(start_var, duration, end_var, f'interval_{task_id}')
         task_intervals[task_id] = interval
 
-        # If a mechanic task has a quality inspection, create a special "blocking" interval for the mechanic
         if task_info.get('task_type') in ['Production', 'Rework', 'Late Part'] and task_id in scheduler.quality_requirements:
             qi_task_id = scheduler.quality_requirements[task_id]
             if qi_task_id in tasks:
                 qi_duration = tasks[qi_task_id].get('duration', 0)
-
-                # The mechanic is busy for their task + the inspection
                 blocking_duration = duration + qi_duration
-
                 blocking_end_var = model.NewIntVar(0, horizon, f'blocking_end_{task_id}')
                 blocking_interval = model.NewIntervalVar(start_var, blocking_duration, blocking_end_var, f'blocking_interval_{task_id}')
                 mechanic_blocking_intervals[task_id] = blocking_interval
@@ -136,51 +129,47 @@ def scenario_3_optimal_schedule(scheduler, time_limit_seconds=90):
     mechanic_skill_teams = sorted([team for team in scheduler.team_capacity if ' (Skill ' in team])
     quality_teams = sorted(list(scheduler.quality_team_capacity.keys()))
     customer_teams = sorted(list(scheduler.customer_team_capacity.keys()))
-
     all_resource_teams = mechanic_skill_teams + quality_teams + customer_teams
-    team_capacity_vars = {}
 
+    team_max_requirement = defaultdict(lambda: 1)
+    for task_id, task_info in tasks.items():
+        mechanics_required = task_info.get('mechanics_required', 1)
+        assigned_team = None
+        if task_info.get('is_quality'):
+            assigned_team = task_info.get('team')
+        elif task_info.get('is_customer'):
+            assigned_team = task_info.get('team')
+        else: # Mechanic task
+            assigned_team = task_info.get('team_skill')
+
+        if assigned_team:
+            team_max_requirement[assigned_team] = max(team_max_requirement[assigned_team], mechanics_required)
+
+    team_capacity_vars = {}
     for team in all_resource_teams:
-        min_req = 1
-        for task in tasks.values():
-            if not task.get('is_quality', False) and not task.get('is_customer', False) and task.get('team_skill') == team:
-                min_req = max(min_req, task.get('mechanics_required', 1))
-            elif task.get('is_quality', False) and task.get('team') == team:
-                min_req = max(min_req, task.get('mechanics_required', 1))
-            elif task.get('is_customer', False) and task.get('team') == team:
-                min_req = max(min_req, task.get('mechanics_required', 1))
+        min_req = team_max_requirement.get(team, 1)
         team_capacity_vars[team] = model.NewIntVar(min_req, 100, f'capacity_{team}')
 
     # --- Constraints ---
-    # 1. Precedence Constraints (using the dynamic dependency builder)
+    # 1. Precedence Constraints
     dynamic_constraints = scheduler.build_dynamic_dependencies()
     for constraint in dynamic_constraints:
         pred_id, succ_id = constraint.get('First'), constraint.get('Second')
         if pred_id in task_intervals and succ_id in task_intervals:
             model.Add(task_intervals[succ_id].StartExpr() >= task_intervals[pred_id].EndExpr())
 
-    # 2. Add Late Part Constraints (On-Dock Date AND Precedence)
+    # 2. Late Part Constraints
     for lp_constraint in scheduler.late_part_constraints:
-        pred_id = lp_constraint.get('First') # This is the late part ID, e.g., "LP_301"
-
-        # Add the on-dock date constraint for the late part itself
+        pred_id = lp_constraint.get('First')
         if pred_id in task_intervals and pred_id in scheduler.on_dock_dates:
             on_dock_date = scheduler.on_dock_dates[pred_id]
             earliest_start_date = on_dock_date + timedelta(days=scheduler.late_part_delay_days)
-            # The date_to_minutes conversion lands on the first minute of the day.
-            # The validator seems to check against the whole day. Let's add a full day of minutes
-            # minus one to push it to the END of the allowed start day. This is a bit of a hack
-            # to overcome the continuous vs. discrete time problem.
-            earliest_start_minutes = date_to_minutes(earliest_start_date) + MINUTES_PER_DAY -1
+            earliest_start_minutes = date_to_minutes(earliest_start_date) + MINUTES_PER_DAY - 1
             model.Add(task_intervals[pred_id].StartExpr() >= earliest_start_minutes)
-
-        # Add the precedence constraint linking the late part to its successor
         try:
-            # The successor ID might be an integer or a string like 'C_50'
             succ_str = str(lp_constraint.get('Second'))
             succ_baseline_id = int(re.findall(r'\d+', succ_str)[0])
             product = lp_constraint.get('Product_Line')
-
             if product:
                 succ_id = scheduler.task_instance_map.get((product, succ_baseline_id))
                 if pred_id in task_intervals and succ_id in task_intervals:
@@ -188,29 +177,26 @@ def scenario_3_optimal_schedule(scheduler, time_limit_seconds=90):
         except (ValueError, IndexError):
             print(f"[WARNING] Could not parse successor ID for late part constraint: {lp_constraint}")
 
-
-    # 3. Resource Cumulative Constraints (Skill & Quality Specific)
+    # 3. Resource Cumulative Constraints
     for team in all_resource_teams:
         demands = []
         intervals_for_team = []
-        is_quality_team = team in quality_teams
-        is_customer_team = team in customer_teams
+        is_mechanic_team = team in mechanic_skill_teams
 
         for task_id, task_info in tasks.items():
-            task_assigned_team = None
-            if is_quality_team and task_info.get('is_quality', False):
-                task_assigned_team = task_info.get('team')
-            elif is_customer_team and task_info.get('is_customer', False):
-                task_assigned_team = task_info.get('team')
-            elif not is_quality_team and not is_customer_team:
-                task_assigned_team = task_info.get('team_skill')
+            assigned_team = None
+            if task_info.get('is_quality'):
+                assigned_team = task_info.get('team')
+            elif task_info.get('is_customer'):
+                assigned_team = task_info.get('team')
+            else: # is mechanic task
+                assigned_team = task_info.get('team_skill')
 
-            if task_assigned_team == team:
+            if assigned_team == team:
                 demands.append(task_info.get('mechanics_required', 1))
-                # Use the special blocking interval for mechanics if it exists
-                if not is_quality_team and not is_customer_team and task_id in mechanic_blocking_intervals:
+                if is_mechanic_team and task_id in mechanic_blocking_intervals:
                     intervals_for_team.append(mechanic_blocking_intervals[task_id])
-                else: # Otherwise, use the standard task interval
+                else:
                     intervals_for_team.append(task_intervals[task_id])
 
         if intervals_for_team:
@@ -253,14 +239,12 @@ def scenario_3_optimal_schedule(scheduler, time_limit_seconds=90):
         print(f"Solver finished with status: {solver.StatusName(status)}")
         scheduler.task_schedule.clear()
 
-        # Clear old capacities and update with optimized values
         scheduler.team_capacity.clear()
         scheduler.quality_team_capacity.clear()
         scheduler.customer_team_capacity.clear()
 
         for team, cap_var in team_capacity_vars.items():
             optimized_capacity = solver.Value(cap_var)
-            # Check original dictionaries to determine team type
             if team in scheduler._original_team_capacity:
                 scheduler.team_capacity[team] = optimized_capacity
             elif team in scheduler._original_quality_capacity:
@@ -268,78 +252,66 @@ def scenario_3_optimal_schedule(scheduler, time_limit_seconds=90):
             elif team in scheduler._original_customer_team_capacity:
                 scheduler.customer_team_capacity[team] = optimized_capacity
 
-        # Update schedule
+        # **FIX START: Populate schedule with the correct team name for validation**
         for task_id, interval in task_intervals.items():
             task_info = scheduler.tasks[task_id]
+
+            assigned_team = task_info.get('team', '')
+            if not task_info.get('is_quality') and not task_info.get('is_customer') and task_info.get('team_skill'):
+                assigned_team = task_info.get('team_skill')
+
             scheduler.task_schedule[task_id] = {
                 'task_id': task_id, 'start_time': minutes_to_date(solver.Value(interval.StartExpr())),
                 'end_time': minutes_to_date(solver.Value(interval.EndExpr())),
-                'duration': task_info.get('duration', 0), 'team': task_info.get('team', ''),
+                'duration': task_info.get('duration', 0),
+                'team': assigned_team,  # Use the corrected team name
                 'team_skill': task_info.get('team_skill', ''),
                 'mechanics_required': task_info.get('mechanics_required', 1), 'product': task_info.get('product', 'Unknown'),
                 'original_task_id': task_info.get('original_task_id', task_id), 'task_type': task_info.get('task_type', 'Production'),
-                'skill': task_info.get('skill', ''), 'shift': '1st', 'is_quality': 'Quality' in task_info.get('team', ''),
-                'is_customer': 'Customer' in task_info.get('team', ''),
+                'skill': task_info.get('skill', ''), 'shift': '1st',
+                'is_quality': task_info.get('is_quality', False),
+                'is_customer': task_info.get('is_customer', False),
             }
+        # **FIX END**
 
-        # Manually rebuild the global priority list from our new schedule
         priority_data = []
         for task_id, schedule in scheduler.task_schedule.items():
             task_info = scheduler.tasks.get(task_id, {})
-            priority_data.append({
-                'task_instance_id': task_id, 'task_type': task_info.get('task_type', 'Production'),
-                'product_line': task_info.get('product', 'Unknown'), 'scheduled_start': schedule['start_time'],
-                'slack_hours': 999
-            })
+            priority_data.append({ 'task_instance_id': task_id, 'task_type': task_info.get('task_type', 'Production'),
+                'product_line': task_info.get('product', 'Unknown'), 'scheduled_start': schedule['start_time'], 'slack_hours': 999 })
         priority_data.sort(key=lambda x: x['scheduled_start'])
         for i, task in enumerate(priority_data, 1): task['global_priority'] = i
         scheduler.global_priority_list = priority_data
 
         print(f"\nSCENARIO 3 OPTIMIZATION COMPLETE: Lateness={solver.Value(total_lateness_days)} days, Workforce={solver.Value(total_workforce)} people")
 
-        # --- Detailed Workforce Breakdown ---
-        print("\n" + "-" * 40)
-        print("Optimized Workforce Breakdown:")
-        print("-" * 40)
-
+        print("\n" + "-" * 40 + "\nOptimized Workforce Breakdown:\n" + "-" * 40)
         makespan = scheduler.calculate_makespan()
         team_work_minutes = defaultdict(float)
         for task_id, schedule in scheduler.task_schedule.items():
-            team = schedule.get('team_skill', schedule.get('team'))
-            if team:
-                team_work_minutes[team] += schedule.get('duration', 0) * schedule.get('mechanics_required', 1)
+            team = schedule.get('team') # Use 'team' as it's now corrected
+            if team: team_work_minutes[team] += schedule.get('duration', 0) * schedule.get('mechanics_required', 1)
 
         all_optimized_teams = {**scheduler.team_capacity, **scheduler.quality_team_capacity, **scheduler.customer_team_capacity}
-
-        # Group by shift for reporting
         by_shift = defaultdict(lambda: defaultdict(list))
         for team, capacity in all_optimized_teams.items():
             if capacity > 0:
                 shifts = scheduler.team_shifts.get(team) or scheduler.quality_team_shifts.get(team) or scheduler.customer_team_shifts.get(team, ['Undefined'])
                 shift_str = ', '.join(shifts) if shifts else 'Undefined'
-
                 team_type = "Mechanic"
-                if team in scheduler.quality_team_capacity:
-                    team_type = "Quality"
-                elif team in scheduler.customer_team_capacity:
-                    team_type = "Customer"
-
-                # Calculate utilization
+                if team in scheduler.quality_team_capacity: team_type = "Quality"
+                elif team in scheduler.customer_team_capacity: team_type = "Customer"
                 total_work = team_work_minutes.get(team, 0.0)
-                # Assume 8-hour day for this calculation
                 available_minutes = capacity * makespan * 8 * 60
                 utilization = (total_work / available_minutes) * 100 if available_minutes > 0 else 0
-
                 by_shift[shift_str][team_type].append(f"  - {team}: {capacity} people ({utilization:.1f}% utilization)")
 
         for shift, types in sorted(by_shift.items()):
             print(f"\nShift: {shift}")
             for team_type, teams in sorted(types.items()):
                 print(f" {team_type} Teams:")
-                for team_line in sorted(teams):
-                    print(team_line)
+                for team_line in sorted(teams): print(team_line)
         print("-" * 40)
-
 
         return {'status': 'SUCCESS'}
     else:
