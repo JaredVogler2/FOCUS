@@ -495,7 +495,7 @@ def run_what_if_scenario(scheduler, prioritized_product, time_limit_seconds=60):
 
         temp_scheduler.team_capacity = scheduler._original_team_capacity.copy()
         temp_scheduler.quality_team_capacity = scheduler._original_quality_capacity.copy()
-        temp_scheduler.customer_team_capacity = scheduler._original_customer_capacity.copy()
+        temp_scheduler.customer_team_capacity = scheduler._original_customer_team_capacity.copy()
 
         for task_id, interval in task_intervals.items():
             task_info = temp_scheduler.tasks[task_id]

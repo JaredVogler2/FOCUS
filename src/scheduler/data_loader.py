@@ -330,7 +330,7 @@ def _load_customer_teams(scheduler, sections):
         for team, capacity in base_team_capacities.items():
             if team not in scheduler.customer_team_capacity:
                 scheduler.customer_team_capacity[team] = capacity
-                scheduler._original_customer_capacity[team] = capacity
+                scheduler._original_customer_team_capacity[team] = capacity
 
         print(f"[DEBUG] Loaded capacity for {len(scheduler.customer_team_capacity)} customer teams (including aggregated base teams)")
 
