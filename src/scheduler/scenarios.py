@@ -9,8 +9,6 @@ import re
 from ortools.sat.python import cp_model
 from datetime import datetime, timedelta
 
-from . import metrics, algorithms
-
 if TYPE_CHECKING:
     from .main import ProductionScheduler
 
@@ -24,6 +22,7 @@ def scenario_1_csv_headcount(scheduler, time_limit_seconds=60):
     print("SCENARIO 1: Optimal Schedule with Fixed CSV Headcount (CP-SAT)")
     print("=" * 80)
 
+    from . import metrics, algorithms
     model = cp_model.CpModel()
 
     # --- Time Conversion Setup ---
