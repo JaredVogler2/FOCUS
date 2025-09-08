@@ -2,8 +2,6 @@
 // Compatible with product-specific late parts and rework tasks
 let mechanicOptionsCache = {};
 let lastFilterKey = null;
-let populateProductDropdownRetries = 0;
-const MAX_POPULATE_RETRIES = 10; // Try for 5 seconds
 let currentScenario = 'baseline';
 let currentView = 'team-lead';
 let selectedTeam = 'all';
@@ -7723,40 +7721,27 @@ function setupScenarioEventListeners() {
     }
 }
 
-function populateProductDropdown() {
+async function populateProductDropdown() {
     const select = document.getElementById('scenarioProductSelect');
-    if (!select) {
-        console.error("Could not find #scenarioProductSelect element.");
-        return;
-    }
+    if (!select) return;
 
-    console.log(`(Attempt ${populateProductDropdownRetries + 1}) Populating scenario product dropdown...`);
+    try {
+        const response = await fetch('/api/products');
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const products = await response.json();
 
-    if (scenarioData && scenarioData.products && scenarioData.products.length > 0) {
-        console.log("`scenarioData.products` is available. Populating dropdown.");
         select.innerHTML = '<option value="">-- Select a Product --</option>';
-
-        const sortedProducts = [...scenarioData.products].sort((a, b) => a.name.localeCompare(b.name));
-
-        sortedProducts.forEach(product => {
+        products.forEach(product => {
             const option = document.createElement('option');
-            option.value = product.name;
-            option.textContent = product.name;
+            option.value = product;
+            option.textContent = product;
             select.appendChild(option);
         });
-        console.log(`Successfully populated dropdown with ${sortedProducts.length} products.`);
-        populateProductDropdownRetries = 0; // Reset for next time
-    } else {
-        if (populateProductDropdownRetries < MAX_POPULATE_RETRIES) {
-            populateProductDropdownRetries++;
-            console.warn(`scenarioData.products not available. Retrying in 500ms...`);
-            select.innerHTML = '<option value="">Loading product data...</option>';
-            setTimeout(populateProductDropdown, 500);
-        } else {
-            console.error("Failed to populate product dropdown after multiple retries. `scenarioData.products` is not available.");
-            select.innerHTML = '<option value="">Error: Could not load products</option>';
-            populateProductDropdownRetries = 0; // Reset for next time
-        }
+    } catch (error) {
+        console.error('Failed to load products:', error);
+        select.innerHTML = '<option value="">Error loading products</option>';
     }
 }
 

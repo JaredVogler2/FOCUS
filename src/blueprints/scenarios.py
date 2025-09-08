@@ -143,11 +143,18 @@ def run_what_if():
 @scenarios_bp.route('/products')
 def get_products():
     """Get a list of all unique product lines for scenario planning."""
-    if scheduler := current_app.scheduler:
-        # Get products from the product_remaining_ranges, which is populated from the PRODUCT LINE JOBS table.
-        # This ensures all products with tasks are included, not just those with delivery dates.
-        product_list = list(scheduler.product_remaining_ranges.keys())
-        return jsonify(sorted(product_list))
+    # The scheduler object can be unreliable with the dev server's reloader.
+    # Instead, we source the product list from the 'baseline' scenario results,
+    # which are computed and stored at startup. This ensures consistency with other
+    # dashboard views.
+    if 'baseline' in current_app.scenario_results:
+        baseline_results = current_app.scenario_results['baseline']
+        if 'products' in baseline_results and baseline_results['products']:
+            # Extract unique product names from the list of product objects
+            product_names = sorted(list(set(p['name'] for p in baseline_results['products'])))
+            return jsonify(product_names)
+
+    # Fallback if baseline or products are not available
     return jsonify([])
 
 
