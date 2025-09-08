@@ -9,6 +9,8 @@ import re
 from ortools.sat.python import cp_model
 from datetime import datetime, timedelta
 
+from . import metrics, algorithms
+
 if TYPE_CHECKING:
     from .main import ProductionScheduler
 
@@ -194,9 +196,18 @@ def scenario_1_csv_headcount(scheduler, time_limit_seconds=60):
 
         priority_data = []
         for task_id, schedule in scheduler.task_schedule.items():
+            slack_hours = metrics.calculate_slack_time(scheduler, task_id)
+            criticality = algorithms.classify_task_criticality(scheduler, task_id)
             task_info = scheduler.tasks.get(task_id, {})
-            priority_data.append({ 'task_instance_id': task_id, 'task_type': task_info.get('task_type', 'Production'),
-                'product_line': task_info.get('product', 'Unknown'), 'scheduled_start': schedule['start_time'], 'slack_hours': 999 })
+
+            priority_data.append({
+                'task_instance_id': task_id,
+                'task_type': task_info.get('task_type', 'Production'),
+                'product_line': task_info.get('product', 'Unknown'),
+                'scheduled_start': schedule['start_time'],
+                'slack_hours': slack_hours,
+                'criticality': criticality
+            })
         priority_data.sort(key=lambda x: x['scheduled_start'])
         for i, task in enumerate(priority_data, 1): task['global_priority'] = i
         scheduler.global_priority_list = priority_data
