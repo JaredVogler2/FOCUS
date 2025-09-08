@@ -583,6 +583,12 @@ function switchView(view) {
 
     // Call the main update function
     updateView();
+
+    // The updateView() -> initScenarioView() path seems unreliable for the scenario view.
+    // A direct call is added here to ensure the view initializes correctly.
+    if (view === 'scenario') {
+        initScenarioView();
+    }
 }
 
 // Update view based on current selection
