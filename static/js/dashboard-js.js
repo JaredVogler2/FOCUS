@@ -561,18 +561,34 @@ function showScenarioInfo() {
 
 // Switch between views
 function switchView(view) {
-    document.querySelectorAll('.view-tab').forEach(t => t.classList.remove('active'));
-    document.querySelectorAll('.view-content').forEach(v => v.classList.remove('active'));
-    document.querySelector(`[data-view="${view}"]`).classList.add('active');
-    document.getElementById(`${view}-view`).classList.add('active');
     currentView = view;
-    updateView();
+    console.log(`Switching to view: ${view}`);
 
+    // Update active tab
+    document.querySelectorAll('.view-tab').forEach(tab => {
+        tab.classList.toggle('active', tab.dataset.view === view);
+    });
+
+    // Update active content
+    document.querySelectorAll('.view-content').forEach(content => {
+        // The new scenario view has a different content attribute name
+        const contentName = content.dataset.viewContent || content.id.replace('-view', '');
+        content.style.display = contentName === view ? 'block' : 'none';
+        if (contentName === view) {
+            content.classList.add('active');
+        } else {
+            content.classList.remove('active');
+        }
+    });
+
+    // Call the main update function
+    updateView();
 }
 
 // Update view based on current selection
 function updateView() {
-    if (!scenarioData) return;
+    if (!scenarioData && currentView !== 'scenario') return; // Allow scenario view to init without full scenarioData
+
     if (currentView === 'team-lead') {
         updateTeamLeadView();
     } else if (currentView === 'management') {
@@ -580,10 +596,11 @@ function updateView() {
     } else if (currentView === 'mechanic') {
         updateMechanicView();
     } else if (currentView === 'project') {
-        // Initialize timeline instead of Gantt chart
         initializeCustomGantt();
     } else if (currentView === 'supply-chain') {
         updateSupplyChainView();
+    } else if (currentView === 'scenario') {
+        initScenarioView();
     }
 }
 
@@ -7685,6 +7702,214 @@ window.onScenarioChange = onScenarioChange;
 
 // Make functions globally available
 window.handlePredecessorAutocomplete = handlePredecessorAutocomplete;
+
+
+// --- SCENARIO PLANNING ---
+
+function initScenarioView() {
+    console.log('Initializing Scenario Planning view');
+    populateProductDropdown();
+    loadSavedScenarios();
+    setupScenarioEventListeners();
+}
+
+function setupScenarioEventListeners() {
+    const runBtn = document.getElementById('runScenarioBtn');
+    if (runBtn && !runBtn.hasAttribute('data-listener-added')) {
+        runBtn.setAttribute('data-listener-added', 'true');
+        runBtn.addEventListener('click', runWhatIfScenario);
+    }
+}
+
+async function populateProductDropdown() {
+    const select = document.getElementById('productSelect');
+    if (!select) return;
+
+    try {
+        const response = await fetch('/api/products');
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const products = await response.json();
+
+        select.innerHTML = '<option value="">-- Select a Product --</option>';
+        products.forEach(product => {
+            const option = document.createElement('option');
+            option.value = product;
+            option.textContent = product;
+            select.appendChild(option);
+        });
+    } catch (error) {
+        console.error('Failed to load products:', error);
+        select.innerHTML = '<option value="">Error loading products</option>';
+    }
+}
+
+async function runWhatIfScenario() {
+    const productSelect = document.getElementById('productSelect');
+    const selectedProduct = productSelect.value;
+
+    if (!selectedProduct) {
+        alert('Please select a product to prioritize.');
+        return;
+    }
+
+    const resultDiv = document.getElementById('scenarioResult');
+    const spinner = document.getElementById('scenarioSpinner');
+    const runBtn = document.getElementById('runScenarioBtn');
+
+    resultDiv.style.display = 'none';
+    spinner.style.display = 'block';
+    runBtn.disabled = true;
+    runBtn.textContent = 'Running Optimization...';
+
+    try {
+        const response = await fetch('/api/scenarios/run_what_if', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ product_to_prioritize: selectedProduct }),
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Scenario run failed.');
+        }
+
+        const data = await response.json();
+        renderScenarioComparison(data);
+        loadSavedScenarios(); // Refresh the saved list
+
+    } catch (error) {
+        console.error('Error running what-if scenario:', error);
+        alert(`Error: ${error.message}`);
+    } finally {
+        spinner.style.display = 'none';
+        runBtn.disabled = false;
+        runBtn.textContent = 'Run Prioritization Scenario';
+    }
+}
+
+function renderScenarioComparison(data) {
+    const resultDiv = document.getElementById('scenarioResult');
+    const titleEl = document.getElementById('scenarioResultTitle');
+    const dateEl = document.getElementById('scenarioResultDate');
+    const comparisonBody = document.getElementById('comparison-body');
+
+    if (!resultDiv || !titleEl || !dateEl || !comparisonBody) return;
+
+    titleEl.textContent = `Results for Prioritizing: ${data.prioritized_product}`;
+    dateEl.textContent = new Date(data.created_at).toLocaleString();
+
+    const baselineProducts = new Map(data.baseline.products.map(p => [p.name, p]));
+    const whatIfProducts = new Map(data.what_if.products.map(p => [p.name, p]));
+
+    comparisonBody.innerHTML = '';
+
+    const allProductNames = new Set([...baselineProducts.keys(), ...whatIfProducts.keys()]);
+
+    allProductNames.forEach(productName => {
+        const baseline = baselineProducts.get(productName);
+        const whatIf = whatIfProducts.get(productName);
+
+        const baselineLateness = baseline ? baseline.latenessDays : 0;
+        const whatIfLateness = whatIf ? whatIf.latenessDays : 0;
+
+        const impact = whatIfLateness - baselineLateness;
+
+        let impactClass = 'impact-neutral';
+        let impactText = `${impact > 0 ? '+' : ''}${impact} days`;
+        if (impact > 0) impactClass = 'impact-negative';
+        if (impact < 0) impactClass = 'impact-positive';
+        if (productName === data.prioritized_product) impactClass = 'impact-prioritized';
+
+
+        const formatLateness = (lateness) => {
+            if (lateness > 0) return `<span class="lateness-late">${lateness} days late</span>`;
+            if (lateness < 0) return `<span class="lateness-early">${Math.abs(lateness)} days early</span>`;
+            return `<span class="lateness-ontime">On Time</span>`;
+        };
+
+        const row = document.createElement('div');
+        row.className = 'comparison-row';
+        row.innerHTML = `
+            <div class="product-name">${productName} ${productName === data.prioritized_product ? '<strong>(Prioritized)</strong>' : ''}</div>
+            <div>${formatLateness(baselineLateness)}</div>
+            <div>${formatLateness(whatIfLateness)}</div>
+            <div><span class="impact-badge ${impactClass}">${impactText}</span></div>
+        `;
+        comparisonBody.appendChild(row);
+    });
+
+    resultDiv.style.display = 'block';
+}
+
+
+async function loadSavedScenarios() {
+    const listDiv = document.getElementById('savedScenariosList');
+    if (!listDiv) return;
+
+    try {
+        const response = await fetch('/api/scenarios/saved');
+        const savedScenarios = await response.json();
+
+        const scenarioIds = Object.keys(savedScenarios);
+
+        if (scenarioIds.length === 0) {
+            listDiv.innerHTML = '<p>No saved scenarios yet.</p>';
+            return;
+        }
+
+        listDiv.innerHTML = ''; // Clear previous list
+
+        // Sort by date, newest first
+        scenarioIds.sort((a, b) => new Date(savedScenarios[b].created_at) - new Date(savedScenarios[a].created_at));
+
+        scenarioIds.forEach(id => {
+            const scenario = savedScenarios[id];
+            const age = timeSince(new Date(scenario.created_at));
+
+            const item = document.createElement('div');
+            item.className = 'saved-scenario-item';
+            item.innerHTML = `
+                <div>
+                    <strong>Prioritized:</strong> ${scenario.prioritized_product}
+                    <small>(Saved ${age} ago)</small>
+                </div>
+                <button class="view-saved-btn">View</button>
+            `;
+
+            item.querySelector('.view-saved-btn').addEventListener('click', (e) => {
+                e.stopPropagation();
+                renderScenarioComparison(scenario);
+                document.querySelector('.container').scrollTop = 0; // Scroll to top
+            });
+
+            listDiv.appendChild(item);
+        });
+
+    } catch (error) {
+        console.error('Failed to load saved scenarios:', error);
+        listDiv.innerHTML = '<p>Error loading saved scenarios.</p>';
+    }
+}
+
+// Helper function to calculate time since a date
+function timeSince(date) {
+    const seconds = Math.floor((new Date() - date) / 1000);
+    let interval = seconds / 31536000;
+    if (interval > 1) return Math.floor(interval) + " years";
+    interval = seconds / 2592000;
+    if (interval > 1) return Math.floor(interval) + " months";
+    interval = seconds / 86400;
+    if (interval > 1) return Math.floor(interval) + " days";
+    interval = seconds / 3600;
+    if (interval > 1) return Math.floor(interval) + " hours";
+    interval = seconds / 60;
+    if (interval > 1) return Math.floor(interval) + " minutes";
+    return Math.floor(seconds) + " seconds";
+}
 window.selectPredecessorTask = selectPredecessorTask;
 window.setupReasonDropdownHandler = setupReasonDropdownHandler;
 

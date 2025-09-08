@@ -1,6 +1,6 @@
 # src/blueprints/main.py
 
-from flask import Blueprint, render_template, jsonify
+from flask import Blueprint, render_template, jsonify, current_app
 import webbrowser
 import threading
 
@@ -22,6 +22,15 @@ def index():
         threading.Timer(1.25, open_browser).start()
         main_bp.browser_opened = True
     return render_template('dashboard2.html')
+
+@main_bp.route('/api/products')
+def get_products():
+    """Get a list of all unique product lines."""
+    if scheduler := current_app.scheduler:
+        # The products are the keys of the delivery_dates dictionary
+        product_list = list(scheduler.delivery_dates.keys())
+        return jsonify(sorted(product_list))
+    return jsonify([])
 
 @main_bp.app_errorhandler(404)
 def not_found(error):

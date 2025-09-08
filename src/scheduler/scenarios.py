@@ -345,3 +345,213 @@ def scenario_3_optimal_schedule(scheduler, time_limit_seconds=90):
     else:
         print(f"Solver could not find a solution. Status: {solver.StatusName(status)}")
         return None
+
+
+def run_what_if_scenario(scheduler, prioritized_product, time_limit_seconds=60):
+    """
+    Scenario "What-If": Prioritize a specific product and see the impact.
+    This is a modification of scenario_3_optimal_schedule, but uses fixed resources.
+    """
+    print("\n" + "=" * 80)
+    print(f"SCENARIO WHAT-IF: Prioritizing {prioritized_product}")
+    print("=" * 80)
+
+    model = cp_model.CpModel()
+
+    # --- Time Conversion Setup ---
+    MINUTES_PER_DAY = 8 * 60
+    horizon = sum(task.get('duration', 0) for task in scheduler.tasks.values()) + len(scheduler.tasks) * 2 * MINUTES_PER_DAY
+    if not scheduler.on_dock_dates: return None
+    project_start_date = min(d for d in scheduler.on_dock_dates.values() if d is not None)
+
+    minutes_to_date_map = {}
+    date_to_minutes_map = {}
+    generic_product_line = list(scheduler.delivery_dates.keys())[0] if scheduler.delivery_dates else None
+
+    if generic_product_line:
+        cumulative_minutes = 0
+        for day in range(365 * 5):
+            current_date = project_start_date + timedelta(days=day)
+            if scheduler.is_working_day(current_date, generic_product_line):
+                day_start_time = current_date.replace(hour=6, minute=0, second=0, microsecond=0)
+                date_to_minutes_map[current_date.date()] = cumulative_minutes
+                for minute_of_day in range(MINUTES_PER_DAY):
+                    exact_time = day_start_time + timedelta(minutes=minute_of_day)
+                    minutes_to_date_map[cumulative_minutes + minute_of_day] = exact_time
+                cumulative_minutes += MINUTES_PER_DAY
+
+    def date_to_minutes(d):
+        current_d = d.date()
+        while current_d not in date_to_minutes_map:
+            current_d += timedelta(days=1)
+            if (current_d - d.date()).days > 365:
+                return horizon
+        return date_to_minutes_map[current_d]
+
+    def minutes_to_date(m): return minutes_to_date_map.get(m, project_start_date)
+
+    # --- Task Interval Variables ---
+    tasks = scheduler.tasks
+    task_intervals = {}
+    mechanic_blocking_intervals = {}
+
+    for task_id, task_info in tasks.items():
+        duration = task_info.get('duration', 0) or 60
+        start_var = model.NewIntVar(0, horizon, f'start_{task_id}')
+        end_var = model.NewIntVar(0, horizon, f'end_{task_id}')
+        interval = model.NewIntervalVar(start_var, duration, end_var, f'interval_{task_id}')
+        task_intervals[task_id] = interval
+
+        if task_info.get('task_type') in ['Production', 'Rework', 'Late Part'] and task_id in scheduler.quality_requirements:
+            qi_task_id = scheduler.quality_requirements[task_id]
+            if qi_task_id in tasks:
+                qi_duration = tasks[qi_task_id].get('duration', 0)
+                blocking_duration = duration + qi_duration
+                blocking_end_var = model.NewIntVar(0, horizon, f'blocking_end_{task_id}')
+                blocking_interval = model.NewIntervalVar(start_var, blocking_duration, blocking_end_var, f'blocking_interval_{task_id}')
+                mechanic_blocking_intervals[task_id] = blocking_interval
+
+    # --- Resource Modeling (Use original capacities, not optimized vars) ---
+    team_capacities = {**scheduler._original_team_capacity,
+                       **scheduler._original_quality_capacity,
+                       **scheduler._original_customer_capacity}
+
+    # --- Constraints ---
+    # 1. Precedence Constraints
+    dynamic_constraints = scheduler.build_dynamic_dependencies()
+    for constraint in dynamic_constraints:
+        pred_id, succ_id = constraint.get('First'), constraint.get('Second')
+        if pred_id in task_intervals and succ_id in task_intervals:
+            model.Add(task_intervals[succ_id].StartExpr() >= task_intervals[pred_id].EndExpr())
+
+    # 2. Late Part Constraints
+    for lp_constraint in scheduler.late_part_constraints:
+        pred_id = lp_constraint.get('First')
+        if pred_id in task_intervals and pred_id in scheduler.on_dock_dates:
+            on_dock_date = scheduler.on_dock_dates[pred_id]
+            earliest_start_date = on_dock_date + timedelta(days=scheduler.late_part_delay_days)
+            earliest_start_minutes = date_to_minutes(earliest_start_date) + MINUTES_PER_DAY - 1
+            model.Add(task_intervals[pred_id].StartExpr() >= earliest_start_minutes)
+        try:
+            succ_str = str(lp_constraint.get('Second'))
+            succ_baseline_id = int(re.findall(r'\d+', succ_str)[0])
+            product = lp_constraint.get('Product_Line')
+            if product:
+                succ_id = scheduler.task_instance_map.get((product, succ_baseline_id))
+                if pred_id in task_intervals and succ_id in task_intervals:
+                    model.Add(task_intervals[succ_id].StartExpr() >= task_intervals[pred_id].EndExpr())
+        except (ValueError, IndexError):
+            pass
+
+    # 3. Resource Cumulative Constraints
+    for team, capacity in team_capacities.items():
+        demands = []
+        intervals_for_team = []
+        is_quality_team = team in scheduler._original_quality_capacity
+        is_customer_team = team in scheduler._original_customer_capacity
+
+        for task_id, task_info in tasks.items():
+            task_assigned_team = None
+            if is_quality_team and task_info.get('is_quality', False):
+                task_assigned_team = task_info.get('team')
+            elif is_customer_team and task_info.get('is_customer', False):
+                task_assigned_team = task_info.get('team')
+            elif not is_quality_team and not is_customer_team:
+                task_assigned_team = task_info.get('team_skill')
+
+            if task_assigned_team == team:
+                demands.append(task_info.get('mechanics_required', 1))
+                if not is_quality_team and not is_customer_team and task_id in mechanic_blocking_intervals:
+                    intervals_for_team.append(mechanic_blocking_intervals[task_id])
+                else:
+                    intervals_for_team.append(task_intervals[task_id])
+
+        if intervals_for_team:
+            model.AddCumulative(intervals_for_team, demands, capacity)
+
+    # --- Objective Function (MODIFIED FOR WHAT-IF) ---
+    product_final_tasks = defaultdict(list)
+    for task_id, task_info in tasks.items():
+        if not scheduler.get_successors(task_id):
+            if product := scheduler.instance_to_product.get(task_id):
+                product_final_tasks[product].append(task_id)
+
+    # 1. Prioritized Product Completion Time
+    prioritized_product_completion_var = model.NewIntVar(0, horizon, f'completion_{prioritized_product}')
+    if prioritized_product in product_final_tasks:
+        final_tasks_for_product = product_final_tasks[prioritized_product]
+        model.AddMaxEquality(prioritized_product_completion_var, [task_intervals[tid].EndExpr() for tid in final_tasks_for_product])
+    else:
+        model.Add(prioritized_product_completion_var == 0)
+
+    # 2. Lateness for all OTHER products
+    other_lateness_vars = []
+    for product, final_tasks in product_final_tasks.items():
+        if product == prioritized_product:
+            continue
+
+        if (delivery_date := scheduler.delivery_dates.get(product)) and final_tasks:
+            due_date_minutes = date_to_minutes(delivery_date)
+            product_completion_var = model.NewIntVar(0, horizon, f'completion_{product}')
+            model.AddMaxEquality(product_completion_var, [task_intervals[tid].EndExpr() for tid in final_tasks])
+            lateness = model.NewIntVar(0, horizon, f'lateness_{product}')
+            model.AddDivisionEquality(lateness, product_completion_var - due_date_minutes, MINUTES_PER_DAY)
+            other_lateness_vars.append(lateness)
+
+    total_other_lateness_days = model.NewIntVar(0, horizon, 'total_other_lateness_days')
+    if other_lateness_vars:
+        model.Add(total_other_lateness_days == sum(other_lateness_vars))
+    else:
+        model.Add(total_other_lateness_days == 0)
+
+    # 3. Combine objectives with weights
+    model.Minimize(1000 * prioritized_product_completion_var + 10 * total_other_lateness_days)
+
+    # --- Solve ---
+    print(f"Starting CP-SAT solver for What-If with a time limit of {time_limit_seconds} seconds...")
+    solver = cp_model.CpSolver()
+    solver.parameters.num_workers = 8
+    solver.parameters.max_time_in_seconds = time_limit_seconds
+    status = solver.Solve(model)
+
+    # --- Result Extraction ---
+    if status in (cp_model.OPTIMAL, cp_model.FEASIBLE):
+        print(f"Solver finished with status: {solver.StatusName(status)}")
+
+        temp_scheduler = copy.deepcopy(scheduler)
+        temp_scheduler.task_schedule.clear()
+
+        temp_scheduler.team_capacity = scheduler._original_team_capacity.copy()
+        temp_scheduler.quality_team_capacity = scheduler._original_quality_capacity.copy()
+        temp_scheduler.customer_team_capacity = scheduler._original_customer_capacity.copy()
+
+        for task_id, interval in task_intervals.items():
+            task_info = temp_scheduler.tasks[task_id]
+            temp_scheduler.task_schedule[task_id] = {
+                'task_id': task_id, 'start_time': minutes_to_date(solver.Value(interval.StartExpr())),
+                'end_time': minutes_to_date(solver.Value(interval.EndExpr())),
+                'duration': task_info.get('duration', 0), 'team': task_info.get('team', ''),
+                'team_skill': task_info.get('team_skill', ''),
+                'mechanics_required': task_info.get('mechanics_required', 1), 'product': task_info.get('product', 'Unknown'),
+                'original_task_id': task_info.get('original_task_id', task_id), 'task_type': task_info.get('task_type', 'Production'),
+                'skill': task_info.get('skill', ''), 'shift': '1st', 'is_quality': 'Quality' in task_info.get('team', ''),
+                'is_customer': 'Customer' in task_info.get('team', ''),
+            }
+
+        priority_data = []
+        for task_id, schedule in temp_scheduler.task_schedule.items():
+            task_info = temp_scheduler.tasks.get(task_id, {})
+            priority_data.append({
+                'task_instance_id': task_id, 'task_type': task_info.get('task_type', 'Production'),
+                'product_line': task_info.get('product', 'Unknown'), 'scheduled_start': schedule['start_time'],
+                'slack_hours': 999
+            })
+        priority_data.sort(key=lambda x: x['scheduled_start'])
+        for i, task in enumerate(priority_data, 1): task['global_priority'] = i
+        temp_scheduler.global_priority_list = priority_data
+
+        print(f"\nWHAT-IF SCENARIO COMPLETE: Prioritized {prioritized_product}")
+        return temp_scheduler
+    else:
+        print(f"Solver could not find a solution for What-If scenario. Status: {solver.StatusName(status)}")
+        return None

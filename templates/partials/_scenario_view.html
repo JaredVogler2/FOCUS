@@ -1,0 +1,46 @@
+<div class="view-content" data-view-content="scenario" style="display: none;">
+    <h2>Run "What-If" Scenarios</h2>
+    <p>Select a product to prioritize. The system will generate a new schedule optimized for finishing that product as early as possible, and show the impact on all other products compared to the baseline schedule.</p>
+
+    <div class="scenario-controls">
+        <div class="control-group">
+            <label for="productSelect">Prioritize Product:</label>
+            <select id="productSelect">
+                <option>Loading products...</option>
+            </select>
+        </div>
+        <button id="runScenarioBtn" class="cta-button">Run Prioritization Scenario</button>
+    </div>
+
+    <hr>
+
+    <div id="scenarioResult" class="scenario-result-container" style="display: none;">
+        <h3 id="scenarioResultTitle"></h3>
+        <p>Scenario generated on: <span id="scenarioResultDate"></span></p>
+        <div class="comparison-table">
+            <div class="comparison-header">
+                <div>Product</div>
+                <div>Baseline Schedule</div>
+                <div>Prioritized Schedule</div>
+                <div>Impact</div>
+            </div>
+            <div id="comparison-body" class="comparison-body">
+                <!-- Rows will be dynamically inserted here -->
+            </div>
+        </div>
+    </div>
+
+    <div id="scenarioSpinner" class="spinner" style="display: none;">
+        <div class="double-bounce1"></div>
+        <div class="double-bounce2"></div>
+        <p>Running optimization... this may take up to a minute.</p>
+    </div>
+
+
+    <div class="saved-scenarios-container">
+        <h3>Saved Scenarios</h3>
+        <div id="savedScenariosList">
+            <p>No saved scenarios yet.</p>
+        </div>
+    </div>
+</div>
