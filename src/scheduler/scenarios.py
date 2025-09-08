@@ -420,7 +420,7 @@ def run_what_if_scenario(scheduler, prioritized_product, time_limit_seconds=60):
         demands = []
         intervals_for_team = []
         is_quality_team = team in scheduler._original_quality_capacity
-        is_customer_team = team in scheduler._original_customer_capacity
+        is_customer_team = team in scheduler._original_customer_team_capacity
 
         for task_id, task_info in tasks.items():
             task_assigned_team = None
