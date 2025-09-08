@@ -7778,18 +7778,22 @@ async function runWhatIfScenario() {
             body: JSON.stringify({ product_to_prioritize: selectedProduct }),
         });
 
+        // The response is now guaranteed to be JSON, even on error, thanks to the backend fix.
+        const data = await response.json();
+
         if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.error || 'Scenario run failed.');
+            // Use the error message from the JSON response
+            throw new Error(data.error || `Scenario run failed with status: ${response.status}`);
         }
 
-        const data = await response.json();
         renderScenarioComparison(data);
         loadSavedScenarios(); // Refresh the saved list
 
     } catch (error) {
         console.error('Error running what-if scenario:', error);
-        alert(`Error: ${error.message}`);
+        // Display the error message in a more user-friendly way
+        const errorMsg = error.message || 'An unknown error occurred.';
+        alert(`Error running scenario: ${errorMsg}`);
     } finally {
         spinner.style.display = 'none';
         runBtn.disabled = false;
