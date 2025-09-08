@@ -27,8 +27,9 @@ def index():
 def get_products():
     """Get a list of all unique product lines."""
     if scheduler := current_app.scheduler:
-        # The products are the keys of the delivery_dates dictionary
-        product_list = list(scheduler.delivery_dates.keys())
+        # Get products from the product_remaining_ranges, which is populated from the PRODUCT LINE JOBS table.
+        # This ensures all products with tasks are included, not just those with delivery dates.
+        product_list = list(scheduler.product_remaining_ranges.keys())
         return jsonify(sorted(product_list))
     return jsonify([])
 
