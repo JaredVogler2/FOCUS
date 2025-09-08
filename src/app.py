@@ -20,6 +20,7 @@ def create_app():
     """Create and configure an instance of the Flask application."""
     app = Flask(__name__, template_folder='../templates', static_folder='../static')
     CORS(app)
+    app.config['JSON_AS_ASCII'] = False
 
     app.config['TEMPLATES_AUTO_RELOAD'] = True
     app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0

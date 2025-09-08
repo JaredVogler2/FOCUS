@@ -7723,7 +7723,10 @@ function setupScenarioEventListeners() {
 
 async function populateProductDropdown() {
     const select = document.getElementById('scenarioProductSelect');
-    if (!select) return;
+    if (!select) {
+        console.error("CRITICAL: Could not find element with ID 'scenarioProductSelect'. Cannot populate dropdown.");
+        return;
+    }
 
     try {
         const response = await fetch('/api/products');
