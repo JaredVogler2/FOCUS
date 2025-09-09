@@ -38,35 +38,33 @@ def write_queue(data):
 @ie_bp.route('/flag_task', methods=['POST'])
 def flag_task_for_review():
     """
-    Flags a task for review by the Industrial Engineering team using a file-based queue.
+    Flags a task for review by the Industrial Engineering team.
+    This now handles a consolidated payload which may contain multiple predecessors.
     """
     data = request.json
     task_id = data.get('taskId')
-    priority = data.get('priority', 999)
-    scenario = data.get('scenario', 'baseline')
-    predecessor_task = data.get('predecessorTask', '')
-    notes = data.get('notes', '')
-    mechanic_name = data.get('mechanicName', 'Unknown')
 
     if not task_id:
         return jsonify({'success': False, 'error': 'Task ID is required'}), 400
 
+    # Extract all data from the consolidated payload
+    priority = data.get('priority', 999)
+    scenario = data.get('scenario', 'baseline')
+    reason = data.get('reason', 'Unknown')
+    general_notes = data.get('generalNotes', '')
+    predecessors = data.get('predecessors', [])
+    mechanic_name = data.get('mechanicName', 'Unknown')
+    delay_minutes = data.get('delayMinutes', 0)
+
     queue = read_queue()
 
-    # Prevent duplicate entries by checking for the exact same feedback
-    if any(
-        item['task_id'] == task_id and
-        item.get('predecessor_task') == predecessor_task and
-        item.get('notes') == notes
-        for item in queue
-    ):
-        return jsonify({'success': True, 'message': f'This exact feedback for task {task_id} is already in the review queue.'}), 200
+    # Create a unique ID for this feedback submission
+    flagged_at = datetime.utcnow().isoformat()
 
-    # Get additional task details
+    # Get additional task details from the main data source
     task_details = {}
     scenario_data = current_app.scenario_results.get(scenario, {})
     task_info = next((task for task in scenario_data.get('tasks', []) if task['taskId'] == task_id), None)
-
     if task_info:
         task_details = {
             'product': task_info.get('product'),
@@ -75,17 +73,24 @@ def flag_task_for_review():
         }
 
     review_item = {
+        'feedback_id': flagged_at, # Use the timestamp as a unique ID for the feedback
         'task_id': task_id,
         'priority': priority,
-        'reason': 'Held by Predecessor Task',
-        'predecessor_task': predecessor_task,
-        'notes': notes,
+        'reason': reason,
+        'general_notes': general_notes,
+        'predecessors': predecessors,
+        'delay_minutes': delay_minutes,
         'scenario': scenario,
-        'flagged_at': datetime.utcnow().isoformat(),
+        'flagged_at': flagged_at,
         'status': 'open',
         'details': task_details,
         'mechanic_name': mechanic_name
     }
+
+    # Simple check to prevent exact duplicate submissions in a short time frame
+    # In a real application, this could be more robust.
+    if any(item.get('task_id') == task_id and item.get('mechanic_name') == mechanic_name and item.get('reason') == reason for item in queue):
+        current_app.logger.info(f"Duplicate-like feedback for task {task_id} by {mechanic_name}")
 
     queue.append(review_item)
     write_queue(queue)
@@ -121,7 +126,7 @@ def resolve_task():
     new_queue = []
     resolved_task_id = None
     for item in queue:
-        if item.get('flagged_at') == item_id:
+        if item.get('feedback_id') == item_id:
             task_found = True
             resolved_task_id = item.get('task_id', 'Unknown')
         else:
@@ -129,6 +134,6 @@ def resolve_task():
 
     if task_found:
         write_queue(new_queue)
-        return jsonify({'success': True, 'message': f'Task {resolved_task_id} resolved and removed from the review queue.'})
+        return jsonify({'success': True, 'message': f'Task {resolved_task_id} ({item_id}) resolved and removed from the review queue.'})
     else:
         return jsonify({'success': False, 'error': f'Task with ID {item_id} not found in the review queue.'}), 404

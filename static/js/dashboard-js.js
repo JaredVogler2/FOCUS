@@ -6733,7 +6733,7 @@ function createPredecessorEntryHTML(feedbackKey, index, currentProduct, predeces
                 <div class="autocomplete-suggestions"></div>
             </div>
             <div style="flex: 2;">
-                <label style="font-size: 11px; display: block; margin-bottom: 4px; font-weight: 500;">Notes (Required if ID is blank)</label>
+                <label style="font-size: 11px; display: block; margin-bottom: 4px; font-weight: 500;">Notes (Required)</label>
                 <textarea class="predecessor-notes" placeholder="Describe the issue or what you're waiting for..." style="width: 100%; height: 40px; padding: 6px; border: 1px solid #d1d5db; border-radius: 4px; resize: vertical;">${notes}</textarea>
             </div>
             <button type="button" onclick="this.parentElement.remove()" style="background: #ef4444; color: white; border: none; border-radius: 50%; width: 24px; height: 24px; cursor: pointer; font-size: 14px; line-height: 24px; margin-top: 22px; flex-shrink: 0;">
@@ -7205,13 +7205,7 @@ function saveFeedback(feedbackKey, taskId, mechanicId) {
 
         feedbackData.reason = reason;
         feedbackData.reasonText = getReasonDisplayText(reason);
-        const generalNotes = generalNotesInput ? generalNotesInput.value.trim() : '';
-        if (!generalNotes) {
-            alert('General notes are required when a task is delayed to provide justification for the delay.');
-            generalNotesInput.focus();
-            return;
-        }
-        feedbackData.notes = generalNotes;
+        feedbackData.notes = generalNotesInput ? generalNotesInput.value.trim() : '';
         feedbackData.delayMinutes = delayInput ? parseInt(delayInput.value) || 0 : 0;
 
         if (reason === 'predecessor') {
@@ -7254,36 +7248,44 @@ function saveFeedback(feedbackKey, taskId, mechanicId) {
         console.warn('Could not save feedback to localStorage:', e);
     }
 
-    // Flag tasks for IE review
-    if (feedbackData.reason === 'predecessor' && feedbackData.predecessors) {
+    // Flag tasks for IE review if the status is 'delayed'
+    if (status === 'delayed') {
         const task = scenarioData.tasks.find(t => t.taskId === taskId);
         const priority = task ? task.priority : 999;
-        let successCount = 0;
 
-        feedbackData.predecessors.forEach(p => {
-            const payload = {
-                taskId: taskId,
-                priority: priority,
-                scenario: currentScenario,
-                predecessorTask: p.predecessorTask,
-                notes: p.notes,
-                mechanicName: feedbackData.mechanicName
-            };
-            console.log('[DEBUG] Flagging predecessor:', payload);
+        const payload = {
+            taskId: taskId,
+            priority: priority,
+            scenario: currentScenario,
+            reason: feedbackData.reason,
+            generalNotes: feedbackData.notes, // 'notes' in feedbackData is the general notes
+            predecessors: feedbackData.predecessors || [],
+            delayMinutes: feedbackData.delayMinutes,
+            mechanicName: feedbackData.mechanicName
+        };
 
-            fetch('/api/ie/flag_task', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            })
-            .then(response => response.json())
-            .then(data => { if (data.success) { successCount++; } })
-            .catch(err => console.error('Error flagging task:', err));
+        console.log('[DEBUG] Flagging task with consolidated payload:', payload);
+
+        fetch('/api/ie/flag_task', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showNotification(data.message, 'info');
+            } else {
+                showNotification(`Error flagging task: ${data.error}`, 'error');
+            }
+        })
+        .catch(err => {
+            console.error('Error flagging task:', err);
+            showNotification(`Error flagging task: ${err.message}`, 'error');
         });
-        showNotification(`${feedbackData.predecessors.length} predecessor task(s) sent for IE review.`, 'info');
     }
 
-    // Visual feedback
+    // Visual feedback for saving
     showNotification('Feedback saved successfully!', 'success');
     const form = document.getElementById(`feedback-form-${sanitizedKey}`);
     if (form) {
@@ -8188,7 +8190,7 @@ async function updateIEView() {
     const tableBody = document.getElementById('ie-review-table-body');
     if (!tableBody) return;
 
-    tableBody.innerHTML = '<tr><td colspan="8" class="text-center" style="padding: 20px;">Loading IE review queue...</td></tr>';
+    tableBody.innerHTML = '<tr><td colspan="9" class="text-center" style="padding: 20px;">Loading IE review queue...</td></tr>';
 
     try {
         const response = await fetch('/api/ie/review_queue');
@@ -8196,15 +8198,28 @@ async function updateIEView() {
         const queue = await response.json();
 
         if (queue.length === 0) {
-            tableBody.innerHTML = '<tr><td colspan="8" class="text-center" style="padding: 20px;">No tasks in the review queue.</td></tr>';
+            tableBody.innerHTML = '<tr><td colspan="9" class="text-center" style="padding: 20px;">No tasks in the review queue.</td></tr>';
             return;
         }
 
         let rowsHtml = '';
         queue.forEach(item => {
             const flaggedAt = new Date(item.flagged_at).toLocaleString();
-            // Create a safe ID for the DOM by removing special characters
             const safeId = item.flagged_at.replace(/[^a-zA-Z0-9-_]/g, '');
+
+            let predecessorsHtml = '';
+            if (item.predecessors && item.predecessors.length > 0) {
+                predecessorsHtml = '<ul style="margin: 0; padding-left: 18px; font-size: 12px;">';
+                item.predecessors.forEach(p => {
+                    // Use a placeholder if predecessorTask is empty or null
+                    const taskDisplay = p.predecessorTask ? `<strong>${p.predecessorTask}:</strong>` : '<em>(No task specified):</em>';
+                    predecessorsHtml += `<li style="margin-bottom: 5px;">${taskDisplay} ${p.notes}</li>`;
+                });
+                predecessorsHtml += '</ul>';
+            } else {
+                predecessorsHtml = '<span style="color: #888;">N/A</span>';
+            }
+
             rowsHtml += `
                 <tr id="ie-task-${safeId}">
                     <td>${item.priority}</td>
@@ -8213,8 +8228,8 @@ async function updateIEView() {
                     <td>${item.details.team || 'N/A'}</td>
                     <td>${item.mechanic_name || 'N/A'}</td>
                     <td>${flaggedAt}</td>
-                    <td>${item.predecessor_task}</td>
-                    <td>${item.notes || ''}</td>
+                    <td>${predecessorsHtml}</td>
+                    <td>${item.general_notes || ''}</td>
                     <td>
                         <button class="btn-ie-action" onclick="resolveIETask('${item.flagged_at}', 'agree')">Agree & Resolve</button>
                         <button class="btn-ie-action" onclick="resolveIETask('${item.flagged_at}', 'disagree')">Disagree</button>
@@ -8226,7 +8241,7 @@ async function updateIEView() {
 
     } catch (error) {
         console.error('Error updating IE view:', error);
-        tableBody.innerHTML = '<tr><td colspan="8" class="text-center" style="color: red; padding: 20px;">Error loading data.</td></tr>';
+        tableBody.innerHTML = '<tr><td colspan="9" class="text-center" style="color: red; padding: 20px;">Error loading data.</td></tr>';
     }
 }
 
