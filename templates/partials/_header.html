@@ -1,3 +1,49 @@
+<style>
+    .autocomplete-suggestions {
+        position: absolute;
+        background: white;
+        border: 1px solid #d1d5db;
+        border-radius: 0 0 6px 6px;
+        box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -1px rgb(0 0 0 / 0.06);
+        z-index: 1000;
+        max-height: 300px;
+        overflow-y: auto;
+        width: 100%;
+        margin-top: -1px;
+        display: none; /* Hidden by default */
+    }
+    .autocomplete-item {
+        padding: 8px 12px;
+        cursor: pointer;
+        border-bottom: 1px solid #f3f4f6;
+    }
+    .autocomplete-item:hover {
+        background: #f3f4f6;
+    }
+    .autocomplete-item:last-child {
+        border-bottom: none;
+    }
+    .autocomplete-item-id {
+        font-weight: 600;
+        font-size: 13px;
+        margin-bottom: 2px;
+    }
+    .autocomplete-item-id mark {
+        background: #fef3c7;
+        padding: 1px 2px;
+        border-radius: 2px;
+        font-weight: 600;
+    }
+    .autocomplete-item-details {
+        font-size: 11px;
+        color: #6b7280;
+    }
+    .autocomplete-item-none {
+        padding: 8px 12px;
+        color: #6b7280;
+        font-style: italic;
+    }
+</style>
 <!-- Header -->
 <div class="header">
     <h1>

@@ -6633,34 +6633,120 @@ function displayIndividualViewWithFeedback(mechanicSchedule, mechanicId) {
 }
 
 // Create individual task item with feedback form
-function createPredecessorEntryHTML(feedbackKey, index, predecessorTask = '', notes = '') {
+// --- Autocomplete Functions for Predecessor Tasks ---
+
+function handlePredecessorAutocomplete(input, currentProduct) {
+    const query = input.value.toLowerCase().trim();
+    // The suggestions container is assumed to be the next sibling of the input field.
+    const suggestionsContainer = input.nextElementSibling;
+
+    if (!suggestionsContainer) {
+        console.error('Could not find suggestions container for', input);
+        return;
+    }
+
+    if (query.length < 2) {
+        suggestionsContainer.innerHTML = '';
+        suggestionsContainer.style.display = 'none';
+        return;
+    }
+
+    const relevantTasks = window.aircraftTasks[currentProduct] || [];
+    const matches = relevantTasks
+        .filter(task => task.taskId.toLowerCase().includes(query))
+        .sort((a, b) => new Date(a.startTime) - new Date(b.startTime))
+        .slice(0, 8); // Limit to 8 suggestions
+
+    if (matches.length === 0) {
+        suggestionsContainer.innerHTML = `<div class="autocomplete-item-none">No matches found for "${query}"</div>`;
+        suggestionsContainer.style.display = 'block';
+        return;
+    }
+
+    const suggestionsHTML = matches.map(task => {
+        const taskIdMatch = task.taskId.toLowerCase().indexOf(query);
+        let displayTaskId = task.taskId;
+        if (taskIdMatch !== -1) {
+            const before = task.taskId.substring(0, taskIdMatch);
+            const match = task.taskId.substring(taskIdMatch, taskIdMatch + query.length);
+            const after = task.taskId.substring(taskIdMatch + query.length);
+            displayTaskId = `${before}<mark>${match}</mark>${after}`;
+        }
+
+        return `
+            <div class="autocomplete-item"
+                 onclick="selectPredecessorTask('${input.id}', '${task.taskId.replace(/'/g, "\\'")}')">
+                <div class="autocomplete-item-id">${displayTaskId}</div>
+                <div class="autocomplete-item-details">${task.type} | ${task.team || 'N/A'}</div>
+            </div>
+        `;
+    }).join('');
+
+    suggestionsContainer.innerHTML = suggestionsHTML;
+    suggestionsContainer.style.display = 'block';
+}
+
+function selectPredecessorTask(inputId, taskId) {
+    const input = document.getElementById(inputId);
+    if (input) {
+        input.value = taskId;
+        // Give visual feedback
+        input.style.background = '#f0fdf4';
+        setTimeout(() => { input.style.background = ''; }, 1500);
+
+        const suggestionsContainer = input.nextElementSibling;
+        if (suggestionsContainer) {
+            suggestionsContainer.innerHTML = '';
+            suggestionsContainer.style.display = 'none';
+        }
+    }
+}
+
+// Close suggestions when clicking outside
+document.addEventListener('click', function(e) {
+    if (!e.target.closest('.predecessor-input-container')) {
+        const suggestions = document.querySelectorAll('.autocomplete-suggestions');
+        suggestions.forEach(container => {
+            container.style.display = 'none';
+        });
+    }
+});
+
+
+function createPredecessorEntryHTML(feedbackKey, index, currentProduct, predecessorTask = '', notes = '') {
     const entryId = `${feedbackKey}-entry-${index}`;
+    const inputId = `predecessor-input-${entryId}`;
+
     return `
         <div id="${entryId}" class="predecessor-entry" style="display: flex; gap: 10px; align-items: start; background: #f0f8ff; padding: 10px; border: 1px solid #d1e9ff; border-radius: 6px; margin-bottom: 8px;">
-            <div style="flex: 1;">
-                <label style="font-size: 11px; display: block; margin-bottom: 4px; font-weight: 500;">Predecessor Task ID (Optional)</label>
-                <input type="text" class="predecessor-task-id" placeholder="e.g., A_12..." value="${predecessorTask}" style="width: 100%; padding: 6px; border: 1px solid #d1d5db; border-radius: 4px;">
+            <div class="predecessor-input-container" style="flex: 1; position: relative;">
+                <label for="${inputId}" style="font-size: 11px; display: block; margin-bottom: 4px; font-weight: 500;">Predecessor Task ID (Optional)</label>
+                <input type="text" id="${inputId}" class="predecessor-task-id predecessor-input"
+                       oninput="handlePredecessorAutocomplete(this, '${currentProduct}')"
+                       placeholder="e.g., A_12..." value="${predecessorTask}" style="width: 100%; padding: 6px; border: 1px solid #d1d5db; border-radius: 4px;">
+                <div class="autocomplete-suggestions"></div>
             </div>
             <div style="flex: 2;">
                 <label style="font-size: 11px; display: block; margin-bottom: 4px; font-weight: 500;">Notes (Required if ID is blank)</label>
                 <textarea class="predecessor-notes" placeholder="Describe the issue or what you're waiting for..." style="width: 100%; height: 40px; padding: 6px; border: 1px solid #d1d5db; border-radius: 4px; resize: vertical;">${notes}</textarea>
             </div>
-            <button type="button" onclick="this.parentElement.remove()" style="background: #ef4444; color: white; border: none; border-radius: 50%; width: 24px; height: 24px; cursor: pointer; font-size: 14px; line-height: 24px; margin-top: 18px; flex-shrink: 0;">
+            <button type="button" onclick="this.parentElement.remove()" style="background: #ef4444; color: white; border: none; border-radius: 50%; width: 24px; height: 24px; cursor: pointer; font-size: 14px; line-height: 24px; margin-top: 22px; flex-shrink: 0;">
                 &times;
             </button>
         </div>
     `;
 }
 
-function addPredecessorEntry(feedbackKey) {
+function addPredecessorEntry(feedbackKey, currentProduct) {
     const listContainer = document.getElementById(`predecessor-list-${feedbackKey}`);
     if (listContainer) {
         const newIndex = listContainer.children.length;
-        const newEntryHTML = createPredecessorEntryHTML(feedbackKey, newIndex);
+        const newEntryHTML = createPredecessorEntryHTML(feedbackKey, newIndex, currentProduct);
         listContainer.insertAdjacentHTML('beforeend', newEntryHTML);
     }
 }
 
+// Create individual task item with feedback form
 // Create individual task item with feedback form
 function createTaskFeedbackItem(task, mechanicId) {
     const container = document.createElement('div');
@@ -6819,13 +6905,13 @@ function createTaskFeedbackItem(task, mechanicId) {
         </div>
     `;
 
-    setTimeout(() => setupReasonDropdownHandler(feedbackKey), 100);
+    setTimeout(() => setupReasonDropdownHandler(feedbackKey, task.product), 100);
 
     return container;
 }
 
 
-function setupReasonDropdownHandler(feedbackKey) {
+function setupReasonDropdownHandler(feedbackKey, currentProduct) {
     const reasonSelect = document.getElementById(`reason-${feedbackKey}`);
     const detailsContainer = document.getElementById(`reason-details-container-${feedbackKey}`);
 
@@ -6837,9 +6923,9 @@ function setupReasonDropdownHandler(feedbackKey) {
             detailsContainer.innerHTML = `
                 <div id="predecessor-container-${feedbackKey}" style="margin-top: 10px;">
                     <div id="predecessor-list-${feedbackKey}">
-                        ${createPredecessorEntryHTML(feedbackKey, 0)}
+                        ${createPredecessorEntryHTML(feedbackKey, 0, currentProduct)}
                     </div>
-                    <button type="button" onclick="addPredecessorEntry('${feedbackKey}')" style="margin-top: 8px; background: #3b82f6; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px;">
+                    <button type="button" onclick="addPredecessorEntry('${feedbackKey}', '${currentProduct}')" style="margin-top: 8px; background: #3b82f6; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px;">
                         + Add Another Predecessor
                     </button>
                 </div>
