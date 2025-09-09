@@ -15,6 +15,12 @@ let taskAssignments = {};
 let latePartsData = {};
 let supplyChainMetrics = {};
 
+// Helper function to create safe IDs for query selectors
+function sanitizeForQuerySelector(key) {
+    if (!key) return '';
+    return key.replace(/[^a-zA-Z0-9-_]/g, '_');
+}
+
 let savedAssignments = {}; // Store assignments per scenario
 
 // Initialize savedAssignments structure
@@ -6761,6 +6767,7 @@ function createTaskFeedbackItem(task, mechanicId) {
 
     const startTime = new Date(task.startTime);
     const feedbackKey = `${mechanicId}_${task.taskId}`;
+    const sanitizedKey = sanitizeForQuerySelector(feedbackKey);
     const existingFeedback = taskFeedback[currentScenario] && taskFeedback[currentScenario][feedbackKey];
 
     let borderColor = '#3b82f6';
@@ -6805,7 +6812,7 @@ function createTaskFeedbackItem(task, mechanicId) {
             </div>
 
             <!-- Feedback Form -->
-            <div id="feedback-form-${feedbackKey}" style="background: #f9fafb; padding: 12px; border-radius: 6px; border: 1px solid #e5e7eb;">
+            <div id="feedback-form-${sanitizedKey}" style="background: #f9fafb; padding: 12px; border-radius: 6px; border: 1px solid #e5e7eb;">
                 <div style="font-weight: 500; margin-bottom: 10px; color: #374151;">
                     Task Status & Feedback:
                 </div>
@@ -6813,29 +6820,29 @@ function createTaskFeedbackItem(task, mechanicId) {
                 <!-- Status Selection -->
                 <div style="margin-bottom: 12px;">
                     <label style="display: flex; align-items: center; margin-bottom: 6px; cursor: pointer;">
-                        <input type="radio" name="status-${feedbackKey}" value="completed"
+                        <input type="radio" name="status-${sanitizedKey}" value="completed"
                                ${!existingFeedback || existingFeedback.status === 'completed' ? 'checked' : ''}
-                               onchange="toggleFeedbackFields('${feedbackKey}')"
+                               onchange="toggleFeedbackFields('${sanitizedKey}')"
                                style="margin-right: 6px;">
                         <span style="color: #10b981; font-weight: 500;">✓ Completed On Time</span>
                     </label>
                     <label style="display: flex; align-items: center; cursor: pointer;">
-                        <input type="radio" name="status-${feedbackKey}" value="delayed"
+                        <input type="radio" name="status-${sanitizedKey}" value="delayed"
                                ${existingFeedback && existingFeedback.status === 'delayed' ? 'checked' : ''}
-                               onchange="toggleFeedbackFields('${feedbackKey}')"
+                               onchange="toggleFeedbackFields('${sanitizedKey}')"
                                style="margin-right: 6px;">
                         <span style="color: #ef4444; font-weight: 500;">⚠️ Delayed or Had Issues</span>
                     </label>
                 </div>
 
                 <!-- Delay Reason Fields (shown only when delayed) -->
-                <div id="delay-fields-${feedbackKey}" style="display: ${existingFeedback && existingFeedback.status === 'delayed' ? 'block' : 'none'};">
+                <div id="delay-fields-${sanitizedKey}" style="display: ${existingFeedback && existingFeedback.status === 'delayed' ? 'block' : 'none'};">
                     <!-- Delay Reason -->
                     <div style="margin-bottom: 10px;">
                         <label style="display: block; font-weight: 500; margin-bottom: 4px; color: #374151;">
                             Reason for Delay:
                         </label>
-                        <select id="reason-${feedbackKey}" style="width: 100%; padding: 6px; border: 1px solid #d1d5db; border-radius: 4px;">
+                        <select id="reason-${sanitizedKey}" style="width: 100%; padding: 6px; border: 1px solid #d1d5db; border-radius: 4px;">
                             <option value="">Select Reason</option>
                             <option value="predecessor" ${existingFeedback?.reason === 'predecessor' ? 'selected' : ''}>
                                 Held by Predecessor Task(s)
@@ -6865,14 +6872,14 @@ function createTaskFeedbackItem(task, mechanicId) {
                     </div>
 
                     <!-- Container for reason-specific fields -->
-                    <div id="reason-details-container-${feedbackKey}"></div>
+                    <div id="reason-details-container-${sanitizedKey}"></div>
 
                     <!-- General Notes and Delay Duration -->
                     <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #e5e7eb;">
                         <label style="display: block; font-weight: 500; margin-bottom: 4px; color: #374151;">
                             General Notes for this Delay:
                         </label>
-                        <textarea id="notes-${feedbackKey}"
+                        <textarea id="notes-${sanitizedKey}"
                                   placeholder="Additional details about the delay or issue..."
                                   style="width: 100%; padding: 6px; border: 1px solid #d1d5db; border-radius: 4px; resize: vertical; min-height: 60px;">${existingFeedback?.notes || ''}</textarea>
                     </div>
@@ -6881,7 +6888,7 @@ function createTaskFeedbackItem(task, mechanicId) {
                             Estimated Total Delay (minutes):
                         </label>
                         <input type="number"
-                               id="delay-${feedbackKey}"
+                               id="delay-${sanitizedKey}"
                                placeholder="e.g., 30"
                                value="${existingFeedback?.delayMinutes || ''}"
                                style="width: 100px; padding: 6px; border: 1px solid #d1d5db; border-radius: 4px;">
@@ -6905,15 +6912,24 @@ function createTaskFeedbackItem(task, mechanicId) {
         </div>
     `;
 
-    setTimeout(() => setupReasonDropdownHandler(feedbackKey, task.product), 100);
+    setTimeout(() => setupReasonDropdownHandler(sanitizedKey, task.product), 100);
 
     return container;
 }
 
 
-function setupReasonDropdownHandler(feedbackKey, currentProduct) {
-    const reasonSelect = document.getElementById(`reason-${feedbackKey}`);
-    const detailsContainer = document.getElementById(`reason-details-container-${feedbackKey}`);
+function toggleFeedbackFields(sanitizedKey) {
+    const delayFields = document.getElementById(`delay-fields-${sanitizedKey}`);
+    const delayedRadio = document.querySelector(`input[name="status-${sanitizedKey}"][value="delayed"]`);
+
+    if (delayFields && delayedRadio) {
+        delayFields.style.display = delayedRadio.checked ? 'block' : 'none';
+    }
+}
+
+function setupReasonDropdownHandler(sanitizedKey, currentProduct) {
+    const reasonSelect = document.getElementById(`reason-${sanitizedKey}`);
+    const detailsContainer = document.getElementById(`reason-details-container-${sanitizedKey}`);
 
     const handleReasonChange = () => {
         if (!reasonSelect || !detailsContainer) return;
@@ -6921,11 +6937,11 @@ function setupReasonDropdownHandler(feedbackKey, currentProduct) {
         if (reasonSelect.value === 'predecessor') {
             // Inject the HTML for the predecessor list
             detailsContainer.innerHTML = `
-                <div id="predecessor-container-${feedbackKey}" style="margin-top: 10px;">
-                    <div id="predecessor-list-${feedbackKey}">
-                        ${createPredecessorEntryHTML(feedbackKey, 0, currentProduct)}
+                <div id="predecessor-container-${sanitizedKey}" style="margin-top: 10px;">
+                    <div id="predecessor-list-${sanitizedKey}">
+                        ${createPredecessorEntryHTML(sanitizedKey, 0, currentProduct)}
                     </div>
-                    <button type="button" onclick="addPredecessorEntry('${feedbackKey}', '${currentProduct}')" style="margin-top: 8px; background: #3b82f6; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px;">
+                    <button type="button" onclick="addPredecessorEntry('${sanitizedKey}', '${currentProduct}')" style="margin-top: 8px; background: #3b82f6; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px;">
                         + Add Another Predecessor
                     </button>
                 </div>
@@ -6937,7 +6953,7 @@ function setupReasonDropdownHandler(feedbackKey, currentProduct) {
 
     if (reasonSelect) {
         reasonSelect.addEventListener('change', handleReasonChange);
-        // Trigger initial state
+        // Trigger initial state to show/hide fields based on pre-selected value
         handleReasonChange();
     }
 }
@@ -7154,10 +7170,11 @@ function setupReasonChangeHandler(feedbackKey) {
 
 // Save feedback for a specific task
 function saveFeedback(feedbackKey, taskId, mechanicId) {
-    const statusRadios = document.querySelectorAll(`input[name="status-${feedbackKey}"]`);
-    const reasonSelect = document.getElementById(`reason-${feedbackKey}`);
-    const generalNotesInput = document.getElementById(`notes-${feedbackKey}`);
-    const delayInput = document.getElementById(`delay-${feedbackKey}`);
+    const sanitizedKey = sanitizeForQuerySelector(feedbackKey);
+    const statusRadios = document.querySelectorAll(`input[name="status-${sanitizedKey}"]`);
+    const reasonSelect = document.getElementById(`reason-${sanitizedKey}`);
+    const generalNotesInput = document.getElementById(`notes-${sanitizedKey}`);
+    const delayInput = document.getElementById(`delay-${sanitizedKey}`);
 
     let status = 'completed';
     for (const radio of statusRadios) {
@@ -7190,19 +7207,17 @@ function saveFeedback(feedbackKey, taskId, mechanicId) {
         feedbackData.delayMinutes = delayInput ? parseInt(delayInput.value) || 0 : 0;
 
         if (reason === 'predecessor') {
-            const predecessorEntries = document.querySelectorAll(`#predecessor-list-${feedbackKey} .predecessor-entry`);
+            const predecessorEntries = document.querySelectorAll(`#predecessor-list-${sanitizedKey} .predecessor-entry`);
             const predecessors = [];
 
             if (predecessorEntries.length === 0) {
                 alert('Please add at least one predecessor entry for the selected reason.');
-                // You might want to focus or highlight the "Add" button here
                 return;
             }
 
             for (const entry of predecessorEntries) {
                 const predecessorTaskInput = entry.querySelector('.predecessor-task-id');
                 const notesInput = entry.querySelector('.predecessor-notes');
-
                 const predecessorTask = predecessorTaskInput.value.trim();
                 const notes = notesInput.value.trim();
 
@@ -7217,7 +7232,7 @@ function saveFeedback(feedbackKey, taskId, mechanicId) {
         }
     }
 
-    // Save feedback object locally
+    // Save feedback object locally using the original key
     if (!window.taskFeedback[currentScenario]) {
         window.taskFeedback[currentScenario] = {};
     }
@@ -7249,11 +7264,7 @@ function saveFeedback(feedbackKey, taskId, mechanicId) {
                 body: JSON.stringify(payload)
             })
             .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    successCount++;
-                }
-            })
+            .then(data => { if (data.success) { successCount++; } })
             .catch(err => console.error('Error flagging task:', err));
         });
         showNotification(`${feedbackData.predecessors.length} predecessor task(s) sent for IE review.`, 'info');
@@ -7261,7 +7272,7 @@ function saveFeedback(feedbackKey, taskId, mechanicId) {
 
     // Visual feedback
     showNotification('Feedback saved successfully!', 'success');
-    const form = document.getElementById(`feedback-form-${feedbackKey}`);
+    const form = document.getElementById(`feedback-form-${sanitizedKey}`);
     if (form) {
         const statusSpan = form.parentElement.querySelector('span[style*="background"]');
         if (statusSpan) {
@@ -7366,26 +7377,31 @@ function loadSavedFeedback() {
 // Clear feedback for a task
 function clearFeedback(feedbackKey) {
     if (confirm('Are you sure you want to clear this feedback?')) {
+        const sanitizedKey = sanitizeForQuerySelector(feedbackKey);
+
+        // Delete data using original key
         if (taskFeedback[currentScenario]) {
             delete taskFeedback[currentScenario][feedbackKey];
         }
 
-        // Reset form
-        const statusRadios = document.querySelectorAll(`input[name="status-${feedbackKey}"]`);
-        const reasonSelect = document.getElementById(`reason-${feedbackKey}`);
-        const predecessorInput = document.getElementById(`predecessor-${feedbackKey}`);
-        const notesInput = document.getElementById(`notes-${feedbackKey}`);
-        const delayInput = document.getElementById(`delay-${feedbackKey}`);
-
-        // Reset to default values
+        // Reset form using sanitized key
+        const statusRadios = document.querySelectorAll(`input[name="status-${sanitizedKey}"]`);
         if (statusRadios[0]) statusRadios[0].checked = true;
+
+        const reasonSelect = document.getElementById(`reason-${sanitizedKey}`);
         if (reasonSelect) reasonSelect.value = '';
-        if (predecessorInput) predecessorInput.value = '';
+
+        const notesInput = document.getElementById(`notes-${sanitizedKey}`);
         if (notesInput) notesInput.value = '';
+
+        const delayInput = document.getElementById(`delay-${sanitizedKey}`);
         if (delayInput) delayInput.value = '';
 
+        // Manually trigger reason change to clear predecessor list
+        if(reasonSelect) reasonSelect.dispatchEvent(new Event('change'));
+
         // Hide delay fields
-        toggleFeedbackFields(feedbackKey);
+        toggleFeedbackFields(sanitizedKey);
 
         showNotification('Feedback cleared', 'info');
     }
