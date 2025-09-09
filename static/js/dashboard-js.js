@@ -4866,36 +4866,22 @@ let customGanttViewMode = 'days';
 
 // Enhanced update view to use custom Gantt
 function updateView() {
-    console.log(`[DEBUG] updateView() called. currentView = ${currentView}`);
-    if (!scenarioData && currentView !== 'scenario') {
-        console.log('[DEBUG] updateView() returning early because no scenarioData.');
-        return;
-    }
+    if (!scenarioData && currentView !== 'scenario') return; // Allow scenario view to init without full scenarioData
 
     if (currentView === 'team-lead') {
-        console.log('[DEBUG] updateView() -> updateTeamLeadView()');
         updateTeamLeadView();
     } else if (currentView === 'management') {
-        console.log('[DEBUG] updateView() -> updateManagementView()');
         updateManagementView();
     } else if (currentView === 'mechanic') {
-        console.log('[DEBUG] updateView() -> updateMechanicView()');
         updateMechanicView();
     } else if (currentView === 'project') {
-        console.log('[DEBUG] updateView() -> initializeCustomGantt()');
-        // Use custom Gantt chart instead of timeline
         initializeCustomGantt();
     } else if (currentView === 'supply-chain') {
-        console.log('[DEBUG] updateView() -> updateSupplyChainView()');
         updateSupplyChainView();
     } else if (currentView === 'industrial-engineering') {
-        console.log('[DEBUG] updateView() -> updateIEView()');
         updateIEView();
     } else if (currentView === 'scenario') {
-        console.log('[DEBUG] updateView() -> initScenarioView()');
         initScenarioView();
-    } else {
-        console.log(`[DEBUG] updateView() did not match any view. currentView = ${currentView}`);
     }
 }
 
@@ -6647,6 +6633,34 @@ function displayIndividualViewWithFeedback(mechanicSchedule, mechanicId) {
 }
 
 // Create individual task item with feedback form
+function createPredecessorEntryHTML(feedbackKey, index, predecessorTask = '', notes = '') {
+    const entryId = `${feedbackKey}-entry-${index}`;
+    return `
+        <div id="${entryId}" class="predecessor-entry" style="display: flex; gap: 10px; align-items: start; background: #f0f8ff; padding: 10px; border: 1px solid #d1e9ff; border-radius: 6px; margin-bottom: 8px;">
+            <div style="flex: 1;">
+                <label style="font-size: 11px; display: block; margin-bottom: 4px; font-weight: 500;">Predecessor Task ID (Optional)</label>
+                <input type="text" class="predecessor-task-id" placeholder="e.g., A_12..." value="${predecessorTask}" style="width: 100%; padding: 6px; border: 1px solid #d1d5db; border-radius: 4px;">
+            </div>
+            <div style="flex: 2;">
+                <label style="font-size: 11px; display: block; margin-bottom: 4px; font-weight: 500;">Notes (Required if ID is blank)</label>
+                <textarea class="predecessor-notes" placeholder="Describe the issue or what you're waiting for..." style="width: 100%; height: 40px; padding: 6px; border: 1px solid #d1d5db; border-radius: 4px; resize: vertical;">${notes}</textarea>
+            </div>
+            <button type="button" onclick="this.parentElement.remove()" style="background: #ef4444; color: white; border: none; border-radius: 50%; width: 24px; height: 24px; cursor: pointer; font-size: 14px; line-height: 24px; margin-top: 18px; flex-shrink: 0;">
+                &times;
+            </button>
+        </div>
+    `;
+}
+
+function addPredecessorEntry(feedbackKey) {
+    const listContainer = document.getElementById(`predecessor-list-${feedbackKey}`);
+    if (listContainer) {
+        const newIndex = listContainer.children.length;
+        const newEntryHTML = createPredecessorEntryHTML(feedbackKey, newIndex);
+        listContainer.insertAdjacentHTML('beforeend', newEntryHTML);
+    }
+}
+
 // Create individual task item with feedback form
 function createTaskFeedbackItem(task, mechanicId) {
     const container = document.createElement('div');
@@ -6738,7 +6752,7 @@ function createTaskFeedbackItem(task, mechanicId) {
                         <select id="reason-${feedbackKey}" style="width: 100%; padding: 6px; border: 1px solid #d1d5db; border-radius: 4px;">
                             <option value="">Select Reason</option>
                             <option value="predecessor" ${existingFeedback?.reason === 'predecessor' ? 'selected' : ''}>
-                                Held by Predecessor Task
+                                Held by Predecessor Task(s)
                             </option>
                             <option value="awaiting-quality" ${existingFeedback?.reason === 'awaiting-quality' ? 'selected' : ''}>
                                 Awaiting Quality Inspection
@@ -6764,36 +6778,21 @@ function createTaskFeedbackItem(task, mechanicId) {
                         </select>
                     </div>
 
-                    <!-- Predecessor Task Field (shown only for predecessor reason) -->
-                    <div id="predecessor-field-${feedbackKey}" class="predecessor-field"
-                         style="margin-bottom: 10px; display: ${existingFeedback?.reason === 'predecessor' ? 'block' : 'none'}; position: relative;">
-                        <label style="display: block; font-weight: 500; margin-bottom: 4px; color: #374151;">
-                            Predecessor Task ID:
-                        </label>
-                        <input type="text"
-                               id="predecessor-${feedbackKey}"
-                               class="predecessor-input"
-                               placeholder="Start typing task ID (e.g., A_12, B_45)..."
-                               value="${existingFeedback?.predecessorTask || ''}"
-                               oninput="handlePredecessorAutocomplete(this, '${task.product}')"
-                               style="width: 100%; padding: 6px; border: 1px solid #d1d5db; border-radius: 4px;">
-                        <div id="predecessor-suggestions-${feedbackKey}" class="autocomplete-suggestions"></div>
-                    </div>
+                    <!-- Container for reason-specific fields -->
+                    <div id="reason-details-container-${feedbackKey}"></div>
 
-                    <!-- Additional Notes -->
-                    <div style="margin-bottom: 10px;">
+                    <!-- General Notes and Delay Duration -->
+                    <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #e5e7eb;">
                         <label style="display: block; font-weight: 500; margin-bottom: 4px; color: #374151;">
-                            Additional Notes:
+                            General Notes for this Delay:
                         </label>
                         <textarea id="notes-${feedbackKey}"
                                   placeholder="Additional details about the delay or issue..."
                                   style="width: 100%; padding: 6px; border: 1px solid #d1d5db; border-radius: 4px; resize: vertical; min-height: 60px;">${existingFeedback?.notes || ''}</textarea>
                     </div>
-
-                    <!-- Delay Duration -->
-                    <div style="margin-bottom: 10px;">
+                    <div style="margin-top: 10px;">
                         <label style="display: block; font-weight: 500; margin-bottom: 4px; color: #374151;">
-                            Estimated Delay (minutes):
+                            Estimated Total Delay (minutes):
                         </label>
                         <input type="number"
                                id="delay-${feedbackKey}"
@@ -6810,7 +6809,7 @@ function createTaskFeedbackItem(task, mechanicId) {
                         Save Feedback
                     </button>
                     ${existingFeedback ?
-                        `<button onclick="clearFeedback('${feedbackKey}')"
+                        `<button type="button" onclick="clearFeedback('${feedbackKey}')"
                                 style="background: #6b7280; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px;">
                             Clear Feedback
                         </button>` : ''
@@ -6820,35 +6819,40 @@ function createTaskFeedbackItem(task, mechanicId) {
         </div>
     `;
 
-    // THIS IS THE FIX FOR ISSUE #1 - ADD THIS LINE:
     setTimeout(() => setupReasonDropdownHandler(feedbackKey), 100);
 
     return container;
 }
 
+
 function setupReasonDropdownHandler(feedbackKey) {
     const reasonSelect = document.getElementById(`reason-${feedbackKey}`);
-    const predecessorField = document.getElementById(`predecessor-field-${feedbackKey}`);
+    const detailsContainer = document.getElementById(`reason-details-container-${feedbackKey}`);
 
-    if (reasonSelect && predecessorField) {
-        reasonSelect.addEventListener('change', function() {
-            console.log(`Reason changed to: ${this.value}`);
-            if (this.value === 'predecessor') {
-                predecessorField.style.display = 'block';
-                // Focus the input field
-                const input = document.getElementById(`predecessor-${feedbackKey}`);
-                if (input) {
-                    setTimeout(() => input.focus(), 100);
-                }
-            } else {
-                predecessorField.style.display = 'none';
-            }
-        });
+    const handleReasonChange = () => {
+        if (!reasonSelect || !detailsContainer) return;
 
-        // Trigger the change event if predecessor is already selected
         if (reasonSelect.value === 'predecessor') {
-            reasonSelect.dispatchEvent(new Event('change'));
+            // Inject the HTML for the predecessor list
+            detailsContainer.innerHTML = `
+                <div id="predecessor-container-${feedbackKey}" style="margin-top: 10px;">
+                    <div id="predecessor-list-${feedbackKey}">
+                        ${createPredecessorEntryHTML(feedbackKey, 0)}
+                    </div>
+                    <button type="button" onclick="addPredecessorEntry('${feedbackKey}')" style="margin-top: 8px; background: #3b82f6; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px;">
+                        + Add Another Predecessor
+                    </button>
+                </div>
+            `;
+        } else {
+            detailsContainer.innerHTML = ''; // Clear it for other reasons
         }
+    };
+
+    if (reasonSelect) {
+        reasonSelect.addEventListener('change', handleReasonChange);
+        // Trigger initial state
+        handleReasonChange();
     }
 }
 
@@ -7066,8 +7070,7 @@ function setupReasonChangeHandler(feedbackKey) {
 function saveFeedback(feedbackKey, taskId, mechanicId) {
     const statusRadios = document.querySelectorAll(`input[name="status-${feedbackKey}"]`);
     const reasonSelect = document.getElementById(`reason-${feedbackKey}`);
-    const predecessorInput = document.getElementById(`predecessor-${feedbackKey}`);
-    const notesInput = document.getElementById(`notes-${feedbackKey}`);
+    const generalNotesInput = document.getElementById(`notes-${feedbackKey}`);
     const delayInput = document.getElementById(`delay-${feedbackKey}`);
 
     let status = 'completed';
@@ -7075,25 +7078,6 @@ function saveFeedback(feedbackKey, taskId, mechanicId) {
         if (radio.checked) {
             status = radio.value;
             break;
-        }
-    }
-
-    // Validation for delayed tasks
-    if (status === 'delayed') {
-        const reason = reasonSelect ? reasonSelect.value : '';
-        if (!reason) {
-            alert('Please select a reason for the delay');
-            reasonSelect.focus();
-            return;
-        }
-
-        if (reason === 'predecessor') {
-            const predecessorTask = predecessorInput ? predecessorInput.value.trim() : '';
-            if (!predecessorTask) {
-                alert('Please specify the predecessor task that caused the delay');
-                predecessorInput.focus();
-                return;
-            }
         }
     }
 
@@ -7107,65 +7091,90 @@ function saveFeedback(feedbackKey, taskId, mechanicId) {
     };
 
     if (status === 'delayed') {
-        feedbackData.reason = reasonSelect ? reasonSelect.value : '';
-        feedbackData.reasonText = getReasonDisplayText(feedbackData.reason);
-        feedbackData.predecessorTask = predecessorInput ? predecessorInput.value.trim() : '';
-        feedbackData.notes = notesInput ? notesInput.value.trim() : '';
+        const reason = reasonSelect ? reasonSelect.value : '';
+        if (!reason) {
+            alert('Please select a reason for the delay.');
+            reasonSelect.focus();
+            return;
+        }
+
+        feedbackData.reason = reason;
+        feedbackData.reasonText = getReasonDisplayText(reason);
+        feedbackData.notes = generalNotesInput ? generalNotesInput.value.trim() : '';
         feedbackData.delayMinutes = delayInput ? parseInt(delayInput.value) || 0 : 0;
+
+        if (reason === 'predecessor') {
+            const predecessorEntries = document.querySelectorAll(`#predecessor-list-${feedbackKey} .predecessor-entry`);
+            const predecessors = [];
+
+            if (predecessorEntries.length === 0) {
+                alert('Please add at least one predecessor entry for the selected reason.');
+                // You might want to focus or highlight the "Add" button here
+                return;
+            }
+
+            for (const entry of predecessorEntries) {
+                const predecessorTaskInput = entry.querySelector('.predecessor-task-id');
+                const notesInput = entry.querySelector('.predecessor-notes');
+
+                const predecessorTask = predecessorTaskInput.value.trim();
+                const notes = notesInput.value.trim();
+
+                if (!predecessorTask && !notes) {
+                    alert('Each predecessor entry must have either a Task ID or Notes.');
+                    predecessorTaskInput.focus();
+                    return;
+                }
+                predecessors.push({ predecessorTask, notes });
+            }
+            feedbackData.predecessors = predecessors;
+        }
     }
 
-    // Initialize feedback storage if needed
+    // Save feedback object locally
     if (!window.taskFeedback[currentScenario]) {
         window.taskFeedback[currentScenario] = {};
     }
-
-    // Save feedback
     window.taskFeedback[currentScenario][feedbackKey] = feedbackData;
-
-    console.log(`[DEBUG] Feedback data for ${feedbackKey}:`, feedbackData);
-
-    // If reason is predecessor, flag for IE review
-    if (feedbackData.reason === 'predecessor') {
-        console.log(`[DEBUG] Reason is "predecessor". Flagging task ${taskId} for IE review.`);
-        const task = scenarioData.tasks.find(t => t.taskId === taskId);
-        const priority = task ? task.priority : 999;
-        const payload = {
-            taskId: taskId,
-            priority: priority,
-            scenario: currentScenario,
-            predecessorTask: feedbackData.predecessorTask,
-            notes: feedbackData.notes
-        };
-        console.log('[DEBUG] Sending payload to /api/ie/flag_task:', payload);
-
-        fetch('/api/ie/flag_task', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-        })
-        .then(response => response.json())
-        .then(data => {
-            console.log(`[DEBUG] Response from /api/ie/flag_task:`, data);
-            if (data.success) {
-                showNotification(data.message, 'info');
-            } else {
-                console.warn('[DEBUG] Could not flag task for IE review:', data.error);
-            }
-        })
-        .catch(err => console.error('[DEBUG] Error flagging task:', err));
-    }
-
-    // Save to localStorage for persistence
     try {
         localStorage.setItem(`taskFeedback_${currentScenario}`, JSON.stringify(window.taskFeedback[currentScenario]));
     } catch (e) {
         console.warn('Could not save feedback to localStorage:', e);
     }
 
+    // Flag tasks for IE review
+    if (feedbackData.reason === 'predecessor' && feedbackData.predecessors) {
+        const task = scenarioData.tasks.find(t => t.taskId === taskId);
+        const priority = task ? task.priority : 999;
+        let successCount = 0;
+
+        feedbackData.predecessors.forEach(p => {
+            const payload = {
+                taskId: taskId,
+                priority: priority,
+                scenario: currentScenario,
+                predecessorTask: p.predecessorTask,
+                notes: p.notes
+            };
+
+            fetch('/api/ie/flag_task', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    successCount++;
+                }
+            })
+            .catch(err => console.error('Error flagging task:', err));
+        });
+        showNotification(`${feedbackData.predecessors.length} predecessor task(s) sent for IE review.`, 'info');
+    }
+
     // Visual feedback
     showNotification('Feedback saved successfully!', 'success');
-
-    // Update the status indicator
     const form = document.getElementById(`feedback-form-${feedbackKey}`);
     if (form) {
         const statusSpan = form.parentElement.querySelector('span[style*="background"]');
@@ -7174,10 +7183,7 @@ function saveFeedback(feedbackKey, taskId, mechanicId) {
             statusSpan.textContent = 'Feedback Submitted';
         }
     }
-
-    // Update the feedback summary
     updateFeedbackSummary();
-
     console.log('Saved feedback:', feedbackData);
 }
 
@@ -8063,28 +8069,19 @@ async function updateSupplyChainView() {
 
 // New function for Industrial Engineering View
 async function updateIEView() {
-    console.log('[DEBUG] updateIEView() called.');
+    console.log('Updating Industrial Engineering View...');
     const tableBody = document.getElementById('ie-review-table-body');
-    if (!tableBody) {
-        console.error('[DEBUG] IE review table body not found!');
-        return;
-    }
+    if (!tableBody) return;
 
     tableBody.innerHTML = '<tr><td colspan="8" class="text-center" style="padding: 20px;">Loading IE review queue...</td></tr>';
 
     try {
-        console.log('[DEBUG] Fetching /api/ie/review_queue...');
         const response = await fetch('/api/ie/review_queue');
+        if (!response.ok) throw new Error('Failed to fetch review queue');
         const queue = await response.json();
-        console.log('[DEBUG] Received review queue data:', queue);
-
-        if (!response.ok) {
-            throw new Error(`Server responded with ${response.status}: ${JSON.stringify(queue)}`);
-        }
 
         if (queue.length === 0) {
             tableBody.innerHTML = '<tr><td colspan="8" class="text-center" style="padding: 20px;">No tasks in the review queue.</td></tr>';
-            console.log('[DEBUG] Queue is empty. Rendered "No tasks" message.');
             return;
         }
 
@@ -8108,11 +8105,10 @@ async function updateIEView() {
             `;
         });
         tableBody.innerHTML = rowsHtml;
-        console.log(`[DEBUG] Rendered ${queue.length} tasks into the IE review table.`);
 
     } catch (error) {
-        console.error('[DEBUG] Error updating IE view:', error);
-        tableBody.innerHTML = '<tr><td colspan="8" class="text-center" style="color: red; padding: 20px;">Error loading data. Please try again.</td></tr>';
+        console.error('Error updating IE view:', error);
+        tableBody.innerHTML = '<tr><td colspan="8" class="text-center" style="color: red; padding: 20px;">Error loading data.</td></tr>';
     }
 }
 
