@@ -4866,19 +4866,36 @@ let customGanttViewMode = 'days';
 
 // Enhanced update view to use custom Gantt
 function updateView() {
-    if (!scenarioData) return;
+    console.log(`[DEBUG] updateView() called. currentView = ${currentView}`);
+    if (!scenarioData && currentView !== 'scenario') {
+        console.log('[DEBUG] updateView() returning early because no scenarioData.');
+        return;
+    }
 
     if (currentView === 'team-lead') {
+        console.log('[DEBUG] updateView() -> updateTeamLeadView()');
         updateTeamLeadView();
     } else if (currentView === 'management') {
+        console.log('[DEBUG] updateView() -> updateManagementView()');
         updateManagementView();
     } else if (currentView === 'mechanic') {
+        console.log('[DEBUG] updateView() -> updateMechanicView()');
         updateMechanicView();
     } else if (currentView === 'project') {
+        console.log('[DEBUG] updateView() -> initializeCustomGantt()');
         // Use custom Gantt chart instead of timeline
         initializeCustomGantt();
     } else if (currentView === 'supply-chain') {
+        console.log('[DEBUG] updateView() -> updateSupplyChainView()');
         updateSupplyChainView();
+    } else if (currentView === 'industrial-engineering') {
+        console.log('[DEBUG] updateView() -> updateIEView()');
+        updateIEView();
+    } else if (currentView === 'scenario') {
+        console.log('[DEBUG] updateView() -> initScenarioView()');
+        initScenarioView();
+    } else {
+        console.log(`[DEBUG] updateView() did not match any view. currentView = ${currentView}`);
     }
 }
 
