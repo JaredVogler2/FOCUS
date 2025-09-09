@@ -46,6 +46,7 @@ def flag_task_for_review():
     scenario = data.get('scenario', 'baseline')
     predecessor_task = data.get('predecessorTask', '')
     notes = data.get('notes', '')
+    mechanic_name = data.get('mechanicName', 'Unknown')
 
     if not task_id:
         return jsonify({'success': False, 'error': 'Task ID is required'}), 400
@@ -82,7 +83,8 @@ def flag_task_for_review():
         'scenario': scenario,
         'flagged_at': datetime.utcnow().isoformat(),
         'status': 'open',
-        'details': task_details
+        'details': task_details,
+        'mechanic_name': mechanic_name
     }
 
     queue.append(review_item)

@@ -7205,7 +7205,13 @@ function saveFeedback(feedbackKey, taskId, mechanicId) {
 
         feedbackData.reason = reason;
         feedbackData.reasonText = getReasonDisplayText(reason);
-        feedbackData.notes = generalNotesInput ? generalNotesInput.value.trim() : '';
+        const generalNotes = generalNotesInput ? generalNotesInput.value.trim() : '';
+        if (!generalNotes) {
+            alert('General notes are required when a task is delayed to provide justification for the delay.');
+            generalNotesInput.focus();
+            return;
+        }
+        feedbackData.notes = generalNotes;
         feedbackData.delayMinutes = delayInput ? parseInt(delayInput.value) || 0 : 0;
 
         if (reason === 'predecessor') {
@@ -7260,7 +7266,8 @@ function saveFeedback(feedbackKey, taskId, mechanicId) {
                 priority: priority,
                 scenario: currentScenario,
                 predecessorTask: p.predecessorTask,
-                notes: p.notes
+                notes: p.notes,
+                mechanicName: feedbackData.mechanicName
             };
             console.log('[DEBUG] Flagging predecessor:', payload);
 
@@ -8204,6 +8211,7 @@ async function updateIEView() {
                     <td><strong>${item.task_id}</strong></td>
                     <td>${item.details.product || 'N/A'}</td>
                     <td>${item.details.team || 'N/A'}</td>
+                    <td>${item.mechanic_name || 'N/A'}</td>
                     <td>${flaggedAt}</td>
                     <td>${item.predecessor_task}</td>
                     <td>${item.notes || ''}</td>
