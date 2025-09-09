@@ -7171,6 +7171,8 @@ function setupReasonChangeHandler(feedbackKey) {
 // Save feedback for a specific task
 function saveFeedback(feedbackKey, taskId, mechanicId) {
     const sanitizedKey = sanitizeForQuerySelector(feedbackKey);
+    console.log('[DEBUG] saveFeedback called with sanitizedKey:', sanitizedKey);
+
     const statusRadios = document.querySelectorAll(`input[name="status-${sanitizedKey}"]`);
     const reasonSelect = document.getElementById(`reason-${sanitizedKey}`);
     const generalNotesInput = document.getElementById(`notes-${sanitizedKey}`);
@@ -7207,7 +7209,10 @@ function saveFeedback(feedbackKey, taskId, mechanicId) {
         feedbackData.delayMinutes = delayInput ? parseInt(delayInput.value) || 0 : 0;
 
         if (reason === 'predecessor') {
-            const predecessorEntries = document.querySelectorAll(`#predecessor-list-${sanitizedKey} .predecessor-entry`);
+            const selector = `#predecessor-list-${sanitizedKey} .predecessor-entry`;
+            console.log('[DEBUG] Querying for predecessor entries with selector:', selector);
+            const predecessorEntries = document.querySelectorAll(selector);
+            console.log('[DEBUG] Found predecessor entries:', predecessorEntries);
             const predecessors = [];
 
             if (predecessorEntries.length === 0) {
@@ -7221,9 +7226,9 @@ function saveFeedback(feedbackKey, taskId, mechanicId) {
                 const predecessorTask = predecessorTaskInput.value.trim();
                 const notes = notesInput.value.trim();
 
-                if (!predecessorTask && !notes) {
-                    alert('Each predecessor entry must have either a Task ID or Notes.');
-                    predecessorTaskInput.focus();
+                if (!notes) {
+                    alert('Notes are required for each predecessor entry to provide justification.');
+                    notesInput.focus();
                     return;
                 }
                 predecessors.push({ predecessorTask, notes });
@@ -7257,6 +7262,7 @@ function saveFeedback(feedbackKey, taskId, mechanicId) {
                 predecessorTask: p.predecessorTask,
                 notes: p.notes
             };
+            console.log('[DEBUG] Flagging predecessor:', payload);
 
             fetch('/api/ie/flag_task', {
                 method: 'POST',
