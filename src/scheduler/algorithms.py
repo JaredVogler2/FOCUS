@@ -116,7 +116,7 @@ def schedule_tasks(scheduler, allow_late_delivery=False, silent_mode=False):
 
         task_info = scheduler.tasks[task_instance_id]
         duration = task_info['duration']
-        mechanics_needed = task_info.get('mechanics_required') or task_info.get('personnel_required') or 1
+        mechanics_needed = task_info['mechanics_required']
         is_quality = task_info['is_quality']
         is_customer = task_info.get('is_customer', False)
         task_type = task_info['task_type']

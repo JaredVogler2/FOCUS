@@ -84,7 +84,6 @@ def export_scenario_with_capacities(scheduler, scenario_name):
                     'endTime': schedule['end_time'].isoformat(),
                     'duration': schedule.get('duration', 60),
                     'mechanics': schedule.get('mechanics_required', 1),
-                    'personnel_required': schedule.get('personnel_required'),
                     'shift': schedule.get('shift', '1st'),
                     'priority': item.get('global_priority', 999),
                     'isLatePartTask': task_id in scheduler.late_part_tasks,
@@ -102,8 +101,7 @@ def export_scenario_with_capacities(scheduler, scenario_name):
     for task_id, schedule in scheduler.task_schedule.items():
         team_for_util = schedule.get('team_skill', schedule.get('team'))
         if team_for_util:
-            required = schedule.get('mechanics_required') or schedule.get('personnel_required') or 1
-            team_task_minutes[team_for_util] += schedule.get('duration', 0) * required
+            team_task_minutes[team_for_util] += schedule.get('duration', 0) * schedule.get('mechanics_required', 1)
 
     utilization = {team: min(100, round((team_task_minutes.get(team, 0) / (8 * 60 * makespan * capacity) * 100), 1)) if capacity > 0 and makespan > 0 else 0 for team, capacity in team_capacities.items()}
 

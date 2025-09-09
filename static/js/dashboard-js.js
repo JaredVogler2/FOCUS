@@ -605,6 +605,8 @@ function updateView() {
         initializeCustomGantt();
     } else if (currentView === 'supply-chain') {
         updateSupplyChainView();
+    } else if (currentView === 'industrial-engineering') {
+        updateIEView();
     } else if (currentView === 'scenario') {
         initScenarioView();
     }
@@ -7103,6 +7105,32 @@ function saveFeedback(feedbackKey, taskId, mechanicId) {
     // Save feedback
     window.taskFeedback[currentScenario][feedbackKey] = feedbackData;
 
+    // If reason is predecessor, flag for IE review
+    if (feedbackData.reason === 'predecessor') {
+        const task = scenarioData.tasks.find(t => t.taskId === taskId);
+        const priority = task ? task.priority : 999;
+
+        fetch('/api/ie/flag_task', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                taskId: taskId,
+                priority: priority,
+                scenario: currentScenario,
+                predecessorTask: feedbackData.predecessorTask
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showNotification(data.message, 'info');
+            } else {
+                console.warn('Could not flag task for IE review:', data.error);
+            }
+        })
+        .catch(err => console.error('Error flagging task:', err));
+    }
+
     // Save to localStorage for persistence
     try {
         localStorage.setItem(`taskFeedback_${currentScenario}`, JSON.stringify(window.taskFeedback[currentScenario]));
@@ -7938,4 +7966,147 @@ console.log('Task Feedback System initialized successfully!');
 
 window.handleReasonChange = handleReasonChange;
 
+// New function for Supply Chain View
+async function updateSupplyChainView() {
+    console.log('Updating Supply Chain View...');
+    const tableBody = document.getElementById('late-parts-table-body');
+    const totalLatePartsSpan = document.getElementById('total-late-parts');
+
+    if (!tableBody || !totalLatePartsSpan) {
+        console.error('Supply chain view elements not found');
+        return;
+    }
+
+    // Set loading state
+    tableBody.innerHTML = '<tr><td colspan="7" class="text-center" style="padding: 20px;">Loading supply chain data...</td></tr>';
+
+    try {
+        const response = await fetch('/api/supply_chain/late_parts_analysis');
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const lateParts = await response.json();
+
+        if (lateParts.length === 0) {
+            tableBody.innerHTML = '<tr><td colspan="7" class="text-center" style="padding: 20px;">No late parts found.</td></tr>';
+            totalLatePartsSpan.textContent = '0';
+            return;
+        }
+
+        let rowsHtml = '';
+        lateParts.forEach(part => {
+            const onDockDate = part.on_dock_date ? new Date(part.on_dock_date) : null;
+            const scheduledStart = part.scheduled_start ? new Date(part.scheduled_start) : null;
+
+            let delayDays = 'N/A';
+            let delayClass = '';
+            if (onDockDate && scheduledStart) {
+                // Calculate delay only from on-dock date to scheduled start
+                const delay = (scheduledStart - onDockDate) / (1000 * 60 * 60 * 24);
+                if (delay > 0) {
+                    delayDays = Math.ceil(delay);
+                    if (delay > 7) {
+                        delayClass = 'delay-critical';
+                    } else if (delay > 2) {
+                        delayClass = 'delay-warning';
+                    }
+                } else {
+                    delayDays = '0';
+                }
+            }
+
+            rowsHtml += `
+                <tr>
+                    <td><strong>${part.part_id}</strong></td>
+                    <td>${part.product}</td>
+                    <td>${onDockDate ? onDockDate.toLocaleDateString() : 'N/A'}</td>
+                    <td>${scheduledStart ? scheduledStart.toLocaleString() : 'Not Scheduled'}</td>
+                    <td class="${delayClass}">${delayDays}</td>
+                    <td>${part.dependent_tasks.join(', ') || 'None'}</td>
+                    <td>${part.team || 'N/A'}</td>
+                </tr>
+            `;
+        });
+
+        tableBody.innerHTML = rowsHtml;
+        totalLatePartsSpan.textContent = lateParts.length;
+
+    } catch (error) {
+        console.error('Failed to update supply chain view:', error);
+        tableBody.innerHTML = '<tr><td colspan="7" class="text-center" style="color: red; padding: 20px;">Error loading data. Please try again.</td></tr>';
+    }
+}
+
+// New function for Industrial Engineering View
+async function updateIEView() {
+    console.log('Updating Industrial Engineering View...');
+    const tableBody = document.getElementById('ie-review-table-body');
+    if (!tableBody) return;
+
+    tableBody.innerHTML = '<tr><td colspan="7" class="text-center" style="padding: 20px;">Loading IE review queue...</td></tr>';
+
+    try {
+        const response = await fetch('/api/ie/review_queue');
+        if (!response.ok) throw new Error('Failed to fetch review queue');
+        const queue = await response.json();
+
+        if (queue.length === 0) {
+            tableBody.innerHTML = '<tr><td colspan="7" class="text-center" style="padding: 20px;">No tasks in the review queue.</td></tr>';
+            return;
+        }
+
+        let rowsHtml = '';
+        queue.forEach(item => {
+            const flaggedAt = new Date(item.flagged_at).toLocaleString();
+            rowsHtml += `
+                <tr id="ie-task-${item.task_id}">
+                    <td>${item.priority}</td>
+                    <td><strong>${item.task_id}</strong></td>
+                    <td>${item.details.product || 'N/A'}</td>
+                    <td>${item.details.team || 'N/A'}</td>
+                    <td>${flaggedAt}</td>
+                    <td>${item.predecessor_task}</td>
+                    <td>
+                        <button class="btn-ie-action" onclick="resolveIETask('${item.task_id}', 'agree')">Agree & Resolve</button>
+                        <button class="btn-ie-action" onclick="resolveIETask('${item.task_id}', 'disagree')">Disagree</button>
+                    </td>
+                </tr>
+            `;
+        });
+        tableBody.innerHTML = rowsHtml;
+
+    } catch (error) {
+        console.error('Error updating IE view:', error);
+        tableBody.innerHTML = '<tr><td colspan="7" class="text-center" style="color: red; padding: 20px;">Error loading data.</td></tr>';
+    }
+}
+
+async function resolveIETask(taskId, action) {
+    console.log(`Resolving IE task ${taskId} with action: ${action}`);
+    if (action === 'disagree') {
+        alert('Disagree functionality is not yet implemented. The task will be removed from the queue for now.');
+    }
+
+    try {
+        const response = await fetch(`/api/ie/resolve_task/${taskId}`, { method: 'POST' });
+        if (!response.ok) throw new Error('Failed to resolve task');
+
+        const result = await response.json();
+        if (result.success) {
+            showNotification(result.message, 'success');
+            // Remove the row from the table
+            const row = document.getElementById(`ie-task-${taskId}`);
+            if (row) {
+                row.style.transition = 'opacity 0.5s';
+                row.style.opacity = '0';
+                setTimeout(() => row.remove(), 500);
+            }
+        } else {
+            throw new Error(result.error);
+        }
+    } catch (error) {
+        console.error('Error resolving IE task:', error);
+        showNotification(`Error: ${error.message}`, 'error');
+    }
+}
 

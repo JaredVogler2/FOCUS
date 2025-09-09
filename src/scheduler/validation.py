@@ -67,9 +67,8 @@ def check_resource_conflicts(scheduler):
 
         events = []
         for task_id, schedule in tasks:
-            required = schedule.get('mechanics_required') or schedule.get('personnel_required') or 0
-            events.append((schedule['start_time'], required, 'start', task_id))
-            events.append((schedule['end_time'], -required, 'end', task_id))
+            events.append((schedule['start_time'], schedule['mechanics_required'], 'start', task_id))
+            events.append((schedule['end_time'], -schedule['mechanics_required'], 'end', task_id))
 
         events.sort(key=lambda x: (x[0], x[1]))
 

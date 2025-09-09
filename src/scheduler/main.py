@@ -67,31 +67,29 @@ class ProductionScheduler:
             min_requirements[team] = 0
         for team in self.quality_team_capacity:
             min_requirements[team] = 0
-        for team in self.customer_team_capacity:
-            min_requirements[team] = 0
 
         # Check all tasks for their team_skill requirements
         for task_id, task_info in self.tasks.items():
             # Use team_skill if available, otherwise team
             team = task_info.get('team_skill', task_info.get('team'))
-
-            required = 0
-            if task_info.get('is_quality', False):
-                required = task_info.get('mechanics_required', 0) # For QI, this is quality headcount
-            elif task_info.get('is_customer', False):
-                required = task_info.get('personnel_required', 0)
-            else:
-                required = task_info.get('mechanics_required', 0)
-
+            mechanics_required = task_info.get('mechanics_required', 0)
 
             if team:
                 if team in min_requirements:
-                    min_requirements[team] = max(min_requirements[team], required)
+                    min_requirements[team] = max(min_requirements[team], mechanics_required)
                 else:
-                    # This can happen for skill-specific teams not in the base capacity list
-                    min_requirements[team] = required
+                    # Team not in capacity tables - this is a problem
                     if self.debug:
-                        print(f"[DEBUG] Adding new team '{team}' to min_requirements for task {task_id}")
+                        print(f"[WARNING] Task {task_id} requires team {team} not in capacity tables")
+
+        # Check quality inspections
+        for qi_id, qi_info in self.quality_inspections.items():
+            headcount = qi_info.get('headcount', 0)
+            # QI tasks should have their team assigned during loading
+            if qi_id in self.tasks:
+                team = self.tasks[qi_id].get('team')
+                if team and team in min_requirements:
+                    min_requirements[team] = max(min_requirements[team], headcount)
 
         return min_requirements
 

@@ -145,7 +145,7 @@ def _load_customer_inspections(scheduler, sections):
                                 'team': 'Customer Team 1',  # Will be assigned dynamically during scheduling
                                 'team_skill': 'Customer Team 1',  # Default, will be reassigned
                                 'team_type': 'customer',
-                                'personnel_required': cc_headcount,
+                                'mechanics_required': cc_headcount,
                                 'is_quality': False,
                                 'is_customer': True,
                                 'task_type': 'Customer',  # Just "Customer" not "Customer Inspection"

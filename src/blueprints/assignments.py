@@ -129,8 +129,6 @@ def auto_assign_tasks():
         task_start = datetime.fromisoformat(task['startTime'])
         task_end = datetime.fromisoformat(task['endTime'])
         mechanics_needed = task.get('mechanics', 1)
-        if task.get('isCustomerTask') and task.get('personnel_required') is not None:
-            mechanics_needed = task.get('personnel_required')
 
         # Find available mechanics from the same team as the task
         team_mechanics = [m for m in available_mechanics if m['team'] == task['team']]

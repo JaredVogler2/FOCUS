@@ -39,6 +39,8 @@ def create_app():
     from src.blueprints.main import main_bp
     from src.blueprints.scenarios import scenarios_bp
     from src.blueprints.assignments import assignments_bp
+    from src.blueprints.supply_chain import supply_chain_bp
+    from src.blueprints.industrial_engineering import ie_bp
 
     def initialize_scheduler_with_context():
         """Initialize the scheduler within the application context."""
@@ -115,6 +117,8 @@ def create_app():
     app.register_blueprint(main_bp)
     app.register_blueprint(scenarios_bp, url_prefix='/api')
     app.register_blueprint(assignments_bp, url_prefix='/api')
+    app.register_blueprint(supply_chain_bp)
+    app.register_blueprint(ie_bp)
 
     @app.errorhandler(404)
     def not_found(error):

@@ -121,7 +121,7 @@ class CpSatScheduler:
                 customer_team = task_info.get('team')
                 if customer_team:
                     resource_to_tasks[customer_team]['intervals'].append(task_vars['interval'])
-                    resource_to_tasks[customer_team]['demands'].append(task_info.get('personnel_required') or task_info.get('mechanics_required') or 1)
+                    resource_to_tasks[customer_team]['demands'].append(task_info['mechanics_required'])
 
             else:
                 # This is a standard Production, Rework, or Late Part task.
@@ -206,9 +206,7 @@ class CpSatScheduler:
                 'end_time': start_datetime + timedelta(minutes=end_minutes),
                 'team': task_info.get('team'), 'team_skill': task_info.get('team_skill'),
                 'skill': task_info.get('skill'), 'product': task_info.get('product'),
-                'duration': task_info.get('duration'),
-                'mechanics_required': task_info.get('mechanics_required'),
-                'personnel_required': task_info.get('personnel_required'),
+                'duration': task_info.get('duration'), 'mechanics_required': task_info.get('mechanics_required'),
                 'is_quality': task_info.get('is_quality', False), 'is_customer': task_info.get('is_customer', False),
                 'task_type': task_info.get('task_type'), 'original_task_id': task_info.get('original_task_id')
             }

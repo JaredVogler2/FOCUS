@@ -1,0 +1,26 @@
+<!-- templates/partials/_industrial_engineering_view.html -->
+<div id="industrial-engineering-view" class="view-content" style="display: none;">
+    <div class="header">
+        <h2>Industrial Engineering Review Queue</h2>
+        <p>Tasks flagged by mechanics as being held by a predecessor task.</p>
+    </div>
+
+    <div class="table-container">
+        <table id="ie-review-table">
+            <thead>
+                <tr>
+                    <th>Priority</th>
+                    <th>Task ID</th>
+                    <th>Product</th>
+                    <th>Team</th>
+                    <th>Flagged At (UTC)</th>
+                    <th>Predecessor Task</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody id="ie-review-table-body">
+                <!-- Data will be loaded here by JavaScript -->
+            </tbody>
+        </table>
+    </div>
+</div>

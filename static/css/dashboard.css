@@ -1404,3 +1404,99 @@ tr.has-conflict {
     transform: translate(-50%, -50%) scale(1.0);
   }
 }
+
+/* Supply Chain View Specific Styles */
+#supply-chain-view .table-container {
+    margin-top: 20px;
+    overflow-x: auto; /* For responsive tables */
+}
+
+#late-parts-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+}
+
+#late-parts-table th,
+#late-parts-table td {
+    border: 1px solid #ddd;
+    padding: 12px;
+    text-align: left;
+    vertical-align: middle;
+}
+
+#late-parts-table th {
+    background-color: #f8f9fa;
+    font-weight: 600;
+    color: #495057;
+}
+
+#late-parts-table-body tr:nth-child(even) {
+    background-color: #f9f9f9;
+}
+
+#late-parts-table-body tr:hover {
+    background-color: #e9ecef;
+}
+
+#late-parts-table-body .delay-critical {
+    color: #d9534f; /* Red for critical delays */
+    font-weight: bold;
+}
+
+#late-parts-table-body .delay-warning {
+    color: #f0ad4e; /* Orange for warning delays */
+}
+
+#supply-chain-view .summary-container {
+    margin-top: 20px;
+    padding: 15px;
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    text-align: right;
+}
+
+/* Industrial Engineering View Specific Styles */
+#industrial-engineering-view .table-container {
+    margin-top: 20px;
+}
+
+#ie-review-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+}
+
+#ie-review-table th,
+#ie-review-table td {
+    border: 1px solid #ddd;
+    padding: 12px;
+    text-align: left;
+    vertical-align: middle;
+}
+
+#ie-review-table th {
+    background-color: #f8f9fa;
+    font-weight: 600;
+    color: #495057;
+}
+
+#ie-review-table-body tr:hover {
+    background-color: #e9ecef;
+}
+
+.btn-ie-action {
+    padding: 5px 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    margin-right: 5px;
+    background-color: #fff;
+    transition: background-color 0.2s;
+}
+
+.btn-ie-action:hover {
+    background-color: #f0f0f0;
+}
