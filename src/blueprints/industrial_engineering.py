@@ -114,7 +114,10 @@ def get_review_queue():
 
 @ie_bp.route('/resolve_task', methods=['POST'])
 def resolve_task():
-    """Resolves a task from the file-based IE review queue using its unique timestamp."""
+    """
+    Resolves a task from the file-based IE review queue using its unique timestamp.
+    This is now more robust to handle items that might be missing the `feedback_id`.
+    """
     data = request.json
     item_id = data.get('flagged_at')
 
@@ -124,11 +127,15 @@ def resolve_task():
     queue = read_queue()
     task_found = False
     new_queue = []
-    resolved_task_id = None
+    resolved_task_id = "Unknown"
+
     for item in queue:
-        if item.get('feedback_id') == item_id:
+        # Check against both the new 'feedback_id' and the legacy 'flagged_at' field for robustness.
+        # This makes the system backward-compatible with any older queue items.
+        if item.get('feedback_id') == item_id or item.get('flagged_at') == item_id:
             task_found = True
             resolved_task_id = item.get('task_id', 'Unknown')
+            current_app.logger.info(f"Resolved IE Queue item for task {resolved_task_id} with ID {item_id}")
         else:
             new_queue.append(item)
 
@@ -136,4 +143,5 @@ def resolve_task():
         write_queue(new_queue)
         return jsonify({'success': True, 'message': f'Task {resolved_task_id} ({item_id}) resolved and removed from the review queue.'})
     else:
+        current_app.logger.error(f"Could not find IE Queue item with ID {item_id} to resolve.")
         return jsonify({'success': False, 'error': f'Task with ID {item_id} not found in the review queue.'}), 404
