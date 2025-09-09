@@ -70,8 +70,7 @@ def flag_task_for_review():
 @ie_bp.route('/review_queue', methods=['GET'])
 def get_review_queue():
     """Returns the current list of tasks awaiting IE review."""
-    if not hasattr(current_app, 'industrial_engineering_review_queue'):
-        return jsonify([])
+    initialize_ie_queue(current_app)
 
     # Sort by priority (lower is higher priority)
     sorted_queue = sorted(
