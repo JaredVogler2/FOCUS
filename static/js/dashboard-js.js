@@ -7105,31 +7105,37 @@ function saveFeedback(feedbackKey, taskId, mechanicId) {
     // Save feedback
     window.taskFeedback[currentScenario][feedbackKey] = feedbackData;
 
+    console.log(`[DEBUG] Feedback data for ${feedbackKey}:`, feedbackData);
+
     // If reason is predecessor, flag for IE review
     if (feedbackData.reason === 'predecessor') {
+        console.log(`[DEBUG] Reason is "predecessor". Flagging task ${taskId} for IE review.`);
         const task = scenarioData.tasks.find(t => t.taskId === taskId);
         const priority = task ? task.priority : 999;
+        const payload = {
+            taskId: taskId,
+            priority: priority,
+            scenario: currentScenario,
+            predecessorTask: feedbackData.predecessorTask,
+            notes: feedbackData.notes
+        };
+        console.log('[DEBUG] Sending payload to /api/ie/flag_task:', payload);
 
         fetch('/api/ie/flag_task', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                taskId: taskId,
-                priority: priority,
-                scenario: currentScenario,
-                predecessorTask: feedbackData.predecessorTask,
-                notes: feedbackData.notes
-            })
+            body: JSON.stringify(payload)
         })
         .then(response => response.json())
         .then(data => {
+            console.log(`[DEBUG] Response from /api/ie/flag_task:`, data);
             if (data.success) {
                 showNotification(data.message, 'info');
             } else {
-                console.warn('Could not flag task for IE review:', data.error);
+                console.warn('[DEBUG] Could not flag task for IE review:', data.error);
             }
         })
-        .catch(err => console.error('Error flagging task:', err));
+        .catch(err => console.error('[DEBUG] Error flagging task:', err));
     }
 
     // Save to localStorage for persistence
@@ -8040,19 +8046,28 @@ async function updateSupplyChainView() {
 
 // New function for Industrial Engineering View
 async function updateIEView() {
-    console.log('Updating Industrial Engineering View...');
+    console.log('[DEBUG] updateIEView() called.');
     const tableBody = document.getElementById('ie-review-table-body');
-    if (!tableBody) return;
+    if (!tableBody) {
+        console.error('[DEBUG] IE review table body not found!');
+        return;
+    }
 
     tableBody.innerHTML = '<tr><td colspan="8" class="text-center" style="padding: 20px;">Loading IE review queue...</td></tr>';
 
     try {
+        console.log('[DEBUG] Fetching /api/ie/review_queue...');
         const response = await fetch('/api/ie/review_queue');
-        if (!response.ok) throw new Error('Failed to fetch review queue');
         const queue = await response.json();
+        console.log('[DEBUG] Received review queue data:', queue);
+
+        if (!response.ok) {
+            throw new Error(`Server responded with ${response.status}: ${JSON.stringify(queue)}`);
+        }
 
         if (queue.length === 0) {
             tableBody.innerHTML = '<tr><td colspan="8" class="text-center" style="padding: 20px;">No tasks in the review queue.</td></tr>';
+            console.log('[DEBUG] Queue is empty. Rendered "No tasks" message.');
             return;
         }
 
@@ -8076,10 +8091,11 @@ async function updateIEView() {
             `;
         });
         tableBody.innerHTML = rowsHtml;
+        console.log(`[DEBUG] Rendered ${queue.length} tasks into the IE review table.`);
 
     } catch (error) {
-        console.error('Error updating IE view:', error);
-        tableBody.innerHTML = '<tr><td colspan="8" class="text-center" style="color: red; padding: 20px;">Error loading data.</td></tr>';
+        console.error('[DEBUG] Error updating IE view:', error);
+        tableBody.innerHTML = '<tr><td colspan="8" class="text-center" style="color: red; padding: 20px;">Error loading data. Please try again.</td></tr>';
     }
 }
 

@@ -41,6 +41,7 @@ def flag_task_for_review():
     Flags a task for review by the Industrial Engineering team using a file-based queue.
     """
     data = request.json
+    print(f"[DEBUG] IE Blueprint: Received data for flagging: {data}")
     task_id = data.get('taskId')
     priority = data.get('priority', 999)
     scenario = data.get('scenario', 'baseline')
@@ -81,7 +82,11 @@ def flag_task_for_review():
     }
 
     queue.append(review_item)
+    print(f"[DEBUG] IE Blueprint: Appended item. Queue size is now {len(queue)}.")
+    print(f"[DEBUG] IE Blueprint: Writing queue to {IE_QUEUE_FILE}...")
     write_queue(queue)
+    print(f"[DEBUG] IE Blueprint: Write complete.")
+
 
     return jsonify({
         'success': True,
@@ -92,7 +97,9 @@ def flag_task_for_review():
 @ie_bp.route('/review_queue', methods=['GET'])
 def get_review_queue():
     """Returns the current list of tasks awaiting IE review from the file."""
+    print(f"[DEBUG] IE Blueprint: get_review_queue called. Reading from {IE_QUEUE_FILE}...")
     queue = read_queue()
+    print(f"[DEBUG] IE Blueprint: Read {len(queue)} items from file.")
     # Sort by priority (lower is higher priority)
     sorted_queue = sorted(
         queue,
