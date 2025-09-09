@@ -105,20 +105,28 @@ def get_review_queue():
     )
     return jsonify(sorted_queue)
 
-@ie_bp.route('/resolve_task/<task_id>', methods=['POST'])
-def resolve_task(task_id):
-    """Resolves a task from the file-based IE review queue."""
+@ie_bp.route('/resolve_task', methods=['POST'])
+def resolve_task():
+    """Resolves a task from the file-based IE review queue using its unique timestamp."""
+    data = request.json
+    item_id = data.get('flagged_at')
+
+    if not item_id:
+        return jsonify({'success': False, 'error': 'A unique item ID (flagged_at) is required.'}), 400
+
     queue = read_queue()
     task_found = False
     new_queue = []
+    resolved_task_id = None
     for item in queue:
-        if item['task_id'] == task_id:
+        if item.get('flagged_at') == item_id:
             task_found = True
+            resolved_task_id = item.get('task_id', 'Unknown')
         else:
             new_queue.append(item)
 
     if task_found:
         write_queue(new_queue)
-        return jsonify({'success': True, 'message': f'Task {task_id} resolved and removed from the review queue.'})
+        return jsonify({'success': True, 'message': f'Task {resolved_task_id} resolved and removed from the review queue.'})
     else:
-        return jsonify({'error': f'Task {task_id} not found in the review queue.'}), 404
+        return jsonify({'success': False, 'error': f'Task with ID {item_id} not found in the review queue.'}), 404

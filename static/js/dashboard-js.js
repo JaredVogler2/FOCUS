@@ -8196,8 +8196,10 @@ async function updateIEView() {
         let rowsHtml = '';
         queue.forEach(item => {
             const flaggedAt = new Date(item.flagged_at).toLocaleString();
+            // Create a safe ID for the DOM by removing special characters
+            const safeId = item.flagged_at.replace(/[^a-zA-Z0-9-_]/g, '');
             rowsHtml += `
-                <tr id="ie-task-${item.task_id}">
+                <tr id="ie-task-${safeId}">
                     <td>${item.priority}</td>
                     <td><strong>${item.task_id}</strong></td>
                     <td>${item.details.product || 'N/A'}</td>
@@ -8206,8 +8208,8 @@ async function updateIEView() {
                     <td>${item.predecessor_task}</td>
                     <td>${item.notes || ''}</td>
                     <td>
-                        <button class="btn-ie-action" onclick="resolveIETask('${item.task_id}', 'agree')">Agree & Resolve</button>
-                        <button class="btn-ie-action" onclick="resolveIETask('${item.task_id}', 'disagree')">Disagree</button>
+                        <button class="btn-ie-action" onclick="resolveIETask('${item.flagged_at}', 'agree')">Agree & Resolve</button>
+                        <button class="btn-ie-action" onclick="resolveIETask('${item.flagged_at}', 'disagree')">Disagree</button>
                     </td>
                 </tr>
             `;
@@ -8220,28 +8222,40 @@ async function updateIEView() {
     }
 }
 
-async function resolveIETask(taskId, action) {
-    console.log(`Resolving IE task ${taskId} with action: ${action}`);
+async function resolveIETask(itemId, action) {
+    console.log(`Resolving IE task item ${itemId} with action: ${action}`);
     if (action === 'disagree') {
         alert('Disagree functionality is not yet implemented. The task will be removed from the queue for now.');
     }
 
     try {
-        const response = await fetch(`/api/ie/resolve_task/${taskId}`, { method: 'POST' });
-        if (!response.ok) throw new Error('Failed to resolve task');
+        const response = await fetch(`/api/ie/resolve_task`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ flagged_at: itemId })
+        });
 
         const result = await response.json();
+
+        if (!response.ok) {
+            // Use the error from the JSON response if available
+            throw new Error(result.error || 'Failed to resolve task');
+        }
+
         if (result.success) {
             showNotification(result.message, 'success');
-            // Remove the row from the table
-            const row = document.getElementById(`ie-task-${taskId}`);
+            // Remove the row from the table using a sanitized ID
+            const safeId = itemId.replace(/[^a-zA-Z0-9-_]/g, '');
+            const row = document.getElementById(`ie-task-${safeId}`);
             if (row) {
                 row.style.transition = 'opacity 0.5s';
                 row.style.opacity = '0';
                 setTimeout(() => row.remove(), 500);
             }
         } else {
-            throw new Error(result.error);
+            throw new Error(result.error || 'An unknown error occurred.');
         }
     } catch (error) {
         console.error('Error resolving IE task:', error);
