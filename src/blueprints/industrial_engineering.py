@@ -25,18 +25,22 @@ def flag_task_for_review():
     priority = data.get('priority', 999)
     scenario = data.get('scenario', 'baseline')
     predecessor_task = data.get('predecessorTask', '')
+    notes = data.get('notes', '') # Get notes from the request
 
     if not task_id:
-        return jsonify({'error': 'Task ID is required'}), 400
+        return jsonify({'success': False, 'error': 'Task ID is required'}), 400
 
-    # Prevent duplicate entries
+    # Prevent duplicate entries but return a success message
     if any(item['task_id'] == task_id for item in current_app.industrial_engineering_review_queue):
-        return jsonify({'message': f'Task {task_id} is already in the review queue.'}), 200
+        return jsonify({'success': True, 'message': f'Task {task_id} is already in the review queue.'}), 200
 
     # Get additional task details from the scheduler
     task_details = {}
-    if current_app.scheduler and task_id in current_app.scheduler.tasks:
-        task_info = current_app.scheduler.tasks[task_id]
+    # Find the task in the correct scenario's data
+    scenario_data = current_app.scenario_results.get(scenario, {})
+    task_info = next((task for task in scenario_data.get('tasks', []) if task['taskId'] == task_id), None)
+
+    if task_info:
         task_details = {
             'product': task_info.get('product'),
             'team': task_info.get('team'),
@@ -48,6 +52,7 @@ def flag_task_for_review():
         'priority': priority,
         'reason': 'Held by Predecessor Task',
         'predecessor_task': predecessor_task,
+        'notes': notes,  # Add notes to the review item
         'scenario': scenario,
         'flagged_at': datetime.utcnow().isoformat(),
         'status': 'open',

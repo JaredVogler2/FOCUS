@@ -7117,7 +7117,8 @@ function saveFeedback(feedbackKey, taskId, mechanicId) {
                 taskId: taskId,
                 priority: priority,
                 scenario: currentScenario,
-                predecessorTask: feedbackData.predecessorTask
+                predecessorTask: feedbackData.predecessorTask,
+                notes: feedbackData.notes
             })
         })
         .then(response => response.json())
@@ -8043,7 +8044,7 @@ async function updateIEView() {
     const tableBody = document.getElementById('ie-review-table-body');
     if (!tableBody) return;
 
-    tableBody.innerHTML = '<tr><td colspan="7" class="text-center" style="padding: 20px;">Loading IE review queue...</td></tr>';
+    tableBody.innerHTML = '<tr><td colspan="8" class="text-center" style="padding: 20px;">Loading IE review queue...</td></tr>';
 
     try {
         const response = await fetch('/api/ie/review_queue');
@@ -8051,7 +8052,7 @@ async function updateIEView() {
         const queue = await response.json();
 
         if (queue.length === 0) {
-            tableBody.innerHTML = '<tr><td colspan="7" class="text-center" style="padding: 20px;">No tasks in the review queue.</td></tr>';
+            tableBody.innerHTML = '<tr><td colspan="8" class="text-center" style="padding: 20px;">No tasks in the review queue.</td></tr>';
             return;
         }
 
@@ -8066,6 +8067,7 @@ async function updateIEView() {
                     <td>${item.details.team || 'N/A'}</td>
                     <td>${flaggedAt}</td>
                     <td>${item.predecessor_task}</td>
+                    <td>${item.notes || ''}</td>
                     <td>
                         <button class="btn-ie-action" onclick="resolveIETask('${item.task_id}', 'agree')">Agree & Resolve</button>
                         <button class="btn-ie-action" onclick="resolveIETask('${item.task_id}', 'disagree')">Disagree</button>
@@ -8077,7 +8079,7 @@ async function updateIEView() {
 
     } catch (error) {
         console.error('Error updating IE view:', error);
-        tableBody.innerHTML = '<tr><td colspan="7" class="text-center" style="color: red; padding: 20px;">Error loading data.</td></tr>';
+        tableBody.innerHTML = '<tr><td colspan="8" class="text-center" style="color: red; padding: 20px;">Error loading data.</td></tr>';
     }
 }
 
