@@ -3830,7 +3830,7 @@ function loadSavedAssignments() {
     let loadedCount = 0;
 
     taskRows.forEach(row => {
-        const taskId = row.querySelector('.task-id')?.textContent?.replace(/[🔦🔧⚡]/g, '').trim();
+        const taskId = row.dataset.taskId;
         if (!taskId || !assignments[taskId]) return;
 
         const taskAssignment = assignments[taskId];
