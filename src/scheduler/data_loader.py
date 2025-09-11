@@ -417,6 +417,24 @@ def _load_task_definitions(scheduler, sections):
             for team_skill, count in sorted(skill_counts.items()):
                 print(f"  - {team_skill}: {count} tasks")
 
+    # Now, process the precedence constraints to add dependencies to baseline tasks
+    if hasattr(scheduler, 'precedence_constraints'):
+        # Initialize dependencies list for all baseline tasks
+        for task_id in scheduler.baseline_task_data:
+            scheduler.baseline_task_data[task_id]['dependencies'] = []
+
+        # Populate dependencies
+        dep_count = 0
+        for constraint in scheduler.precedence_constraints:
+            predecessor = constraint['First']
+            successor = constraint['Second']
+            if successor in scheduler.baseline_task_data:
+                # Ensure the predecessor is also a valid task
+                if predecessor in scheduler.baseline_task_data:
+                    scheduler.baseline_task_data[successor]['dependencies'].append(predecessor)
+                    dep_count += 1
+        print(f"[DEBUG] Applied {dep_count} dependency relationships to baseline tasks")
+
 
 def _load_product_lines(scheduler, sections):
     """Load product lines and create task instances"""
