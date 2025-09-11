@@ -174,3 +174,67 @@ def get_products():
 def get_saved_scenarios():
     """Get a list of all saved what-if scenarios."""
     return jsonify(current_app.saved_scenarios)
+
+
+@scenarios_bp.route('/task/<scenario_id>/<task_id>/chain')
+def get_task_chain(scenario_id, task_id):
+    """Get the full upstream (predecessor) and downstream (successor) chain for a given task."""
+    scenario_results = current_app.scenario_results
+    if scenario_id not in scenario_results:
+        return jsonify({'error': f'Scenario {scenario_id} not found'}), 404
+
+    tasks = scenario_results[scenario_id].get('tasks', [])
+    if not any(t['taskId'] == task_id for t in tasks):
+        return jsonify({'error': f'Task {task_id} not found in scenario {scenario_id}'}), 404
+
+    # Build predecessor and successor graphs
+    predecessors = {t['taskId']: t.get('dependencies', []) for t in tasks}
+    successors = {t['taskId']: [] for t in tasks}
+    for task, deps in predecessors.items():
+        for dep in deps:
+            if dep in successors:
+                successors[dep].append(task)
+
+    # --- Helper for DFS traversal ---
+    def get_chain(start_node, graph, visited=None):
+        if visited is None:
+            visited = set()
+
+        chain = []
+        if start_node in visited:
+            return []
+        visited.add(start_node)
+
+        for node in graph.get(start_node, []):
+            if node not in visited:
+                chain.append(node)
+                chain.extend(get_chain(node, graph, visited))
+        return chain
+
+    # Get upstream and downstream chains
+    upstream_ids = get_chain(task_id, predecessors)
+    downstream_ids = get_chain(task_id, successors)
+
+    # Get task details for the chains
+    task_map = {t['taskId']: t for t in tasks}
+
+    def get_task_details(task_ids):
+        details = []
+        for tid in set(task_ids): # Use set to get unique tasks
+            task_info = task_map.get(tid)
+            if task_info:
+                details.append({
+                    'taskId': task_info.get('taskId'),
+                    'type': task_info.get('type', 'Unknown'),
+                    'product': task_info.get('product', 'Unknown'),
+                    'team': task_info.get('team', 'Unknown'),
+                    'startTime': task_info.get('startTime')
+                })
+        # Sort by start time
+        details.sort(key=lambda x: x.get('startTime', ''))
+        return details
+
+    return jsonify({
+        'upstream': get_task_details(upstream_ids),
+        'downstream': get_task_details(downstream_ids)
+    })

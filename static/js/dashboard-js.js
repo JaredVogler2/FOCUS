@@ -1152,7 +1152,10 @@ async function updateTeamLeadView() {
         rows.push(`
             <tr style="${rowStyle}">
                 <td class="priority">${task.priority || '-'}</td>
-                <td class="task-id">${task.taskId}${typeIndicator}</td>
+                <td class="task-id">
+                    ${task.taskId}${typeIndicator}
+                    <button class="chain-btn" onclick="showTaskChain('${task.taskId}')" title="View Dependency Chain">⛓️</button>
+                </td>
                 <td><span class="task-type ${getTaskTypeClass(taskType)}">${taskType}</span></td>
                 <td>${task.product}<br>${dependencyInfo}</td>
                 <td>${formatDateTime(startTime)}</td>
@@ -6790,10 +6793,11 @@ function createTaskFeedbackItem(task, mechanicId) {
     container.innerHTML = `
         <div style="border-left: 4px solid ${borderColor}; padding: 15px;">
             <!-- Task Header -->
-            <div style="display: flex; justify-content: between; align-items: flex-start; margin-bottom: 10px;">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px;">
                 <div style="flex: 1;">
-                    <div style="font-weight: 600; font-size: 14px; color: #1f2937; margin-bottom: 4px;">
-                        ${typeIcon} Task ${task.taskId} - ${task.type}
+                    <div style="font-weight: 600; font-size: 14px; color: #1f2937; margin-bottom: 4px; display: flex; align-items: center; gap: 8px;">
+                        <span>${typeIcon} Task ${task.taskId} - ${task.type}</span>
+                        <button class="chain-btn" onclick="showTaskChain('${task.taskId}')" title="View Dependency Chain">⛓️</button>
                     </div>
                     <div style="color: #6b7280; font-size: 12px;">
                         📦 ${task.product} • ⏰ ${formatTime(startTime)} • ⌛ ${task.duration} minutes
@@ -8112,6 +8116,109 @@ document.addEventListener('DOMContentLoaded', function() {
 console.log('Task Feedback System initialized successfully!');
 
 window.handleReasonChange = handleReasonChange;
+
+// --- Task Dependency Chain Modal ---
+
+// Show the modal and fetch dependency chain data
+async function showTaskChain(taskId) {
+    const modal = document.getElementById('task-chain-modal');
+    const modalContent = document.getElementById('task-chain-content');
+    const modalTask = document.getElementById('modal-task-id');
+    const modalClose = document.querySelector('.chain-modal-close');
+
+    if (!modal || !modalContent || !modalTask || !modalClose) {
+        console.error('Task chain modal elements not found!');
+        return;
+    }
+
+    // Show modal with loading state
+    modalTask.textContent = taskId;
+    modalContent.innerHTML = '<p>Loading dependency chain...</p>';
+    modal.style.display = 'block';
+
+    // Close modal event listeners
+    modalClose.onclick = () => modal.style.display = 'none';
+    window.onclick = (event) => {
+        if (event.target == modal) {
+            modal.style.display = 'none';
+        }
+    };
+
+    try {
+        const response = await fetch(`/api/task/${currentScenario}/${taskId}/chain`);
+        if (!response.ok) {
+            throw new Error(`API request failed with status ${response.status}`);
+        }
+        const data = await response.json();
+
+        // Render the chains
+        renderTaskChain(data);
+
+    } catch (error) {
+        console.error('Error fetching task chain:', error);
+        modalContent.innerHTML = `<p style="color: red;">Error: Could not load dependency chain. ${error.message}</p>`;
+    }
+}
+
+// Render the predecessor and successor chains into the modal
+function renderTaskChain(data) {
+    const modalContent = document.getElementById('task-chain-content');
+    if (!modalContent) return;
+
+    let html = `
+        <div class="chain-column">
+            <h4>Upstream (Predecessors)</h4>
+            ${formatChainList(data.predecessors, data.task_id)}
+        </div>
+        <div class="chain-column">
+            <h4>Downstream (Successors)</h4>
+            ${formatChainList(data.successors, data.task_id)}
+        </div>
+    `;
+
+    modalContent.innerHTML = html;
+}
+
+// Helper to format a list of tasks for the chain display
+function formatChainList(tasks, mainTaskId) {
+    if (!tasks || tasks.length === 0) {
+        return '<p>None</p>';
+    }
+
+    // The API returns the chain in order, so we can just display it.
+    // Let's add arrows to show the flow.
+    let listHtml = '<ul class="chain-list">';
+    tasks.forEach((task, index) => {
+        const isLast = index === tasks.length - 1;
+        const isFirst = index === 0;
+
+        // The main task is the start/end point of the chain view.
+        // The API includes the main task in the lists, so we can highlight it.
+        const isMainTask = task.taskId === mainTaskId;
+
+        let itemClass = isMainTask ? 'main-task' : '';
+        let arrowHtml = '';
+
+        // For predecessors, arrow points down. For successors, arrow points down.
+        if (!isLast) {
+            arrowHtml = '<div class="chain-arrow">↓</div>';
+        }
+
+        listHtml += `
+            <li class="${itemClass}">
+                <div class="chain-task">
+                    <strong>${task.taskId}</strong> (${task.type})
+                    <br>
+                    <small>${task.product} - ${task.team}</small>
+                </div>
+                ${arrowHtml}
+            </li>
+        `;
+    });
+    listHtml += '</ul>';
+
+    return listHtml;
+}
 
 // New function for Supply Chain View
 async function updateSupplyChainView() {
