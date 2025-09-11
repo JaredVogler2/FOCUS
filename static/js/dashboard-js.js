@@ -1152,7 +1152,10 @@ async function updateTeamLeadView() {
         rows.push(`
             <tr style="${rowStyle}">
                 <td class="priority">${task.priority || '-'}</td>
-                <td class="task-id">${task.taskId}${typeIndicator}</td>
+                <td class="task-id">
+                    ${task.taskId}${typeIndicator}
+                    <button class="chain-btn" onclick="showTaskChain('${task.taskId}')" title="View Dependency Chain">⛓️</button>
+                </td>
                 <td><span class="task-type ${getTaskTypeClass(taskType)}">${taskType}</span></td>
                 <td>${task.product}<br>${dependencyInfo}</td>
                 <td>${formatDateTime(startTime)}</td>
@@ -6733,7 +6736,7 @@ function createPredecessorEntryHTML(feedbackKey, index, currentProduct, predeces
                 <div class="autocomplete-suggestions"></div>
             </div>
             <div style="flex: 2;">
-                <label style="font-size: 11px; display: block; margin-bottom: 4px; font-weight: 500;">Notes (Required if ID is blank)</label>
+                <label style="font-size: 11px; display: block; margin-bottom: 4px; font-weight: 500;">Notes (Required)</label>
                 <textarea class="predecessor-notes" placeholder="Describe the issue or what you're waiting for..." style="width: 100%; height: 40px; padding: 6px; border: 1px solid #d1d5db; border-radius: 4px; resize: vertical;">${notes}</textarea>
             </div>
             <button type="button" onclick="this.parentElement.remove()" style="background: #ef4444; color: white; border: none; border-radius: 50%; width: 24px; height: 24px; cursor: pointer; font-size: 14px; line-height: 24px; margin-top: 22px; flex-shrink: 0;">
@@ -6790,10 +6793,11 @@ function createTaskFeedbackItem(task, mechanicId) {
     container.innerHTML = `
         <div style="border-left: 4px solid ${borderColor}; padding: 15px;">
             <!-- Task Header -->
-            <div style="display: flex; justify-content: between; align-items: flex-start; margin-bottom: 10px;">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px;">
                 <div style="flex: 1;">
-                    <div style="font-weight: 600; font-size: 14px; color: #1f2937; margin-bottom: 4px;">
-                        ${typeIcon} Task ${task.taskId} - ${task.type}
+                    <div style="font-weight: 600; font-size: 14px; color: #1f2937; margin-bottom: 4px; display: flex; align-items: center; gap: 8px;">
+                        <span>${typeIcon} Task ${task.taskId} - ${task.type}</span>
+                        <button class="chain-btn" onclick="showTaskChain('${task.taskId}')" title="View Dependency Chain">⛓️</button>
                     </div>
                     <div style="color: #6b7280; font-size: 12px;">
                         📦 ${task.product} • ⏰ ${formatTime(startTime)} • ⌛ ${task.duration} minutes
@@ -7248,35 +7252,44 @@ function saveFeedback(feedbackKey, taskId, mechanicId) {
         console.warn('Could not save feedback to localStorage:', e);
     }
 
-    // Flag tasks for IE review
-    if (feedbackData.reason === 'predecessor' && feedbackData.predecessors) {
+    // Flag tasks for IE review if the status is 'delayed'
+    if (status === 'delayed') {
         const task = scenarioData.tasks.find(t => t.taskId === taskId);
         const priority = task ? task.priority : 999;
-        let successCount = 0;
 
-        feedbackData.predecessors.forEach(p => {
-            const payload = {
-                taskId: taskId,
-                priority: priority,
-                scenario: currentScenario,
-                predecessorTask: p.predecessorTask,
-                notes: p.notes
-            };
-            console.log('[DEBUG] Flagging predecessor:', payload);
+        const payload = {
+            taskId: taskId,
+            priority: priority,
+            scenario: currentScenario,
+            reason: feedbackData.reason,
+            generalNotes: feedbackData.notes, // 'notes' in feedbackData is the general notes
+            predecessors: feedbackData.predecessors || [],
+            delayMinutes: feedbackData.delayMinutes,
+            mechanicName: feedbackData.mechanicName
+        };
 
-            fetch('/api/ie/flag_task', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            })
-            .then(response => response.json())
-            .then(data => { if (data.success) { successCount++; } })
-            .catch(err => console.error('Error flagging task:', err));
+        console.log('[DEBUG] Flagging task with consolidated payload:', payload);
+
+        fetch('/api/ie/flag_task', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showNotification(data.message, 'info');
+            } else {
+                showNotification(`Error flagging task: ${data.error}`, 'error');
+            }
+        })
+        .catch(err => {
+            console.error('Error flagging task:', err);
+            showNotification(`Error flagging task: ${err.message}`, 'error');
         });
-        showNotification(`${feedbackData.predecessors.length} predecessor task(s) sent for IE review.`, 'info');
     }
 
-    // Visual feedback
+    // Visual feedback for saving
     showNotification('Feedback saved successfully!', 'success');
     const form = document.getElementById(`feedback-form-${sanitizedKey}`);
     if (form) {
@@ -8104,6 +8117,109 @@ console.log('Task Feedback System initialized successfully!');
 
 window.handleReasonChange = handleReasonChange;
 
+// --- Task Dependency Chain Modal ---
+
+// Show the modal and fetch dependency chain data
+async function showTaskChain(taskId) {
+    const modal = document.getElementById('task-chain-modal');
+    const modalContent = document.getElementById('task-chain-content');
+    const modalTask = document.getElementById('modal-task-id');
+    const modalClose = document.querySelector('.chain-modal-close');
+
+    if (!modal || !modalContent || !modalTask || !modalClose) {
+        console.error('Task chain modal elements not found!');
+        return;
+    }
+
+    // Show modal with loading state
+    modalTask.textContent = taskId;
+    modalContent.innerHTML = '<p>Loading dependency chain...</p>';
+    modal.style.display = 'block';
+
+    // Close modal event listeners
+    modalClose.onclick = () => modal.style.display = 'none';
+    window.onclick = (event) => {
+        if (event.target == modal) {
+            modal.style.display = 'none';
+        }
+    };
+
+    try {
+        const response = await fetch(`/api/task/${currentScenario}/${taskId}/chain`);
+        if (!response.ok) {
+            throw new Error(`API request failed with status ${response.status}`);
+        }
+        const data = await response.json();
+
+        // Render the chains
+        renderTaskChain(data);
+
+    } catch (error) {
+        console.error('Error fetching task chain:', error);
+        modalContent.innerHTML = `<p style="color: red;">Error: Could not load dependency chain. ${error.message}</p>`;
+    }
+}
+
+// Render the predecessor and successor chains into the modal
+function renderTaskChain(data) {
+    const modalContent = document.getElementById('task-chain-content');
+    if (!modalContent) return;
+
+    let html = `
+        <div class="chain-column">
+            <h4>Upstream (Predecessors)</h4>
+            ${formatChainList(data.predecessors, data.task_id)}
+        </div>
+        <div class="chain-column">
+            <h4>Downstream (Successors)</h4>
+            ${formatChainList(data.successors, data.task_id)}
+        </div>
+    `;
+
+    modalContent.innerHTML = html;
+}
+
+// Helper to format a list of tasks for the chain display
+function formatChainList(tasks, mainTaskId) {
+    if (!tasks || tasks.length === 0) {
+        return '<p>None</p>';
+    }
+
+    // The API returns the chain in order, so we can just display it.
+    // Let's add arrows to show the flow.
+    let listHtml = '<ul class="chain-list">';
+    tasks.forEach((task, index) => {
+        const isLast = index === tasks.length - 1;
+        const isFirst = index === 0;
+
+        // The main task is the start/end point of the chain view.
+        // The API includes the main task in the lists, so we can highlight it.
+        const isMainTask = task.taskId === mainTaskId;
+
+        let itemClass = isMainTask ? 'main-task' : '';
+        let arrowHtml = '';
+
+        // For predecessors, arrow points down. For successors, arrow points down.
+        if (!isLast) {
+            arrowHtml = '<div class="chain-arrow">↓</div>';
+        }
+
+        listHtml += `
+            <li class="${itemClass}">
+                <div class="chain-task">
+                    <strong>${task.taskId}</strong> (${task.type})
+                    <br>
+                    <small>${task.product} - ${task.team}</small>
+                </div>
+                ${arrowHtml}
+            </li>
+        `;
+    });
+    listHtml += '</ul>';
+
+    return listHtml;
+}
+
 // New function for Supply Chain View
 async function updateSupplyChainView() {
     console.log('Updating Supply Chain View...');
@@ -8181,7 +8297,7 @@ async function updateIEView() {
     const tableBody = document.getElementById('ie-review-table-body');
     if (!tableBody) return;
 
-    tableBody.innerHTML = '<tr><td colspan="8" class="text-center" style="padding: 20px;">Loading IE review queue...</td></tr>';
+    tableBody.innerHTML = '<tr><td colspan="9" class="text-center" style="padding: 20px;">Loading IE review queue...</td></tr>';
 
     try {
         const response = await fetch('/api/ie/review_queue');
@@ -8189,25 +8305,41 @@ async function updateIEView() {
         const queue = await response.json();
 
         if (queue.length === 0) {
-            tableBody.innerHTML = '<tr><td colspan="8" class="text-center" style="padding: 20px;">No tasks in the review queue.</td></tr>';
+            tableBody.innerHTML = '<tr><td colspan="9" class="text-center" style="padding: 20px;">No tasks in the review queue.</td></tr>';
             return;
         }
 
         let rowsHtml = '';
         queue.forEach(item => {
             const flaggedAt = new Date(item.flagged_at).toLocaleString();
+            const safeId = item.flagged_at.replace(/[^a-zA-Z0-9-_]/g, '');
+
+            let predecessorsHtml = '';
+            if (item.predecessors && item.predecessors.length > 0) {
+                predecessorsHtml = '<ul style="margin: 0; padding-left: 18px; font-size: 12px;">';
+                item.predecessors.forEach(p => {
+                    // Use a placeholder if predecessorTask is empty or null
+                    const taskDisplay = p.predecessorTask ? `<strong>${p.predecessorTask}:</strong>` : '<em>(No task specified):</em>';
+                    predecessorsHtml += `<li style="margin-bottom: 5px;">${taskDisplay} ${p.notes}</li>`;
+                });
+                predecessorsHtml += '</ul>';
+            } else {
+                predecessorsHtml = '<span style="color: #888;">N/A</span>';
+            }
+
             rowsHtml += `
-                <tr id="ie-task-${item.task_id}">
+                <tr id="ie-task-${safeId}">
                     <td>${item.priority}</td>
                     <td><strong>${item.task_id}</strong></td>
                     <td>${item.details.product || 'N/A'}</td>
                     <td>${item.details.team || 'N/A'}</td>
+                    <td>${item.mechanic_name || 'N/A'}</td>
                     <td>${flaggedAt}</td>
-                    <td>${item.predecessor_task}</td>
-                    <td>${item.notes || ''}</td>
+                    <td>${predecessorsHtml}</td>
+                    <td>${item.general_notes || ''}</td>
                     <td>
-                        <button class="btn-ie-action" onclick="resolveIETask('${item.task_id}', 'agree')">Agree & Resolve</button>
-                        <button class="btn-ie-action" onclick="resolveIETask('${item.task_id}', 'disagree')">Disagree</button>
+                        <button class="btn-ie-action" onclick="resolveIETask('${item.flagged_at}', 'agree')">Agree & Resolve</button>
+                        <button class="btn-ie-action" onclick="resolveIETask('${item.flagged_at}', 'disagree')">Disagree</button>
                     </td>
                 </tr>
             `;
@@ -8216,32 +8348,44 @@ async function updateIEView() {
 
     } catch (error) {
         console.error('Error updating IE view:', error);
-        tableBody.innerHTML = '<tr><td colspan="8" class="text-center" style="color: red; padding: 20px;">Error loading data.</td></tr>';
+        tableBody.innerHTML = '<tr><td colspan="9" class="text-center" style="color: red; padding: 20px;">Error loading data.</td></tr>';
     }
 }
 
-async function resolveIETask(taskId, action) {
-    console.log(`Resolving IE task ${taskId} with action: ${action}`);
+async function resolveIETask(itemId, action) {
+    console.log(`Resolving IE task item ${itemId} with action: ${action}`);
     if (action === 'disagree') {
         alert('Disagree functionality is not yet implemented. The task will be removed from the queue for now.');
     }
 
     try {
-        const response = await fetch(`/api/ie/resolve_task/${taskId}`, { method: 'POST' });
-        if (!response.ok) throw new Error('Failed to resolve task');
+        const response = await fetch(`/api/ie/resolve_task`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ flagged_at: itemId })
+        });
 
         const result = await response.json();
+
+        if (!response.ok) {
+            // Use the error from the JSON response if available
+            throw new Error(result.error || 'Failed to resolve task');
+        }
+
         if (result.success) {
             showNotification(result.message, 'success');
-            // Remove the row from the table
-            const row = document.getElementById(`ie-task-${taskId}`);
+            // Remove the row from the table using a sanitized ID
+            const safeId = itemId.replace(/[^a-zA-Z0-9-_]/g, '');
+            const row = document.getElementById(`ie-task-${safeId}`);
             if (row) {
                 row.style.transition = 'opacity 0.5s';
                 row.style.opacity = '0';
                 setTimeout(() => row.remove(), 500);
             }
         } else {
-            throw new Error(result.error);
+            throw new Error(result.error || 'An unknown error occurred.');
         }
     } catch (error) {
         console.error('Error resolving IE task:', error);

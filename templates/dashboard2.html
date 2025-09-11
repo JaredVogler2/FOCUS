@@ -53,5 +53,18 @@
 
     <!-- Load the corrected JavaScript file from static folder -->
     <script src="{{ url_for('static', filename='js/dashboard-js.js', v='2.0') }}"></script>
+
+    <!-- Task Chain Modal -->
+    <div id="task-chain-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Dependency Chain for Task: <span id="modal-task-id"></span></h2>
+                <span class="chain-modal-close">&times;</span>
+            </div>
+            <div id="task-chain-content" class="modal-body">
+                <!-- Content will be populated by JavaScript -->
+            </div>
+        </div>
+    </div>
 </body>
 </html>
