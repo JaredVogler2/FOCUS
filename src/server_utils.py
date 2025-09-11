@@ -91,7 +91,8 @@ def export_scenario_with_capacities(scheduler, scenario_name):
                     'isQualityTask': schedule.get('is_quality', False),
                     'isCustomerTask': schedule.get('is_customer', False),
                     'isCritical': item.get('slack_hours', 999) < 24,
-                    'slackHours': item.get('slack_hours', 999)
+                    'slackHours': item.get('slack_hours', 999),
+                    'dependencies': task_info.get('dependencies', [])
                 })
 
     makespan = scheduler.calculate_makespan()
