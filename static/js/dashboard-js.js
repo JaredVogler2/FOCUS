@@ -8186,11 +8186,11 @@ function renderTaskChain(data) {
 
     let html = `
         <div class="chain-column">
-            <h4>Upstream (Predecessors)</h4>
+            <h4 style="background-color: #eef2ff; color: #4338ca; padding: 8px; border-bottom: 2px solid #c7d2fe; border-top-left-radius: 6px; border-top-right-radius: 6px;">Upstream (Predecessors)</h4>
             ${formatChainList(data.predecessors, data.task_id)}
         </div>
         <div class="chain-column">
-            <h4>Downstream (Successors)</h4>
+            <h4 style="background-color: #f0fdf4; color: #15803d; padding: 8px; border-bottom: 2px solid #bbf7d0; border-top-left-radius: 6px; border-top-right-radius: 6px;">Downstream (Successors)</h4>
             ${formatChainList(data.successors, data.task_id)}
         </div>
     `;
@@ -8201,34 +8201,48 @@ function renderTaskChain(data) {
 // Helper to format a list of tasks for the chain display
 function formatChainList(tasks, mainTaskId) {
     if (!tasks || tasks.length === 0) {
-        return '<p>None</p>';
+        return '<p style="padding: 10px; color: #6b7280;">None</p>';
     }
 
     // The API returns the chain in order, so we can just display it.
-    // Let's add arrows to show the flow.
     let listHtml = '<ul class="chain-list">';
     tasks.forEach((task, index) => {
         const isLast = index === tasks.length - 1;
-        const isFirst = index === 0;
-
-        // The main task is the start/end point of the chain view.
-        // The API includes the main task in the lists, so we can highlight it.
         const isMainTask = task.taskId === mainTaskId;
 
         let itemClass = isMainTask ? 'main-task' : '';
-        let arrowHtml = '';
+        let arrowHtml = !isLast ? '<div class="chain-arrow">↓</div>' : '';
 
-        // For predecessors, arrow points down. For successors, arrow points down.
-        if (!isLast) {
-            arrowHtml = '<div class="chain-arrow">↓</div>';
+        // Format scheduled time
+        let scheduledTime = '';
+        if (task.startTime) {
+            try {
+                // Use existing helper function for consistent formatting
+                scheduledTime = `(${formatDateTime(new Date(task.startTime))})`;
+            } catch (e) { /* Ignore if date is invalid */ }
+        }
+
+        // Get assigned mechanic name
+        let mechanicName = 'Unassigned';
+        const assignment = savedAssignments[currentScenario] && savedAssignments[currentScenario][task.taskId];
+        if (assignment && assignment.mechanics && assignment.mechanics.length > 0) {
+            const mechanicId = assignment.mechanics[0]; // Get first assigned mechanic
+            if (mechanicId) {
+                const schedule = savedAssignments[currentScenario].mechanicSchedules && savedAssignments[currentScenario].mechanicSchedules[mechanicId];
+                if (schedule && schedule.displayName) {
+                    // Extract just the "Mechanic #X" or "Inspector #Y" part for brevity
+                    const match = schedule.displayName.match(/^(Mechanic|Inspector|Customer) #\d+/);
+                    mechanicName = match ? match[0] : schedule.displayName.split(' - ')[0];
+                }
+            }
         }
 
         listHtml += `
             <li class="${itemClass}">
                 <div class="chain-task">
-                    <strong>${task.taskId}</strong> (${task.type})
+                    <strong>${task.taskId}</strong> <span style="font-weight: normal; color: #4b5563; font-size: 0.9em;">${scheduledTime}</span>
                     <br>
-                    <small>${task.product} - ${task.team}</small>
+                    <small style="color: #6b7280;">${task.product} - ${task.team} - (${mechanicName})</small>
                 </div>
                 ${arrowHtml}
             </li>
