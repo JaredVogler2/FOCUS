@@ -180,16 +180,16 @@ def get_saved_scenarios():
 def get_task_chain(scenario_id, task_id):
     """
     Get the full upstream (predecessor) and downstream (successor) chain for a given task,
-    respecting product-specific networks.
+    respecting product-specific networks. Returns a simple, ordered chain.
     """
     scenario_results = current_app.scenario_results
     if scenario_id not in scenario_results:
         return jsonify({'error': f'Scenario {scenario_id} not found'}), 404
 
     all_tasks = scenario_results[scenario_id].get('tasks', [])
+    task_map = {t['taskId']: t for t in all_tasks}
 
-    # Find the target task and its product
-    target_task = next((t for t in all_tasks if t['taskId'] == task_id), None)
+    target_task = task_map.get(task_id)
     if not target_task:
         return jsonify({'error': f'Task {task_id} not found in scenario {scenario_id}'}), 404
 
@@ -199,56 +199,75 @@ def get_task_chain(scenario_id, task_id):
 
     # Filter tasks to only include those from the same product line
     product_tasks = [t for t in all_tasks if t.get('product') == product_line]
+    product_task_map = {t['taskId']: t for t in product_tasks}
 
     # Build predecessor and successor graphs from product-specific tasks
-    predecessors = {t['taskId']: t.get('dependencies', []) for t in product_tasks}
-    successors = {t['taskId']: [] for t in product_tasks}
-    for task, deps in predecessors.items():
+    predecessors_graph = {t['taskId']: t.get('dependencies', []) for t in product_tasks}
+    successors_graph = {t['taskId']: [] for t in product_tasks}
+    for task, deps in predecessors_graph.items():
         for dep in deps:
-            if dep in successors:
-                successors[dep].append(task)
+            if dep in successors_graph:
+                successors_graph[dep].append(task)
 
-    # --- Helper for DFS traversal ---
-    def get_chain(start_node, graph, visited=None):
-        if visited is None:
-            visited = set()
-
+    def get_ordered_chain(start_node_id, graph, is_predecessor_chain):
+        """
+        Iteratively traverses the graph to build a simple, linear chain.
+        Selects the first dependency at each step to simplify branching.
+        """
         chain = []
-        if start_node in visited:
-            return []
-        visited.add(start_node)
+        visited = {start_node_id}
+        current_node_id = start_node_id
 
-        for node in graph.get(start_node, []):
-            if node not in visited:
-                chain.append(node)
-                chain.extend(get_chain(node, graph, visited))
+        for _ in range(len(product_tasks)):  # Safety break for cycles
+            next_nodes = graph.get(current_node_id, [])
+            if not next_nodes:
+                break
+
+            # To keep the chain simple, we just follow the first dependency.
+            # In a real-world scenario, you might want to handle branches differently.
+            next_node_id = next_nodes[0]
+
+            if next_node_id in visited:
+                # Cycle detected
+                break
+
+            task_info = product_task_map.get(next_node_id)
+            if task_info:
+                chain.append(task_info)
+                visited.add(next_node_id)
+                current_node_id = next_node_id
+            else:
+                # Dependency points to a task not in the product line
+                break
+
+        # For predecessors, we want the chain going "back in time" from the target
+        if is_predecessor_chain:
+            chain.reverse()
+
         return chain
 
-    # Get upstream and downstream chains
-    upstream_ids = get_chain(task_id, predecessors)
-    downstream_ids = get_chain(task_id, successors)
+    # Get chains
+    upstream_chain = get_ordered_chain(task_id, predecessors_graph, is_predecessor_chain=True)
+    downstream_chain = get_ordered_chain(task_id, successors_graph, is_predecessor_chain=False)
 
-    # Get task details for the chains
-    task_map = {t['taskId']: t for t in product_tasks}
+    # Add the main task to both chains for context
+    upstream_chain.append(target_task)
+    downstream_chain.insert(0, target_task)
 
-    def get_task_details(task_ids):
-        details = []
-        for tid in set(task_ids): # Use set to get unique tasks
-            task_info = task_map.get(tid)
-            if task_info:
-                details.append({
-                    'taskId': task_info.get('taskId'),
-                    'type': task_info.get('type', 'Unknown'),
-                    'product': task_info.get('product', 'Unknown'),
-                    'team': task_info.get('team', 'Unknown'),
-                    'startTime': task_info.get('startTime')
-                })
-        # Sort by start time for logical display
-        details.sort(key=lambda x: (x.get('startTime') is None, x.get('startTime', '')))
-        return details
+    def format_task_details(task_list):
+        return [
+            {
+                'taskId': t.get('taskId'),
+                'type': t.get('type', 'Unknown'),
+                'product': t.get('product', 'Unknown'),
+                'team': t.get('team', 'Unknown'),
+                'startTime': t.get('startTime')
+            } for t in task_list
+        ]
 
     return jsonify({
-        'upstream': get_task_details(upstream_ids),
-        'downstream': get_task_details(downstream_ids),
+        'task_id': task_id,
+        'predecessors': format_task_details(upstream_chain),
+        'successors': format_task_details(downstream_chain),
         'product_line': product_line
     })
