@@ -1150,7 +1150,7 @@ async function updateTeamLeadView() {
         }
 
         rows.push(`
-            <tr style="${rowStyle}">
+            <tr style="${rowStyle}" data-task-id="${task.taskId}">
                 <td class="priority">${task.priority || '-'}</td>
                 <td class="task-id">
                     ${task.taskId}${typeIndicator}
@@ -3583,7 +3583,7 @@ async function autoAssign() {
 
     // Process each visible task row
     taskRows.forEach(row => {
-        const taskId = row.querySelector('.task-id')?.textContent?.replace(/[📦🔧⚡👤]/g, '').trim();
+        const taskId = row.dataset.taskId;
         if (!taskId) return;
 
         // Find the task data
