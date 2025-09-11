@@ -110,6 +110,16 @@ async function loadAllScenarios() {
 function setupEventListeners() {
     console.log('Setting up event listeners...');
 
+    // Event delegation for dynamically created chain buttons
+    document.addEventListener('click', function(e) {
+        if (e.target.classList.contains('chain-btn')) {
+            const taskId = e.target.dataset.taskId;
+            if (taskId) {
+                showTaskChain(taskId);
+            }
+        }
+    });
+
     // View tab switching
     document.querySelectorAll('.view-tab').forEach(tab => {
         tab.addEventListener('click', function() {
@@ -1154,7 +1164,7 @@ async function updateTeamLeadView() {
                 <td class="priority">${task.priority || '-'}</td>
                 <td class="task-id">
                     ${task.taskId}${typeIndicator}
-                    <button class="chain-btn" onclick="showTaskChain('${task.taskId}')" title="View Dependency Chain">⛓️</button>
+                    <button class="chain-btn" data-task-id="${task.taskId}" title="View Dependency Chain">⛓️</button>
                 </td>
                 <td><span class="task-type ${getTaskTypeClass(taskType)}">${taskType}</span></td>
                 <td>${task.product}<br>${dependencyInfo}</td>
@@ -6806,7 +6816,7 @@ function createTaskFeedbackItem(task, mechanicId) {
                 <div style="flex: 1;">
                     <div style="font-weight: 600; font-size: 14px; color: #1f2937; margin-bottom: 4px; display: flex; align-items: center; gap: 8px;">
                         <span>${typeIcon} Task ${task.taskId} - ${task.type}</span>
-                        <button class="chain-btn" onclick="showTaskChain('${task.taskId}')" title="View Dependency Chain">⛓️</button>
+                        <button class="chain-btn" data-task-id="${task.taskId}" title="View Dependency Chain">⛓️</button>
                     </div>
                     <div style="color: #6b7280; font-size: 12px;">
                         📦 ${task.product} • ⏰ ${formatTime(startTime)} • ⌛ ${task.duration} minutes
