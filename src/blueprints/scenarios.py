@@ -256,21 +256,32 @@ def get_task_chain(scenario_id, task_id):
     upstream_chain = get_ordered_chain(task_id, predecessors_map, is_predecessor_chain=True)
     downstream_chain = get_ordered_chain(task_id, successors_map, is_predecessor_chain=False)
 
-    # Filter downstream chain to a +/- 5 day window from the target task's start time
+    # Filter chains to a directional 5-day window from the target task's start time
     if target_task.get('startTime'):
         try:
             target_start_time = datetime.fromisoformat(target_task['startTime'])
             time_window = timedelta(days=5)
 
+            # Filter upstream chain: -5 days from target start
+            filtered_upstream = []
+            for task in upstream_chain:
+                if task.get('startTime'):
+                    task_start_time = datetime.fromisoformat(task['startTime'])
+                    if target_start_time - time_window <= task_start_time < target_start_time:
+                        filtered_upstream.append(task)
+            upstream_chain = filtered_upstream
+
+            # Filter downstream chain: +5 days from target start
             filtered_downstream = []
             for task in downstream_chain:
                 if task.get('startTime'):
                     task_start_time = datetime.fromisoformat(task['startTime'])
-                    if abs(task_start_time - target_start_time) <= time_window:
+                    if target_start_time < task_start_time <= target_start_time + time_window:
                         filtered_downstream.append(task)
             downstream_chain = filtered_downstream
+
         except (ValueError, TypeError):
-            # If date parsing fails, fall back to unfiltered chain
+            # If date parsing fails, fall back to unfiltered chains
             pass
 
 
