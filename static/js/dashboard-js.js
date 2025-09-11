@@ -3609,24 +3609,33 @@ async function autoAssign() {
         // Find available mechanics that match the task's team-skill requirement
         const availableMechanics = [];
         for (const [mechId, mech] of Object.entries(mechanicAvailability)) {
-            // Check if mechanic matches task's team-skill requirement
             let matches = false;
 
+            // First, filter by the primary role (Customer, Quality, or Mechanic)
             if (isCustomerTask) {
-                // Customer tasks need customer team members
-                matches = mech.isCustomer;
+                if (!mech.isCustomer) continue; // Skip non-customer inspectors
+                // For now, any customer inspector is a match. Skill checks can be added here.
+                matches = true;
+
             } else if (task.isQualityTask || task.type === 'Quality Inspection') {
-                // Quality tasks need quality team members
-                matches = mech.isQuality;
-            } else if (mech.teamSkill === taskTeamSkill) {
-                // Exact team-skill match
-                matches = true;
-            } else if (!task.skill && mech.baseTeam === task.team) {
-                // Task doesn't require specific skill, base team matches
-                matches = true;
-            } else if (task.team === mech.baseTeam && (!taskSkill || taskSkill === mech.skill)) {
-                // Base team matches and skill matches (or no skill required)
-                matches = true;
+                if (!mech.isQuality) continue; // Skip non-quality inspectors
+
+                // Now, apply skill-matching logic for Quality Inspectors
+                if (mech.teamSkill === taskTeamSkill) { // Exact team & skill match
+                    matches = true;
+                } else if (mech.baseTeam === task.team && (!taskSkill || taskSkill === mech.skill)) { // Same base team, and skill matches or is not required
+                    matches = true;
+                }
+
+            } else { // This is a standard Mechanic task
+                if (mech.isQuality || mech.isCustomer) continue; // Skip non-mechanics
+
+                // Apply skill-matching logic for Mechanics
+                if (mech.teamSkill === taskTeamSkill) { // Exact team & skill match
+                    matches = true;
+                } else if (mech.baseTeam === task.team && (!taskSkill || taskSkill === mech.skill)) { // Same base team, and skill matches or is not required
+                    matches = true;
+                }
             }
 
             if (matches) {
