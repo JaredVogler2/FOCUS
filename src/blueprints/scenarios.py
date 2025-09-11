@@ -178,18 +178,31 @@ def get_saved_scenarios():
 
 @scenarios_bp.route('/task/<scenario_id>/<task_id>/chain')
 def get_task_chain(scenario_id, task_id):
-    """Get the full upstream (predecessor) and downstream (successor) chain for a given task."""
+    """
+    Get the full upstream (predecessor) and downstream (successor) chain for a given task,
+    respecting product-specific networks.
+    """
     scenario_results = current_app.scenario_results
     if scenario_id not in scenario_results:
         return jsonify({'error': f'Scenario {scenario_id} not found'}), 404
 
-    tasks = scenario_results[scenario_id].get('tasks', [])
-    if not any(t['taskId'] == task_id for t in tasks):
+    all_tasks = scenario_results[scenario_id].get('tasks', [])
+
+    # Find the target task and its product
+    target_task = next((t for t in all_tasks if t['taskId'] == task_id), None)
+    if not target_task:
         return jsonify({'error': f'Task {task_id} not found in scenario {scenario_id}'}), 404
 
-    # Build predecessor and successor graphs
-    predecessors = {t['taskId']: t.get('dependencies', []) for t in tasks}
-    successors = {t['taskId']: [] for t in tasks}
+    product_line = target_task.get('product')
+    if not product_line:
+        return jsonify({'error': f'Task {task_id} does not have a product line specified.'}), 400
+
+    # Filter tasks to only include those from the same product line
+    product_tasks = [t for t in all_tasks if t.get('product') == product_line]
+
+    # Build predecessor and successor graphs from product-specific tasks
+    predecessors = {t['taskId']: t.get('dependencies', []) for t in product_tasks}
+    successors = {t['taskId']: [] for t in product_tasks}
     for task, deps in predecessors.items():
         for dep in deps:
             if dep in successors:
@@ -216,7 +229,7 @@ def get_task_chain(scenario_id, task_id):
     downstream_ids = get_chain(task_id, successors)
 
     # Get task details for the chains
-    task_map = {t['taskId']: t for t in tasks}
+    task_map = {t['taskId']: t for t in product_tasks}
 
     def get_task_details(task_ids):
         details = []
@@ -230,11 +243,12 @@ def get_task_chain(scenario_id, task_id):
                     'team': task_info.get('team', 'Unknown'),
                     'startTime': task_info.get('startTime')
                 })
-        # Sort by start time
-        details.sort(key=lambda x: x.get('startTime', ''))
+        # Sort by start time for logical display
+        details.sort(key=lambda x: (x.get('startTime') is None, x.get('startTime', '')))
         return details
 
     return jsonify({
         'upstream': get_task_details(upstream_ids),
-        'downstream': get_task_details(downstream_ids)
+        'downstream': get_task_details(downstream_ids),
+        'product_line': product_line
     })
