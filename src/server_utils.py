@@ -62,6 +62,14 @@ def export_scenario_with_capacities(scheduler, scenario_name):
     team_capacities = {**scheduler.team_capacity, **scheduler.quality_team_capacity, **scheduler.customer_team_capacity}
     team_shifts = {**scheduler.team_shifts, **scheduler.quality_team_shifts, **scheduler.customer_team_shifts}
 
+    # Build the full dynamic dependency graph once for efficiency
+    dynamic_dependencies = scheduler.build_dynamic_dependencies()
+    predecessors_map = defaultdict(list)
+    successors_map = defaultdict(list)
+    for const in dynamic_dependencies:
+        predecessors_map[const['Second']].append(const['First'])
+        successors_map[const['First']].append(const['Second'])
+
     tasks = []
     MAX_TASKS_FOR_DASHBOARD = 1000
     total_tasks_available = len(scheduler.global_priority_list) if hasattr(scheduler, 'global_priority_list') else len(scheduler.task_schedule)
@@ -92,7 +100,9 @@ def export_scenario_with_capacities(scheduler, scenario_name):
                     'isCustomerTask': schedule.get('is_customer', False),
                     'isCritical': item.get('slack_hours', 999) < 24,
                     'slackHours': item.get('slack_hours', 999),
-                    'dependencies': task_info.get('dependencies', [])
+                    'dependencies': task_info.get('dependencies', []),
+                    'dynamic_predecessors': predecessors_map.get(task_id, []),
+                    'dynamic_successors': successors_map.get(task_id, [])
                 })
 
     makespan = scheduler.calculate_makespan()
@@ -190,5 +200,7 @@ def export_scenario_with_capacities(scheduler, scenario_name):
         'totalTasks': total_tasks_available,
         'displayedTasks': len(tasks),
         'truncated': total_tasks_available > MAX_TASKS_FOR_DASHBOARD,
-        'aggStats': agg_stats
+        'aggStats': agg_stats,
+        'predecessors_map': dict(predecessors_map),
+        'successors_map': dict(successors_map)
     }
