@@ -3,7 +3,7 @@
 from flask import Blueprint, jsonify, current_app, request
 from src.scheduler.scenarios import run_what_if_scenario
 from src.server_utils import export_scenario_with_capacities
-from datetime import datetime
+from datetime import datetime, timedelta
 
 scenarios_bp = Blueprint('scenarios', __name__, url_prefix='/api')
 
@@ -180,34 +180,27 @@ def get_saved_scenarios():
 def get_task_chain(scenario_id, task_id):
     """
     Get the full upstream (predecessor) and downstream (successor) chain for a given task,
-    respecting product-specific networks. Returns a simple, ordered chain.
+    using the pre-computed dynamic dependency maps.
     """
-    scenario_results = current_app.scenario_results
-    if scenario_id not in scenario_results:
+    scenario_data = current_app.scenario_results.get(scenario_id)
+    if not scenario_data:
         return jsonify({'error': f'Scenario {scenario_id} not found'}), 404
 
-    all_tasks = scenario_results[scenario_id].get('tasks', [])
-    task_map = {t['taskId']: t for t in all_tasks}
+    # Use the comprehensive dependency maps from the scenario data
+    predecessors_map = scenario_data.get('predecessors_map', {})
+    successors_map = scenario_data.get('successors_map', {})
+    task_map = {t['taskId']: t for t in scenario_data.get('tasks', [])}
 
     target_task = task_map.get(task_id)
     if not target_task:
-        return jsonify({'error': f'Task {task_id} not found in scenario {scenario_id}'}), 404
+        # Fallback to searching all tasks if not in the dashboard's top 1000
+        all_tasks_from_scheduler = current_app.scheduler.tasks
+        if task_id in all_tasks_from_scheduler:
+            target_task = all_tasks_from_scheduler[task_id]
+            target_task['taskId'] = task_id # Ensure taskId is present
+        else:
+            return jsonify({'error': f'Task {task_id} not found in scenario {scenario_id}'}), 404
 
-    product_line = target_task.get('product')
-    if not product_line:
-        return jsonify({'error': f'Task {task_id} does not have a product line specified.'}), 400
-
-    # Filter tasks to only include those from the same product line
-    product_tasks = [t for t in all_tasks if t.get('product') == product_line]
-    product_task_map = {t['taskId']: t for t in product_tasks}
-
-    # Build predecessor and successor graphs from product-specific tasks
-    predecessors_graph = {t['taskId']: t.get('dependencies', []) for t in product_tasks}
-    successors_graph = {t['taskId']: [] for t in product_tasks}
-    for task, deps in predecessors_graph.items():
-        for dep in deps:
-            if dep in successors_graph:
-                successors_graph[dep].append(task)
 
     def get_ordered_chain(start_node_id, graph, is_predecessor_chain):
         """
@@ -218,43 +211,86 @@ def get_task_chain(scenario_id, task_id):
         visited = {start_node_id}
         current_node_id = start_node_id
 
-        for _ in range(len(product_tasks)):  # Safety break for cycles
+        # Limit chain length to prevent infinite loops from cycles
+        for _ in range(len(task_map) + 50):
             next_nodes = graph.get(current_node_id, [])
             if not next_nodes:
                 break
 
             # To keep the chain simple, we just follow the first dependency.
-            # In a real-world scenario, you might want to handle branches differently.
             next_node_id = next_nodes[0]
 
             if next_node_id in visited:
-                # Cycle detected
+                # Cycle detected, break the loop
                 break
 
-            task_info = product_task_map.get(next_node_id)
+            # The task might not be in the top 1000 tasks sent to the dashboard,
+            # so we fetch its details from the main scheduler object as a fallback.
+            task_info = task_map.get(next_node_id)
+            if not task_info and hasattr(current_app, 'scheduler'):
+                 # Create a minimal task object if not in dashboard list
+                 raw_task = current_app.scheduler.tasks.get(next_node_id, {})
+                 task_info = {
+                     'taskId': next_node_id,
+                     'type': raw_task.get('type', 'Unknown'),
+                     'product': raw_task.get('product'),
+                     'team': raw_task.get('team'),
+                     'startTime': None # Not available for tasks outside dashboard view
+                 }
+
+
             if task_info:
                 chain.append(task_info)
                 visited.add(next_node_id)
                 current_node_id = next_node_id
             else:
-                # Dependency points to a task not in the product line
+                # Dependency points to a task that doesn't exist anywhere
                 break
 
-        # For predecessors, we want the chain going "back in time" from the target
         if is_predecessor_chain:
             chain.reverse()
 
         return chain
 
-    # Get chains
-    upstream_chain = get_ordered_chain(task_id, predecessors_graph, is_predecessor_chain=True)
-    downstream_chain = get_ordered_chain(task_id, successors_graph, is_predecessor_chain=False)
+    # Get chains using the correct maps
+    upstream_chain = get_ordered_chain(task_id, predecessors_map, is_predecessor_chain=True)
+    downstream_chain = get_ordered_chain(task_id, successors_map, is_predecessor_chain=False)
+
+    # Filter chains to a directional 5-day window from the target task's start time
+    if target_task.get('startTime'):
+        try:
+            target_start_time = datetime.fromisoformat(target_task['startTime'])
+            time_window = timedelta(days=5)
+
+            # Filter upstream chain: -5 days from target start
+            filtered_upstream = []
+            for task in upstream_chain:
+                if task.get('startTime'):
+                    task_start_time = datetime.fromisoformat(task['startTime'])
+                    if target_start_time - time_window <= task_start_time < target_start_time:
+                        filtered_upstream.append(task)
+            upstream_chain = filtered_upstream
+
+            # Filter downstream chain: +5 days from target start
+            filtered_downstream = []
+            for task in downstream_chain:
+                if task.get('startTime'):
+                    task_start_time = datetime.fromisoformat(task['startTime'])
+                    if target_start_time < task_start_time <= target_start_time + time_window:
+                        filtered_downstream.append(task)
+            downstream_chain = filtered_downstream
+
+        except (ValueError, TypeError):
+            # If date parsing fails, fall back to unfiltered chains
+            pass
+
 
     # Add the main task to both chains for context
     upstream_chain.append(target_task)
     downstream_chain.insert(0, target_task)
 
     def format_task_details(task_list):
+        # The task objects are already in the correct format
         return [
             {
                 'taskId': t.get('taskId'),
@@ -269,5 +305,5 @@ def get_task_chain(scenario_id, task_id):
         'task_id': task_id,
         'predecessors': format_task_details(upstream_chain),
         'successors': format_task_details(downstream_chain),
-        'product_line': product_line
+        'product_line': target_task.get('product')
     })
