@@ -100,7 +100,7 @@ def export_scenario_with_capacities(scheduler, scenario_name):
                     'isCustomerTask': schedule.get('is_customer', False),
                     'isCritical': item.get('slack_hours', 999) < 24,
                     'slackHours': item.get('slack_hours', 999),
-                    'dependencies': task_info.get('dependencies', []),
+                    'dependencies': predecessors_map.get(task_id, []),
                     'dynamic_predecessors': predecessors_map.get(task_id, []),
                     'dynamic_successors': successors_map.get(task_id, [])
                 })
