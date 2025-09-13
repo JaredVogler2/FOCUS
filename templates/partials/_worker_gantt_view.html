@@ -1,0 +1,59 @@
+<!-- Worker Gantt View -->
+<div id="worker-gantt-view" class="view-content" style="display: none;">
+    <h2>Worker Gantt</h2>
+    <p>Visual schedule organized by worker and shift.</p>
+
+    <!-- Filter Controls -->
+    <div class="worker-gantt-controls" style="display: flex; gap: 15px; margin-bottom: 15px; align-items: center; flex-wrap: wrap; background: #f9fafb; padding: 15px; border-radius: 8px;">
+        <div class="filter-group">
+            <label for="wg-team-filter">Team:</label>
+            <select id="wg-team-filter">
+                <option value="all">All Teams</option>
+                <!-- Options will be populated by JS -->
+            </select>
+        </div>
+        <div class="filter-group">
+            <label for="wg-shift-filter">Shift:</label>
+            <select id="wg-shift-filter">
+                <option value="all">All Shifts</option>
+                <option value="1st">1st Shift</option>
+                <option value="2nd">2nd Shift</option>
+                <option value="3rd">3rd Shift</option>
+            </select>
+        </div>
+        <div class="filter-group">
+            <label for="wg-skillset-filter">Skillset:</label>
+            <select id="wg-skillset-filter">
+                <option value="all">All Skillsets</option>
+                <!-- Options will be populated by JS -->
+            </select>
+        </div>
+        <div class="filter-group">
+            <label for="wg-worker-filter">Worker:</label>
+            <select id="wg-worker-filter">
+                <option value="all">All Workers</option>
+                <!-- Options will be populated by JS -->
+            </select>
+        </div>
+        <button id="wg-refresh-btn" class="btn btn-primary">Refresh</button>
+    </div>
+
+    <!-- The container for the vis.js Timeline -->
+    <div id="worker-gantt-container" style="width: 100%; height: 600px; border: 1px solid #ddd;"></div>
+
+    <!-- Legend -->
+    <div class="gantt-legend" style="display: flex; gap: 20px; margin-top: 15px; flex-wrap: wrap; align-items: center;">
+        <div style="font-weight: 600; color: #374151;">Legend:</div>
+        <div id="wg-product-legend">
+            <!-- Product color legend will be populated by JS -->
+        </div>
+        <div style="display: flex; align-items: center; gap: 6px; font-size: 12px;">
+            <div style="width: 16px; height: 16px; border: 2px solid red; background: white;"></div>
+            <span>Critical Path</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 6px; font-size: 12px;">
+            <div style="width: 16px; height: 16px; background: yellow;"></div>
+            <span>Upstream/Downstream</span>
+        </div>
+    </div>
+</div>
