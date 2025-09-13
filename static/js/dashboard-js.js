@@ -6415,7 +6415,6 @@ function renderWorkerGantt() {
 
     // 6. Get tasks and create vis.js items
     const visItems = new vis.DataSet();
-    const assignments = savedAssignments[currentScenario] || {};
     const productColors = {};
     const lightColors = ["#E0BBE4", "#957DAD", "#D291BC", "#FEC8D8", "#FFDFD3"];
     let colorIndex = 0;
