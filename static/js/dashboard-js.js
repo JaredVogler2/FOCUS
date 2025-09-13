@@ -689,13 +689,14 @@ function initializeWorkerGantt() {
     const groups = new vis.DataSet([]);
 
     const options = {
-        stack: true,
+        stack: false,
         start: new Date(),
-        end: new Date(1000 * 60 * 60 * 24 + (new Date()).valueOf()),
+        end: new Date(1000 * 60 * 60 * 4 + (new Date()).valueOf()), // 4-hour window
         editable: false,
         orientation: 'top',
         height: '100%',
-        groupOrder: 'content' // or a custom function
+        groupOrder: 'content', // or a custom function
+        timeAxis: { scale: 'minute', step: 5 }
     };
 
     workerGantt = new vis.Timeline(container, items, groups, options);
