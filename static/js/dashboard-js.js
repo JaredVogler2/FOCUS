@@ -701,12 +701,12 @@ function initializeWorkerGantt() {
         },
         timeAxis: {
             scale: 'hour',
-            step: 1,
-            // We hide the default labels because we are creating our own custom header
-            format: {
-                majorLabels: () => '',
-                minorLabels: () => ''
-            }
+            step: 1
+        },
+        // We hide the default labels because we are creating our own custom header
+        format: {
+            majorLabels: () => '',
+            minorLabels: () => ''
         },
         onInitialDrawComplete: () => {
              // Redraw headers after the timeline has been drawn to ensure correct window
