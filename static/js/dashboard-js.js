@@ -3998,8 +3998,13 @@ function generateAssignments(tasksToAssign, workerPool) {
 
         // Find available workers matching team and skill who are free
         const availableWorkers = Object.values(tempWorkerAvailability).filter(worker => {
-            const teamMatch = worker.baseTeam === task.team;
-            const skillMatch = !task.skill || worker.skill === task.skill;
+            // Robust team matching
+            const taskBaseTeam = (task.teamSkill || task.team || '').replace(/\s*\([^)]*\)\s*$/, '').trim();
+            const teamMatch = worker.baseTeam === taskBaseTeam;
+
+            const taskSkill = (task.teamSkill || '').match(/\(([^)]+)\)/)?.[1] || task.skill || null;
+            const skillMatch = !taskSkill || worker.skill === taskSkill;
+
             const isAvailable = !worker.busyUntil || new Date(worker.busyUntil) <= taskStart;
             return teamMatch && skillMatch && isAvailable;
         });
@@ -4058,7 +4063,16 @@ async function autoAssign() {
 
         for (let i = 1; i <= capacity; i++) {
             const workerId = `${teamSkill}_${i}`;
-            workerPool[workerId] = { id: workerId, baseTeam, skill };
+            const isCustomer = baseTeam.toLowerCase().includes('customer');
+            const isQuality = baseTeam.toLowerCase().includes('quality');
+            let roleLabel = 'Mechanic';
+            if (isCustomer) {
+                roleLabel = 'Customer Inspector';
+            } else if (isQuality) {
+                roleLabel = 'Inspector';
+            }
+            const displayName = `${roleLabel} #${i} - ${baseTeam}${skill ? ` (${skill})` : ''}`;
+            workerPool[workerId] = { id: workerId, baseTeam, skill, displayName };
         }
     });
 
