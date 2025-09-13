@@ -1612,6 +1612,37 @@ tr.has-conflict {
   overflow: scroll !important;
 }
 
+/* --- Advanced Worker Gantt Layout & Scrolling --- */
+
+.advanced-gantt-wrapper {
+  max-height: 85vh; /* Set a max height for the component */
+  overflow: auto;   /* Make the entire component scrollable */
+  position: relative; /* Establish a positioning context */
+}
+
+/* Make the header sticky within the new scrollable wrapper */
+.gantt-header-advanced {
+  position: sticky;
+  top: 0;
+  z-index: 12; /* Higher than sidebar and content */
+}
+
+/* Make the sidebar sticky within the new scrollable wrapper */
+.gantt-sidebar-advanced {
+  position: sticky;
+  left: 0;
+  z-index: 11; /* Higher than content, lower than header */
+}
+
+/* Style for the top-left corner box to ensure it's also sticky */
+.gantt-corner-box {
+    position: sticky;
+    top: 0;
+    left: 0;
+    z-index: 13; /* Highest z-index */
+    background-color: #f8fafc; /* Match header background */
+}
+
 /* --- Advanced Worker Gantt Highlighting --- */
 
 /* Style for selected items and their dependency chain */

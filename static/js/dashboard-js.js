@@ -329,6 +329,7 @@ function setupEventListeners() {
     // Task assignment selects (dynamic)
     document.addEventListener('change', function(e) {
         if (e.target.classList.contains('assign-select')) {
+            console.log(`[Assign] User assigned task ${e.target.dataset.taskId} to ${e.target.value}`);
             const taskId = e.target.dataset.taskId;
             const position = e.target.dataset.position || '0';
             const mechanicId = e.target.value;
@@ -509,7 +510,10 @@ function switchScenario(scenario) {
         currentScenario = scenario;
         scenarioData = allScenarios[scenario];
 
-        console.log(`Switched to ${scenario}, teamCapacities:`, scenarioData.teamCapacities);
+        console.log(`Switched to ${scenario}, attempting to load saved assignments...`);
+
+        // Automatically load assignments from storage for the new scenario
+        loadAssignmentsFromStorage(true); // Pass true for silent loading
 
         // CRITICAL: Re-populate team dropdowns with new scenario's capacities
         populateTeamDropdowns();
@@ -518,14 +522,8 @@ function switchScenario(scenario) {
         showScenarioInfo();
         updateView();
 
-        // Load saved assignments for this scenario if they exist
-        if (currentView === 'team-lead') {
-            loadSavedAssignments();
-        }
-        if (currentView === 'mechanic') {
-            updateMechanicView();
-        }
-    } // <-- This closing brace was missing
+        // The view update will handle applying the just-loaded assignments.
+    }
 }
 
 // Update product filter dropdown
@@ -1484,6 +1482,7 @@ function updateShiftDropdown() {
 
 // Enhanced Team Lead View with separate team and skill filtering
 async function updateTeamLeadView() {
+    console.log(`[updateTeamLeadView] Fired. Current saved assignments for ${currentScenario}:`, JSON.parse(JSON.stringify(savedAssignments[currentScenario] || {})));
     if (!scenarioData) return;
 
     // ========== SECTION 1: Calculate Team Capacity ==========
@@ -4207,6 +4206,7 @@ function updateAssignmentsInUI(schedules) {
 
 // Load saved assignments into the table
 function loadSavedAssignments() {
+    console.log(`[loadSavedAssignments] Fired. Attempting to load from:`, JSON.parse(JSON.stringify(savedAssignments[currentScenario] || {})));
     if (!savedAssignments[currentScenario]) return;
 
     const assignments = savedAssignments[currentScenario];
@@ -4259,19 +4259,27 @@ function saveAssignmentsToStorage() {
 }
 
 // Load assignments from localStorage
-function loadAssignmentsFromStorage() {
+function loadAssignmentsFromStorage(silent = false) {
     try {
         const stored = localStorage.getItem(`assignments_${currentScenario}`);
         if (stored) {
             savedAssignments[currentScenario] = JSON.parse(stored);
-            loadSavedAssignments();
-            alert('Previous assignments loaded successfully!');
+            // Ensure the mechanicSchedules are rebuilt from the loaded assignments
+            updateMechanicSchedulesFromAssignments();
+            if (!silent) {
+                alert('Previous assignments loaded successfully!');
+            }
+            console.log(`Successfully loaded ${Object.keys(savedAssignments[currentScenario]).length} assignment entries from localStorage for ${currentScenario}.`);
         } else {
-            alert('No saved assignments found for this scenario.');
+            if (!silent) {
+                alert('No saved assignments found for this scenario.');
+            }
         }
     } catch (e) {
         console.error('Failed to load assignments:', e);
-        alert('Failed to load assignments from browser storage.');
+        if (!silent) {
+            alert('Failed to load assignments from browser storage.');
+        }
     }
 }
 
