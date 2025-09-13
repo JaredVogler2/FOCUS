@@ -690,6 +690,7 @@ function initializeWorkerGantt() {
         start: new Date(),
         end: new Date(new Date().getTime() + 24 * 60 * 60 * 1000), // 1-day window
         editable: false,
+        zoomable: false, // Disable zooming with trackpad/mouse wheel
         orientation: 'top',
         height: 'calc(100vh - 250px)', // Adjust height dynamically
         groupOrder: function(a, b) {
@@ -986,20 +987,59 @@ function renderWorkerGantt() {
     visGroups.add({ id: 'header-shift', content: '', isHeader: true, className: 'gantt-header-group', order: groupOrder++ });
     visGroups.add({ id: 'header-time', content: '', isHeader: true, className: 'gantt-header-group', order: groupOrder++ });
 
-    // Add Team and Worker Groups
+    // Add Team and Worker Groups, formatted to match the user's request
     Object.keys(teams).sort().forEach(teamName => {
         const teamGroupId = `team_${teamName.replace(/\s/g, '_')}`;
-        visGroups.add({ id: teamGroupId, content: teamName, treeLevel: 0, order: groupOrder++ });
         const workersInTeam = teams[teamName];
-        workersInTeam.forEach(worker => {
-            const shiftLabel = worker.shift.charAt(0).toUpperCase() + worker.shift.slice(1);
-            visGroups.add({
-                id: worker.id,
-                content: `<div class='wg-group-label'><b>${shiftLabel} Shift:</b> ${worker.name}</div>`,
-                nestedIn: teamGroupId,
-                order: groupOrder++
-            });
+
+        // Group workers by shift and sort them to have a consistent order
+        const workersByShift = {
+            '1st': workersInTeam.filter(w => w.shift === '1st').sort((a,b) => a.name.localeCompare(b.name)),
+            '2nd': workersInTeam.filter(w => w.shift === '2nd').sort((a,b) => a.name.localeCompare(b.name)),
+            '3rd': workersInTeam.filter(w => w.shift === '3rd').sort((a,b) => a.name.localeCompare(b.name)),
+        };
+
+        const numSets = Math.max(workersByShift['1st'].length, workersByShift['2nd'].length, workersByShift['3rd'].length);
+
+        if (numSets === 0) return;
+
+        // Add the main team group, which will be collapsible
+        visGroups.add({
+            id: teamGroupId,
+            content: teamName,
+            treeLevel: 0,
+            order: groupOrder++,
+            className: 'team-parent-group'
         });
+
+        // Loop through the sets to create the worker rows
+        for (let i = 0; i < numSets; i++) {
+            const setWorkers = [
+                workersByShift['1st'][i],
+                workersByShift['2nd'][i],
+                workersByShift['3rd'][i]
+            ].filter(Boolean); // Filter out undefined workers if shifts are uneven
+
+            setWorkers.forEach((worker, index) => {
+                const isLastInSet = index === setWorkers.length - 1;
+                const isLastSet = i === numSets - 1;
+
+                let groupClassName = '';
+                // Add a divider class to the last worker of a set, but not for the very last set in the team
+                if (isLastInSet && !isLastSet) {
+                    groupClassName = 'worker-set-divider';
+                }
+
+                const shiftLabel = worker.shift.charAt(0).toUpperCase() + worker.shift.slice(1);
+                visGroups.add({
+                    id: worker.id,
+                    content: `<div class='wg-group-label'><b>${shiftLabel} Shift:</b> ${worker.name}</div>`,
+                    nestedIn: teamGroupId,
+                    order: groupOrder++,
+                    className: groupClassName
+                });
+            });
+        }
     });
 
     // Add Tasks using the mapping function
@@ -6419,459 +6459,6 @@ window.exportCustomGantt = exportCustomGantt;
 window.fitGanttToTasks = fitGanttToTasks;
 
 
-// ========= WORKER GANTT CHART IMPLEMENTATION =========
-let workerGantt = null;
-
-const SHIFT_HOURS = {
-    '3rd': { start: 23, end: 6, duration: 7 }, // Crosses midnight
-    '1st': { start: 6, end: 14.5, duration: 8.5 }, // 2:30 PM
-    '2nd': { start: 14.5, end: 23, duration: 8.5 }
-};
-
-// This function is the core of the custom time axis.
-// It maps a real date to a "display" date on a linear timeline.
-function mapRealTimeToDisplayTime(realDate, shift) {
-    if (!(realDate instanceof Date)) {
-        realDate = new Date(realDate);
-    }
-
-    const realHours = realDate.getHours() + realDate.getMinutes() / 60;
-    const dayStart = new Date(realDate);
-    dayStart.setHours(0, 0, 0, 0);
-
-    let displayDate = new Date(dayStart);
-    let hoursIntoDisplayDay = 0;
-
-    const shiftInfo = SHIFT_HOURS[shift];
-    if (!shiftInfo) {
-        // Default for unknown shifts: map linearly
-        return realDate;
-    }
-
-    // Calculate hours into the specific shift
-    let hoursIntoShift = 0;
-    if (shift === '3rd') {
-        if (realHours >= shiftInfo.start) { // e.g., 23:30 on Day 1
-            hoursIntoShift = realHours - shiftInfo.start;
-        } else { // e.g., 01:00 on Day 2
-            hoursIntoShift = (24 - shiftInfo.start) + realHours;
-        }
-    } else {
-        hoursIntoShift = realHours - shiftInfo.start;
-    }
-    hoursIntoShift = Math.max(0, Math.min(hoursIntoShift, shiftInfo.duration));
-
-
-    // Map to the 24-hour display block for the day
-    if (shift === '3rd') {
-        hoursIntoDisplayDay = (hoursIntoShift / shiftInfo.duration) * 8; // 0-8 hours
-    } else if (shift === '1st') {
-        hoursIntoDisplayDay = 8 + (hoursIntoShift / shiftInfo.duration) * 8; // 8-16 hours
-    } else if (shift === '2nd') {
-        hoursIntoDisplayDay = 16 + (hoursIntoShift / shiftInfo.duration) * 8; // 16-24 hours
-    }
-
-    // For 3rd shift tasks starting late at night, they belong to the *next* day's schedule block.
-    if (shift === '3rd' && realHours >= shiftInfo.start) {
-        displayDate.setDate(displayDate.getDate() + 1);
-    }
-
-    displayDate.setHours(hoursIntoDisplayDay, (hoursIntoDisplayDay % 1) * 60, 0, 0);
-
-    return displayDate;
-}
-
-
-function initializeWorkerGantt() {
-    console.log("Initializing Worker Gantt...");
-
-    const container = document.getElementById('worker-gantt-container');
-    if (!container) {
-        console.error("Worker Gantt container not found!");
-        return;
-    }
-
-    // Destroy previous instance if it exists
-    if (workerGantt) {
-        workerGantt.destroy();
-    }
-
-    // Create a new timeline
-    const items = new vis.DataSet([]);
-    const groups = new vis.DataSet([]);
-
-    const options = {
-        stack: false,
-        start: new Date(),
-        end: new Date(1000 * 60 * 60 * 24 + (new Date()).valueOf()),
-        editable: false,
-        orientation: 'top',
-        height: '100%',
-        groupOrder: 'content' // or a custom function
-    };
-
-    workerGantt = new vis.Timeline(container, items, groups, options);
-
-    setupWorkerGanttEventListeners();
-    populateWorkerGanttFilters();
-    renderWorkerGantt();
-}
-
-function setupWorkerGanttEventListeners() {
-    if (!workerGantt) return;
-
-    // Add event listeners for filters
-    document.getElementById('wg-team-filter').addEventListener('change', renderWorkerGantt);
-    document.getElementById('wg-shift-filter').addEventListener('change', renderWorkerGantt);
-    document.getElementById('wg-skillset-filter').addEventListener('change', renderWorkerGantt);
-    document.getElementById('wg-worker-filter').addEventListener('change', renderWorkerGantt);
-    document.getElementById('wg-refresh-btn').addEventListener('click', renderWorkerGantt);
-
-    workerGantt.on('select', function(properties) {
-        const selectedIds = properties.items;
-        if (selectedIds.length === 0) {
-            // If nothing is selected, remove all highlights
-            const allItems = workerGantt.itemsData.get({
-                filter: item => item.className && item.className.includes('wg-highlight')
-            });
-            allItems.forEach(item => {
-                item.className = item.className.replace(' wg-highlight', '');
-                workerGantt.itemsData.update(item);
-            });
-            return;
-        }
-
-        const selectedTaskId = selectedIds[0];
-        const allTasks = scenarioData.tasks;
-
-        // Build dependency maps for efficient lookup
-        const successors = {};
-        const predecessors = {};
-        allTasks.forEach(task => {
-            successors[task.taskId] = [];
-            predecessors[task.taskId] = task.dependencies || [];
-            if (task.dependencies) {
-                task.dependencies.forEach(dep => {
-                    if (!successors[dep]) {
-                        successors[dep] = [];
-                    }
-                    successors[dep].push(task.taskId);
-                });
-            }
-        });
-
-        const toHighlight = new Set();
-        const queue = [selectedTaskId];
-        const visited = new Set();
-
-        // Find all successors (downstream)
-        while(queue.length > 0) {
-            const currentId = queue.shift();
-            if (visited.has(currentId)) continue;
-            visited.add(currentId);
-            toHighlight.add(currentId);
-
-            if (successors[currentId]) {
-                successors[currentId].forEach(succId => queue.push(succId));
-            }
-        }
-
-        // Find all predecessors (upstream)
-        queue.push(selectedTaskId);
-        while(queue.length > 0) {
-            const currentId = queue.shift();
-            if (visited.has(currentId)) continue;
-            visited.add(currentId);
-            toHighlight.add(currentId);
-
-            if (predecessors[currentId]) {
-                predecessors[currentId].forEach(predId => queue.push(predId));
-            }
-        }
-
-        // Update items in the timeline
-        const itemsToUpdate = [];
-        workerGantt.itemsData.forEach(item => {
-            let needsUpdate = false;
-            let newClassName = item.className || '';
-
-            if (toHighlight.has(item.id)) {
-                if (!newClassName.includes('wg-highlight')) {
-                    newClassName += ' wg-highlight';
-                    needsUpdate = true;
-                }
-            } else {
-                if (newClassName.includes('wg-highlight')) {
-                    newClassName = newClassName.replace(' wg-highlight', '');
-                    needsUpdate = true;
-                }
-            }
-
-            if (needsUpdate) {
-                itemsToUpdate.push({id: item.id, className: newClassName});
-            }
-        });
-
-        if (itemsToUpdate.length > 0) {
-            workerGantt.itemsData.update(itemsToUpdate);
-        }
-    });
-}
-
-function populateWorkerGanttFilters() {
-    console.log("Populating Worker Gantt filters...");
-    if (!scenarioData || !scenarioData.teamCapacities) return;
-
-    const teamSelect = document.getElementById('wg-team-filter');
-    const skillsetSelect = document.getElementById('wg-skillset-filter');
-    const workerSelect = document.getElementById('wg-worker-filter');
-
-    if (!teamSelect || !skillsetSelect || !workerSelect) return;
-
-    const teams = new Set();
-    const skills = new Set();
-    const allWorkers = [];
-
-    Object.entries(scenarioData.teamCapacities).forEach(([teamSkill, capacity]) => {
-        const skillMatch = teamSkill.match(/^(.+?)\s*\((.+?)\)\s*$/);
-        const baseTeam = skillMatch ? skillMatch[1].trim() : teamSkill;
-        const skill = skillMatch ? skillMatch[2].trim() : null;
-
-        teams.add(baseTeam);
-        if(skill) skills.add(skill);
-
-        for (let i = 1; i <= capacity; i++) {
-            const workerId = `${teamSkill}_${i}`;
-            const workerName = `${baseTeam} - Mechanic #${i}${skill ? ` (${skill})` : ''}`;
-            allWorkers.push({ id: workerId, name: workerName });
-        }
-    });
-
-    // Populate Teams
-    const currentTeam = teamSelect.value;
-    teamSelect.innerHTML = '<option value="all">All Teams</option>';
-    [...teams].sort().forEach(team => {
-        const option = document.createElement('option');
-        option.value = team;
-        option.textContent = team;
-        teamSelect.appendChild(option);
-    });
-    teamSelect.value = currentTeam;
-
-
-    // Populate Skillsets
-    const currentSkill = skillsetSelect.value;
-    skillsetSelect.innerHTML = '<option value="all">All Skillsets</option>';
-    [...skills].sort().forEach(skill => {
-        const option = document.createElement('option');
-        option.value = skill;
-        option.textContent = skill;
-        skillsetSelect.appendChild(option);
-    });
-    skillsetSelect.value = currentSkill;
-
-    // Populate Workers
-    const currentWorker = workerSelect.value;
-    workerSelect.innerHTML = '<option value="all">All Workers</option>';
-    allWorkers.sort((a, b) => a.name.localeCompare(b.name)).forEach(worker => {
-        const option = document.createElement('option');
-        option.value = worker.id;
-        option.textContent = worker.name;
-        workerSelect.appendChild(option);
-    });
-    workerSelect.value = currentWorker;
-}
-
-function renderWorkerGantt() {
-    console.log("Rendering Worker Gantt...");
-    if (!workerGantt) {
-        initializeWorkerGantt();
-        return;
-    }
-
-    if (!scenarioData || !scenarioData.teamCapacities) {
-        console.warn("Worker Gantt: teamCapacities data not available.");
-        return;
-    }
-
-    // Check if assignments have been made. If not, show a message.
-    const assignments = savedAssignments[currentScenario] || {};
-    if (!assignments.mechanicSchedules || Object.keys(assignments.mechanicSchedules).length === 0) {
-        const container = document.getElementById('worker-gantt-container');
-        container.innerHTML = `
-            <div style="padding: 40px; text-align: center; color: #6b7280;">
-                <div style="font-size: 48px; margin-bottom: 10px;">📋</div>
-                <h3 style="color: #1f2937;">No Assigned Tasks to Display</h3>
-                <p style="font-size: 14px; margin-top: 5px;">
-                    Please go to the <strong>Team Lead</strong> view and use the <strong>Auto-Assign</strong> button first.
-                </p>
-            </div>
-        `;
-        // Clear timeline items and groups if they exist from a previous render
-        workerGantt.setItems(new vis.DataSet([]));
-        workerGantt.setGroups(new vis.DataSet([]));
-        return;
-    }
-
-
-    // 1. Get filter values
-    const selectedTeam = document.getElementById('wg-team-filter').value;
-    const selectedShift = document.getElementById('wg-shift-filter').value;
-    const selectedSkill = document.getElementById('wg-skillset-filter').value;
-    const selectedWorker = document.getElementById('wg-worker-filter').value;
-
-    // 2. Get all possible workers and their info
-    let allWorkers = [];
-    Object.entries(scenarioData.teamCapacities).forEach(([teamSkill, capacity]) => {
-        const skillMatch = teamSkill.match(/^(.+?)\s*\((.+?)\)\s*$/);
-        const baseTeam = skillMatch ? skillMatch[1].trim() : teamSkill;
-        const skill = skillMatch ? skillMatch[2].trim() : null;
-        const shifts = scenarioData.teamShifts ? (scenarioData.teamShifts[baseTeam] || ['1st', '2nd', '3rd']) : ['1st', '2nd', '3rd'];
-
-        for (let i = 1; i <= capacity; i++) {
-            const workerId = `${teamSkill}_${i}`;
-            // Assign shift based on worker index for now. This can be improved if more data is available.
-            const shift = shifts[(i-1) % shifts.length];
-            allWorkers.push({
-                id: workerId,
-                name: `Mechanic #${i}`, // Simplified name
-                team: baseTeam,
-                skill: skill,
-                shift: shift
-            });
-        }
-    });
-
-    // 3. Filter workers
-    let filteredWorkers = allWorkers.filter(worker => {
-        const teamMatch = selectedTeam === 'all' || worker.team === selectedTeam;
-        const shiftMatch = selectedShift === 'all' || worker.shift === selectedShift;
-        const skillMatch = selectedSkill === 'all' || worker.skill === selectedSkill;
-        const workerMatch = selectedWorker === 'all' || worker.id === selectedWorker;
-        return teamMatch && shiftMatch && skillMatch && workerMatch;
-    });
-
-    // 4. Group workers by team
-    const teams = {};
-    filteredWorkers.forEach(worker => {
-        if (!teams[worker.team]) {
-            teams[worker.team] = [];
-        }
-        teams[worker.team].push(worker);
-    });
-
-    // 5. Create vis.js groups
-    const visGroups = new vis.DataSet();
-    let groupCounter = 0;
-
-    Object.keys(teams).sort().forEach(teamName => {
-        const workersInTeam = teams[teamName];
-        const workersByShift = { '1st': [], '2nd': [], '3rd': [] };
-        workersInTeam.forEach(w => {
-            if (workersByShift[w.shift]) {
-                workersByShift[w.shift].push(w);
-            }
-        });
-
-        const maxWorkers = Math.max(workersByShift['1st'].length, workersByShift['2nd'].length, workersByShift['3rd'].length);
-
-        for (let i = 0; i < maxWorkers; i++) {
-            const rowGroupId = `team_row_${groupCounter++}`;
-            const worker3rd = workersByShift['3rd'][i];
-            const worker1st = workersByShift['1st'][i];
-            const worker2nd = workersByShift['2nd'][i];
-
-            if (worker3rd || worker1st || worker2nd) {
-                 visGroups.add({
-                    id: rowGroupId,
-                    content: `${teamName} - Row ${i + 1}`,
-                    treeLevel: 0,
-                });
-
-                if (worker3rd) {
-                    visGroups.add({
-                        id: worker3rd.id,
-                        content: `<div class='wg-group-label'><b>3rd:</b> ${worker3rd.name}</div>`,
-                        treeLevel: 1,
-                        nestedIn: rowGroupId,
-                    });
-                }
-                if (worker1st) {
-                     visGroups.add({
-                        id: worker1st.id,
-                        content: `<div class='wg-group-label'><b>1st:</b> ${worker1st.name}</div>`,
-                        treeLevel: 1,
-                        nestedIn: rowGroupId,
-                    });
-                }
-                if (worker2nd) {
-                     visGroups.add({
-                        id: worker2nd.id,
-                        content: `<div class='wg-group-label'><b>2nd:</b> ${worker2nd.name}</div>`,
-                        treeLevel: 1,
-                        nestedIn: rowGroupId,
-                    });
-                }
-            }
-        }
-    });
-
-    workerGantt.setGroups(visGroups);
-
-    // 6. Get tasks and create vis.js items
-    const visItems = new vis.DataSet();
-    const productColors = {};
-    const lightColors = ["#E0BBE4", "#957DAD", "#D291BC", "#FEC8D8", "#FFDFD3"];
-    let colorIndex = 0;
-
-    Object.values(teams).flat().forEach(worker => {
-        const workerSchedule = assignments.mechanicSchedules ? assignments.mechanicSchedules[worker.id] : null;
-        if (workerSchedule && workerSchedule.tasks) {
-            workerSchedule.tasks.forEach(task => {
-                const realStart = new Date(task.startTime);
-                const realEnd = new Date(task.endTime);
-
-                // Ensure product has a color
-                if (!productColors[task.product]) {
-                    productColors[task.product] = lightColors[colorIndex % lightColors.length];
-                    colorIndex++;
-                }
-
-                const displayStart = mapRealTimeToDisplayTime(realStart, worker.shift);
-                const displayEnd = mapRealTimeToDisplayTime(realEnd, worker.shift);
-
-                let className = 'wg-task';
-                if (task.isCritical) {
-                    className += ' wg-critical';
-                }
-
-                visItems.add({
-                    id: task.taskId,
-                    group: worker.id,
-                    content: task.taskId,
-                    start: displayStart,
-                    end: displayEnd,
-                    title: `Task: ${task.taskId}<br>Product: ${task.product}<br>Worker: ${worker.name}`,
-                    style: `background-color: ${productColors[task.product]};`,
-                    className: className
-                });
-            });
-        }
-    });
-
-    workerGantt.setItems(visItems);
-
-    // Update legend
-    const legendContainer = document.getElementById('wg-product-legend');
-    legendContainer.innerHTML = '';
-    Object.keys(productColors).forEach(product => {
-        const color = productColors[product];
-        const legendItem = document.createElement('div');
-        legendItem.style.cssText = 'display: flex; align-items: center; gap: 6px; font-size: 12px;';
-        legendItem.innerHTML = `<div style="width: 16px; height: 16px; background-color: ${color}; border-radius: 3px;"></div> <span>${product}</span>`;
-        legendContainer.appendChild(legendItem);
-    });
-}
 
 // Expose functions globally for HTML onclick handlers
 window.autoAssign = autoAssign;
