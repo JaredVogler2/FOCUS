@@ -1606,3 +1606,22 @@ tr.has-conflict {
     border-color: #d1d5db;
     opacity: 1;
 }
+
+/* Force scrollbars on Advanced Worker Gantt's main content area */
+#worker-gantt-container-advanced .vis-content {
+  overflow: scroll !important;
+}
+
+/* --- Advanced Worker Gantt Highlighting --- */
+
+/* Style for selected items and their dependency chain */
+.vis-item.wg-highlight {
+  background-color: rgba(252, 211, 77, 0.7) !important; /* yellow-400 with opacity */
+  border-color: #f59e0b !important; /* amber-500 */
+}
+
+/* Style for critical path tasks */
+.vis-item.wg-task.wg-critical {
+  border: 2px solid #ef4444 !important; /* red-500 */
+  box-shadow: 0 0 5px rgba(239, 68, 68, 0.5);
+}
