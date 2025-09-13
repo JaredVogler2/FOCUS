@@ -700,7 +700,6 @@ function initializeWorkerGantt() {
     setupWorkerGanttEventListeners();
     populateWorkerGanttFilters();
     renderWorkerGantt(); // Initial render
-    setupAdvancedGanttScrollSync(); // Set up the scroll synchronization
 }
 
 function setupWorkerGanttEventListeners() {
@@ -712,6 +711,8 @@ function setupWorkerGanttEventListeners() {
     document.getElementById('wg-skillset-filter').addEventListener('change', renderWorkerGantt);
     document.getElementById('wg-worker-filter').addEventListener('change', renderWorkerGantt);
     document.getElementById('wg-refresh-btn').addEventListener('click', renderWorkerGantt);
+    document.getElementById('wg-start-date').addEventListener('change', renderWorkerGantt);
+    document.getElementById('wg-end-date').addEventListener('change', renderWorkerGantt);
 
     workerGantt.on('select', function(properties) {
         const selectedIds = properties.items;
@@ -989,29 +990,8 @@ function renderAdvancedGanttSidebar(teams) {
     sidebarContainer.innerHTML = sidebarHTML + '</div>';
 }
 
-// New function to synchronize scrolling
-function setupAdvancedGanttScrollSync() {
-    const header = document.querySelector('.gantt-header-advanced');
-    const sidebar = document.querySelector('.gantt-sidebar-advanced');
-    const mainContainer = document.getElementById('worker-gantt-container-advanced');
-
-    if (!header || !sidebar || !mainContainer) return;
-
-    const visContent = mainContainer.querySelector('.vis-content');
-    if (!visContent) {
-        console.error("vis-content not found for scroll sync.");
-        return;
-    }
-
-    visContent.addEventListener('scroll', () => {
-        header.scrollLeft = visContent.scrollLeft;
-        sidebar.scrollTop = visContent.scrollTop;
-    });
-}
-
-
 function renderWorkerGantt() {
-    console.log("Rendering Advanced Worker Gantt...");
+    console.log("Rendering Advanced Worker Gantt with date filtering...");
     if (!workerGantt) {
         initializeWorkerGantt();
         return;
@@ -1020,18 +1000,54 @@ function renderWorkerGantt() {
     const assignments = savedAssignments[currentScenario] || {};
     const mechanicSchedules = generateMechanicSchedulesFromAssignments(assignments);
 
-    if (Object.keys(mechanicSchedules).length === 0) {
+    // Get all filter values
+    const selectedTeamFilter = document.getElementById('wg-team-filter').value;
+    const selectedShift = document.getElementById('wg-shift-filter').value;
+    const selectedSkill = document.getElementById('wg-skillset-filter').value;
+    const selectedWorker = document.getElementById('wg-worker-filter').value;
+    const startDateFilter = document.getElementById('wg-start-date').value;
+    const endDateFilter = document.getElementById('wg-end-date').value;
+
+    // Parse date filters
+    const filterStart = startDateFilter ? new Date(startDateFilter) : null;
+    const filterEnd = endDateFilter ? new Date(endDateFilter) : null;
+    if (filterEnd) {
+        filterEnd.setHours(23, 59, 59, 999); // Make end date inclusive
+    }
+
+    // Filter schedules by date first
+    const filteredMechanicSchedules = {};
+    Object.keys(mechanicSchedules).forEach(mechanicId => {
+        const schedule = mechanicSchedules[mechanicId];
+        const tasks = schedule.tasks.filter(task => {
+            if (!filterStart && !filterEnd) return true; // No date filters
+            const taskStart = new Date(task.startTime);
+            const taskEnd = new Date(task.endTime);
+
+            // A task overlaps with the filter range if: (task.start < filter.end) AND (task.end > filter.start)
+            const startsBeforeEnd = filterEnd ? taskStart < filterEnd : true;
+            const endsAfterStart = filterStart ? taskEnd > filterStart : true;
+            return startsBeforeEnd && endsAfterStart;
+        });
+
+        if (tasks.length > 0) {
+            filteredMechanicSchedules[mechanicId] = { ...schedule,
+                tasks: tasks
+            };
+        }
+    });
+
+    const hasAssignments = Object.keys(mechanicSchedules).length > 0;
+    const hasVisibleAssignments = Object.keys(filteredMechanicSchedules).length > 0;
+
+    if (!hasAssignments) {
         document.getElementById('worker-gantt-container-advanced').innerHTML = `<div style="padding: 40px; text-align: center; color: #6b7280;"><h3>No Task Assignments Available</h3></div>`;
         document.querySelector('.gantt-sidebar-advanced').innerHTML = '';
         document.querySelector('.gantt-header-advanced').innerHTML = '';
         return;
     }
 
-    const selectedTeamFilter = document.getElementById('wg-team-filter').value;
-    const selectedShift = document.getElementById('wg-shift-filter').value;
-    const selectedSkill = document.getElementById('wg-skillset-filter').value;
-    const selectedWorker = document.getElementById('wg-worker-filter').value;
-
+    // Now, build the list of all possible workers
     let allWorkers = [];
     Object.entries(scenarioData.teamCapacities).forEach(([teamSkill, capacity]) => {
         const skillMatch = teamSkill.match(/^(.+?)\s*\((.+?)\)\s*$/);
@@ -1041,25 +1057,43 @@ function renderWorkerGantt() {
         for (let i = 1; i <= capacity; i++) {
             const workerId = `${teamSkill}_${i}`;
             const shift = shifts[(i - 1) % shifts.length];
-            allWorkers.push({ id: workerId, name: `Mechanic #${i}`, team: baseTeam, skill: skill, shift: shift });
+            allWorkers.push({
+                id: workerId,
+                name: `Mechanic #${i}`,
+                team: baseTeam,
+                skill: skill,
+                shift: shift
+            });
         }
     });
 
-    let filteredWorkers = allWorkers.filter(w => (selectedTeamFilter === 'all' || w.team === selectedTeamFilter) && (selectedShift === 'all' || w.shift === selectedShift) && (selectedSkill === 'all' || w.skill === selectedSkill) && (selectedWorker === 'all' || w.id === selectedWorker));
+    // Filter workers based on dropdowns AND if they have tasks in the filtered schedules
+    let filteredWorkers = allWorkers.filter(w =>
+        (selectedTeamFilter === 'all' || w.team === selectedTeamFilter) &&
+        (selectedShift === 'all' || w.shift === selectedShift) &&
+        (selectedSkill === 'all' || w.skill === selectedSkill) &&
+        (selectedWorker === 'all' || w.id === selectedWorker) &&
+        (filteredMechanicSchedules[w.id] && filteredMechanicSchedules[w.id].tasks.length > 0)
+    );
 
     if (filteredWorkers.length === 0) {
-        document.getElementById('worker-gantt-container-advanced').innerHTML = `<div style="padding: 40px; text-align: center; color: #6b7280;"><h3>No Workers Match Filters</h3></div>`;
+        const message = hasVisibleAssignments ?
+            `<h3>No Workers Match Dropdown Filters</h3><p>Try adjusting the Team, Shift, Skillset, or Worker filters.</p>` :
+            `<h3>No Tasks Match Date Range</h3><p>Try expanding the start and end dates.</p>`;
+        document.getElementById('worker-gantt-container-advanced').innerHTML = `<div style="padding: 40px; text-align: center; color: #6b7280;">${message}</div>`;
         document.querySelector('.gantt-sidebar-advanced').innerHTML = '';
         document.querySelector('.gantt-header-advanced').innerHTML = '';
         return;
     }
 
+    // Build the hierarchy for the sidebar (Teams -> Workers)
     const teams = {};
     filteredWorkers.forEach(w => {
         if (!teams[w.team]) teams[w.team] = [];
         teams[w.team].push(w);
     });
 
+    // Create vis.js groups and items
     const visGroups = new vis.DataSet();
     const visItems = new vis.DataSet();
     let groupOrder = 0;
@@ -1069,12 +1103,16 @@ function renderWorkerGantt() {
 
     sortedTeamNames.forEach(teamName => {
         const workersInTeam = teams[teamName];
-        const shiftOrder = { '1st': 1, '2nd': 2, '3rd': 3 };
+        const shiftOrder = {
+            '1st': 1,
+            '2nd': 2,
+            '3rd': 3
+        };
         workersInTeam.sort((a, b) => {
             const shiftCompare = (shiftOrder[a.shift] || 99) - (shiftOrder[b.shift] || 99);
             if (shiftCompare !== 0) return shiftCompare;
-            const numA = parseInt(a.name.match(/\d+$/)?.[0] || 0);
-            const numB = parseInt(b.name.match(/\d+$/)?.[0] || 0);
+            const numA = parseInt(a.name.match(/\d+$/) ?.[0] || 0);
+            const numB = parseInt(b.name.match(/\d+$/) ?.[0] || 0);
             return numA - numB;
         });
 
@@ -1093,9 +1131,9 @@ function renderWorkerGantt() {
     let colorIndex = 0;
 
     orderedWorkers.forEach(worker => {
-        const schedule = mechanicSchedules[worker.id] || null;
+        const schedule = filteredMechanicSchedules[worker.id] || null; // Use the date-filtered schedule
         if (schedule && schedule.tasks) {
-            schedule.tasks.forEach(task => {
+            schedule.tasks.forEach(task => { // These tasks are already filtered
                 if (!productColors[task.product]) {
                     productColors[task.product] = lightColors[colorIndex % lightColors.length];
                     colorIndex++;
@@ -8067,9 +8105,6 @@ function handleMechanicSelection() {
         displayNoSelection();
         return;
     }
-
-    // Update mechanic schedules from current assignments
-    updateMechanicSchedulesFromAssignments();
 
     if (selection === 'all' || selection === 'all-mechanics' || selection === 'all-quality' || selection === 'all-customer') {
         console.log('Loading aggregated view for:', selection);

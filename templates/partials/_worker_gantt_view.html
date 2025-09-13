@@ -1,90 +1,5 @@
 <!-- Worker Gantt View -->
 <div id="worker-gantt-view" class="view-content" style="display: none;">
-    <style>
-        .advanced-gantt-wrapper {
-            display: grid;
-            grid-template-columns: 150px 1fr; /* Sidebar and main content */
-            grid-template-rows: auto 1fr; /* Header and body */
-            width: 100%;
-            height: calc(100vh - 250px);
-            border: 1px solid #ddd;
-        }
-
-        .gantt-header-advanced,
-        .gantt-sidebar-advanced,
-        #worker-gantt-container-advanced,
-        .gantt-corner-box {
-            overflow: hidden;
-            position: relative;
-        }
-
-        .gantt-corner-box {
-            grid-column: 1;
-            grid-row: 1;
-            background-color: #f8fafc;
-            border-right: 1px solid #ccc;
-            border-bottom: 1px solid #ccc;
-        }
-
-        .gantt-header-advanced {
-            grid-column: 2;
-            grid-row: 1;
-            background-color: #f8fafc;
-            border-bottom: 1px solid #ccc;
-            white-space: nowrap;
-        }
-        .gantt-header-advanced .gantt-header-item {
-            display: inline-block;
-            text-align: center;
-            padding: 4px;
-            border-right: 1px solid #e5e7eb;
-            font-weight: bold;
-            color: #374151;
-            box-sizing: border-box;
-        }
-         .gantt-header-advanced .header-date { font-size: 1.1em; font-weight: 600; }
-         .gantt-header-advanced .header-shift { font-size: 1em; }
-         .gantt-header-advanced .header-time { font-size: 0.9em; color: #6b7280; }
-
-
-        .gantt-sidebar-advanced {
-            grid-column: 1;
-            grid-row: 2;
-            background-color: #f8fafc;
-            border-right: 1px solid #ccc;
-        }
-        .gantt-sidebar-advanced .team-group-label {
-            font-weight: bold;
-            padding: 10px 5px;
-            border-bottom: 1px solid #ddd;
-            text-align: center;
-            writing-mode: vertical-rl;
-            transform: rotate(180deg);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        .gantt-sidebar-advanced .worker-group-label {
-            font-size: 0.9em;
-            padding: 10px 5px;
-            border-bottom: 1px solid #eee;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-
-
-        #worker-gantt-container-advanced {
-            grid-column: 2;
-            grid-row: 2;
-            overflow: auto; /* This is the main scrollable area */
-        }
-
-        /* Hide vis.js's default labels as we are creating our own */
-        #worker-gantt-container-advanced .vis-labelset {
-            display: none;
-        }
-    </style>
     <h2>Worker Gantt</h2>
     <p>Visual schedule organized by worker and shift, with a non-linear timeline representing shifts.</p>
 
@@ -117,15 +32,25 @@
                 <option value="all">All Workers</option>
             </select>
         </div>
+         <div class="filter-group">
+            <label for="wg-start-date">Start Date:</label>
+            <input type="date" id="wg-start-date" class="form-control">
+        </div>
+        <div class="filter-group">
+            <label for="wg-end-date">End Date:</label>
+            <input type="date" id="wg-end-date" class="form-control">
+        </div>
         <button id="wg-refresh-btn" class="btn btn-primary">Refresh</button>
     </div>
 
     <!-- The new advanced Gantt layout wrapper -->
-    <div class="advanced-gantt-wrapper">
-        <div class="gantt-corner-box"></div>
-        <div class="gantt-header-advanced"></div>
-        <div class="gantt-sidebar-advanced"></div>
-        <div id="worker-gantt-container-advanced"></div>
+    <div class="advanced-gantt-scroll-wrapper">
+        <div class="advanced-gantt-grid-container">
+            <div class="gantt-corner-box"></div>
+            <div class="gantt-header-advanced"></div>
+            <div class="gantt-sidebar-advanced"></div>
+            <div id="worker-gantt-container-advanced"></div>
+        </div>
     </div>
 
 
