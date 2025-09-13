@@ -625,7 +625,7 @@ function initializeWorkerGantt() {
     }
 
     const options = {
-        stack: true,
+        stack: false, // Key change for alignment: render tasks in one line.
         start: new Date(),
         end: new Date(new Date().getTime() + 3 * 24 * 60 * 60 * 1000), // 3-day window
         editable: false,
@@ -639,6 +639,11 @@ function initializeWorkerGantt() {
         showMinorLabels: false,
         // Remove group ordering, as it will be handled by the separate sidebar
         groupOrder: 'order',
+        margin: {
+            item: {
+                vertical: 4 // This + item height should match sidebar row height
+            }
+        }
     };
 
     // Initialize timeline without items or groups initially
@@ -746,10 +751,24 @@ const SHIFT_HOURS = {
     '2nd': { start: 14.5, end: 23, duration: 8.5 } // 2:30pm to 11pm
 };
 
+// Helper to determine which shift a real-world time belongs to.
+function getShiftFromRealTime(realDate) {
+    const realHours = realDate.getHours() + realDate.getMinutes() / 60;
+    if (realHours >= 6 && realHours < 14.5) {
+        return '1st';
+    } else if (realHours >= 14.5 && realHours < 23) {
+        return '2nd';
+    } else {
+        return '3rd';
+    }
+}
+
+
 // This function maps a real timestamp to a "display" timestamp for the non-linear Gantt chart.
-function mapRealTimeToDisplayTime(realDate, shift) {
+function mapRealTimeToDisplayTime(realDate) {
     if (!(realDate instanceof Date)) realDate = new Date(realDate);
 
+    const shift = getShiftFromRealTime(realDate);
     const realHours = realDate.getHours() + realDate.getMinutes() / 60;
     const dayStart = new Date(realDate);
     dayStart.setHours(0, 0, 0, 0);
@@ -833,10 +852,16 @@ function renderWorkerGantt() {
         return;
     }
 
-    const teams = {};
+    const teams = {}; // Structure: { teamName: { skillName: [worker, ...] } }
     filteredWorkers.forEach(w => {
-        if (!teams[w.team]) teams[w.team] = [];
-        teams[w.team].push(w);
+        if (!teams[w.team]) {
+            teams[w.team] = {};
+        }
+        const skill = w.skill || 'General'; // Use 'General' for workers without a specific skill
+        if (!teams[w.team][skill]) {
+            teams[w.team][skill] = [];
+        }
+        teams[w.team][skill].push(w);
     });
 
     const visGroups = new vis.DataSet();
@@ -845,28 +870,43 @@ function renderWorkerGantt() {
     const sidebarData = [];
 
     Object.keys(teams).sort().forEach(teamName => {
-        const teamGroupId = `team_${teamName.replace(/\s/g, '_')}`;
-        const workersInTeam = teams[teamName];
-        if (workersInTeam.length === 0) return;
+        const teamSkills = teams[teamName];
+        const teamSidebarData = {
+            id: `team_${teamName.replace(/\s/g, '_')}`,
+            content: teamName,
+            isTeam: true,
+            skills: []
+        };
 
-        const teamSidebarData = { id: teamGroupId, content: teamName, isTeam: true, workers: [] };
-        const shiftOrder = { '1st': 1, '2nd': 2, '3rd': 3 };
-        workersInTeam.sort((a, b) => {
-            const shiftCompare = (shiftOrder[a.shift] || 99) - (shiftOrder[b.shift] || 99);
-            if (shiftCompare !== 0) return shiftCompare;
-            const numA = parseInt(a.name.match(/\d+$/)?.[0] || 0);
-            const numB = parseInt(b.name.match(/\d+$/)?.[0] || 0);
-            return numA - numB;
-        });
+        Object.keys(teamSkills).sort().forEach(skillName => {
+            const workersInSkill = teamSkills[skillName];
+            const skillSidebarData = {
+                id: `skill_${skillName.replace(/\s/g, '_')}`,
+                content: skillName,
+                workers: []
+            };
 
-        workersInTeam.forEach(worker => {
-            const shiftLabel = worker.shift.charAt(0).toUpperCase() + worker.shift.slice(1);
-            const workerContent = `${shiftLabel} Shift: ${worker.descriptiveName}`;
-            visGroups.add({ id: worker.id, content: '&nbsp;', order: groupOrder++ });
-            teamSidebarData.workers.push({ id: worker.id, content: workerContent });
+            const shiftOrder = { '1st': 1, '2nd': 2, '3rd': 3 };
+            workersInSkill.sort((a, b) => {
+                const shiftCompare = (shiftOrder[a.shift] || 99) - (shiftOrder[b.shift] || 99);
+                if (shiftCompare !== 0) return shiftCompare;
+                const numA = parseInt(a.name.match(/\d+$/)?.[0] || 0);
+                const numB = parseInt(b.name.match(/\d+$/)?.[0] || 0);
+                return numA - numB;
+            });
+
+            workersInSkill.forEach(worker => {
+                const shiftLabel = worker.shift.charAt(0).toUpperCase() + worker.shift.slice(1);
+                // Skill is now a label, so it can be removed from the worker's descriptive name if redundant
+                const workerContent = `${shiftLabel} Shift: ${worker.descriptiveName.replace(` (${worker.skill})`, '')}`;
+                visGroups.add({ id: worker.id, content: '&nbsp;', order: groupOrder++ });
+                skillSidebarData.workers.push({ id: worker.id, content: workerContent });
+            });
+            teamSidebarData.skills.push(skillSidebarData);
         });
         sidebarData.push(teamSidebarData);
     });
+
 
     const productColors = {};
     const lightColors = ["#E0BBE4", "#957DAD", "#D291BC", "#FEC8D8", "#FFDFD3"];
@@ -884,8 +924,8 @@ function renderWorkerGantt() {
                 const realEnd = new Date(task.endTime);
 
                 // Use the mapping function to get display times
-                const displayStart = mapRealTimeToDisplayTime(realStart, worker.shift);
-                const displayEnd = mapRealTimeToDisplayTime(realEnd, worker.shift);
+                const displayStart = mapRealTimeToDisplayTime(realStart);
+                const displayEnd = mapRealTimeToDisplayTime(realEnd);
 
                 const uniqueItemId = `${worker.id}_${task.taskId}`;
                 visItems.add({
@@ -961,12 +1001,20 @@ function renderAdvancedGanttSidebar(sidebarData) {
     sidebarData.forEach(team => {
         html += `<div class="adv-gantt-sidebar-team">`;
         html += `<div class="sidebar-team-label">${team.content}</div>`;
-        html += `<div class="sidebar-worker-container">`;
-        team.workers.forEach(worker => {
-            html += `<div class="sidebar-worker-label" data-group-id="${worker.id}">${worker.content}</div>`;
+
+        team.skills.forEach(skill => {
+            html += `<div class="adv-gantt-sidebar-skill">`;
+            html += `<div class="sidebar-skill-label">${skill.content}</div>`;
+            html += `<div class="sidebar-worker-container">`;
+            skill.workers.forEach(worker => {
+                html += `<div class="sidebar-worker-label" data-group-id="${worker.id}">${worker.content}</div>`;
+            });
+            html += `</div></div>`; // Close worker-container and sidebar-skill
         });
-        html += `</div></div>`;
+
+        html += `</div>`; // Close sidebar-team
     });
+
 
     sidebarContainer.innerHTML = html;
 }
