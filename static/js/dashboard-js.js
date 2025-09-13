@@ -1366,66 +1366,6 @@ function ensureSavedAssignments() {
     }
 }
 
-// Determine which teams to include based on selection
-let teamsToInclude = [];
-
-if (selectedTeam === 'all') {
-    // For "all teams", include everything
-    teamsToInclude = Object.keys(scenarioData.teamCapacities || {});
-    // Also add base team names
-    let baseTeams = new Set();
-    for (let team of teamsToInclude) {
-        let baseTeam = team.split(' (')[0]; // Extract base team name
-        baseTeams.add(baseTeam);
-    }
-    // Add base teams to the list
-    for (let baseTeam of baseTeams) {
-        if (!teamsToInclude.includes(baseTeam)) {
-            teamsToInclude.push(baseTeam);
-        }
-    }
-} else if (selectedTeam === 'all-mechanics') {
-    teamsToInclude = Object.keys(scenarioData.teamCapacities || {})
-        .filter(t => (t.toLowerCase().includes('mechanic') || t.toLowerCase().includes('mech')) && !t.toLowerCase().includes('quality'));
-    // Add base mechanic teams
-    for (let i = 1; i <= 10; i++) {
-        teamsToInclude.push(`Mechanic Team ${i}`);
-    }
-} else if (selectedTeam === 'all-quality') {
-    teamsToInclude = Object.keys(scenarioData.teamCapacities || {})
-        .filter(t => t.toLowerCase().includes('quality') || t.toLowerCase().includes('qual'));
-    // Add base quality teams
-    for (let i = 1; i <= 7; i++) {
-        teamsToInclude.push(`Quality Team ${i}`);
-    }
-} else {
-    teamsToInclude = [selectedTeam];
-}
-
-// Filter tasks - check both team and teamSkill fields
-let tasks = (scenarioData.tasks || []).filter(task => {
-    // Check if task's team matches any of the teams to include
-    const taskTeam = task.team || '';
-    const taskTeamSkill = task.teamSkill || task.team || '';
-
-    const teamMatch = teamsToInclude.some(t => {
-        // Check exact match first
-        if (taskTeam === t || taskTeamSkill === t) return true;
-
-        // Check if task team is a base team of an included team with skill
-        if (t.includes('(') && taskTeam === t.split(' (')[0]) return true;
-
-        // Check if included team is a base team of task's team
-        if (taskTeamSkill.includes('(') && t === taskTeamSkill.split(' (')[0]) return true;
-
-        return false;
-    });
-
-    const shiftMatch = selectedShift === 'all' || task.shift === selectedShift;
-    const productMatch = selectedProduct === 'all' || task.product === selectedProduct;
-
-    return teamMatch && shiftMatch && productMatch;
-});
 
 
 // Enhanced Management View with sorting, filtering and aggregation
