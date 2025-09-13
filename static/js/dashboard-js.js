@@ -607,54 +607,109 @@ function switchView(view) {
     }
 }
 
-// ========= WORKER GANTT CHART IMPLEMENTATION (ADVANCED LAYOUT) =========
+// ========= WORKER GANTT CHART IMPLEMENTATION =========
 let workerGantt = null;
+
+const SHIFT_HOURS = {
+    '3rd': { start: 23, end: 6, duration: 7 }, // Crosses midnight
+    '1st': { start: 6, end: 14.5, duration: 8.5 }, // 2:30 PM
+    '2nd': { start: 14.5, end: 23, duration: 8.5 }
+};
+
+// This function is the core of the custom time axis.
+// It maps a real date to a "display" date on a linear timeline.
+function mapRealTimeToDisplayTime(realDate, shift) {
+    if (!(realDate instanceof Date)) {
+        realDate = new Date(realDate);
+    }
+
+    const realHours = realDate.getHours() + realDate.getMinutes() / 60;
+    const dayStart = new Date(realDate);
+    dayStart.setHours(0, 0, 0, 0);
+
+    let displayDate = new Date(dayStart);
+    let hoursIntoDisplayDay = 0;
+
+    const shiftInfo = SHIFT_HOURS[shift];
+    if (!shiftInfo) {
+        // Default for unknown shifts: map linearly
+        return realDate;
+    }
+
+    // Calculate hours into the specific shift
+    let hoursIntoShift = 0;
+    if (shift === '3rd') {
+        if (realHours >= shiftInfo.start) { // e.g., 23:30 on Day 1
+            hoursIntoShift = realHours - shiftInfo.start;
+        } else { // e.g., 01:00 on Day 2
+            hoursIntoShift = (24 - shiftInfo.start) + realHours;
+        }
+    } else {
+        hoursIntoShift = realHours - shiftInfo.start;
+    }
+    hoursIntoShift = Math.max(0, Math.min(hoursIntoShift, shiftInfo.duration));
+
+
+    // Map to the 24-hour display block for the day
+    if (shift === '3rd') {
+        hoursIntoDisplayDay = (hoursIntoShift / shiftInfo.duration) * 8; // 0-8 hours
+    } else if (shift === '1st') {
+        hoursIntoDisplayDay = 8 + (hoursIntoShift / shiftInfo.duration) * 8; // 8-16 hours
+    } else if (shift === '2nd') {
+        hoursIntoDisplayDay = 16 + (hoursIntoShift / shiftInfo.duration) * 8; // 16-24 hours
+    }
+
+    // For 3rd shift tasks starting late at night, they belong to the *next* day's schedule block.
+    if (shift === '3rd' && realHours >= shiftInfo.start) {
+        displayDate.setDate(displayDate.getDate() + 1);
+    }
+
+    displayDate.setHours(hoursIntoDisplayDay, (hoursIntoDisplayDay % 1) * 60, 0, 0);
+
+    return displayDate;
+}
 
 function initializeWorkerGantt() {
     console.log("Initializing Advanced Worker Gantt...");
 
-    const container = document.getElementById('worker-gantt-container');
+    const container = document.getElementById('worker-gantt-container-advanced');
     if (!container) {
-        console.error("Worker Gantt container not found!");
+        console.error("Advanced Worker Gantt container not found!");
         return;
     }
-    container.innerHTML = ''; // Clear previous content
 
     if (workerGantt) {
         workerGantt.destroy();
     }
 
+    const items = new vis.DataSet([]);
+    const groups = new vis.DataSet([]);
+
     const options = {
-        stack: false, // Key change for alignment: render tasks in one line.
+        stack: false,
         start: new Date(),
-        end: new Date(new Date().getTime() + 3 * 24 * 60 * 60 * 1000), // 3-day window
+        end: new Date(new Date().getTime() + 24 * 60 * 60 * 1000),
         editable: false,
-        zoomable: true,
-        moveable: true,
+        zoomable: true, // Allow zoom for the main timeline
+        moveable: true, // Allow pan for the main timeline
         orientation: 'top',
-        showCurrentTime: true,
-        height: 'calc(100vh - 350px)',
-        // We hide the default timeline header completely
-        showMajorLabels: false,
+        height: '100%',
+        showMajorLabels: false, // Hide all default labels
         showMinorLabels: false,
-        // Remove group ordering, as it will be handled by the separate sidebar
-        groupOrder: 'order',
-        margin: {
-            item: {
-                vertical: 4 // This + item height should match sidebar row height
-            }
-        }
+        groupOrder: 'order' // Use a simple order property
     };
 
-    // Initialize timeline without items or groups initially
-    workerGantt = new vis.Timeline(container, new vis.DataSet([]), new vis.DataSet([]), options);
+    workerGantt = new vis.Timeline(container, items, groups, options);
 
     setupWorkerGanttEventListeners();
     populateWorkerGanttFilters();
     renderWorkerGantt(); // Initial render
+    setupAdvancedGanttScrollSync(); // Set up the scroll synchronization
 }
 
 function setupWorkerGanttEventListeners() {
+    if (!workerGantt) return;
+
     // Add event listeners for filters
     document.getElementById('wg-team-filter').addEventListener('change', renderWorkerGantt);
     document.getElementById('wg-shift-filter').addEventListener('change', renderWorkerGantt);
@@ -662,23 +717,94 @@ function setupWorkerGanttEventListeners() {
     document.getElementById('wg-worker-filter').addEventListener('change', renderWorkerGantt);
     document.getElementById('wg-refresh-btn').addEventListener('click', renderWorkerGantt);
 
-    if (!workerGantt) return;
+    workerGantt.on('select', function(properties) {
+        const selectedIds = properties.items;
+        if (selectedIds.length === 0) {
+            // If nothing is selected, remove all highlights
+            const allItems = workerGantt.itemsData.get({
+                filter: item => item.className && item.className.includes('wg-highlight')
+            });
+            allItems.forEach(item => {
+                item.className = item.className.replace(' wg-highlight', '');
+                workerGantt.itemsData.update(item);
+            });
+            return;
+        }
 
-    // Scroll Synchronization
-    const visContent = document.querySelector('#worker-gantt-container .vis-content');
-    const headerContainer = document.getElementById('gantt-header-container');
-    const sidebarContainer = document.getElementById('gantt-sidebar-container');
+        const selectedTaskId = selectedIds[0];
+        const allTasks = scenarioData.tasks;
 
-    if (visContent && headerContainer && sidebarContainer) {
-        visContent.addEventListener('scroll', () => {
-            headerContainer.scrollLeft = visContent.scrollLeft;
-            sidebarContainer.scrollTop = visContent.scrollTop;
+        // Build dependency maps for efficient lookup
+        const successors = {};
+        const predecessors = {};
+        allTasks.forEach(task => {
+            successors[task.taskId] = [];
+            predecessors[task.taskId] = task.dependencies || [];
+            if (task.dependencies) {
+                task.dependencies.forEach(dep => {
+                    if (!successors[dep]) {
+                        successors[dep] = [];
+                    }
+                    successors[dep].push(task.taskId);
+                });
+            }
         });
-    }
 
-    // Re-render custom header on timeline range change (zoom/pan)
-    workerGantt.on('rangechanged', () => {
-        renderAdvancedGanttHeader(workerGantt);
+        const toHighlight = new Set();
+        const queue = [selectedTaskId];
+        const visited = new Set();
+
+        // Find all successors (downstream)
+        while(queue.length > 0) {
+            const currentId = queue.shift();
+            if (visited.has(currentId)) continue;
+            visited.add(currentId);
+            toHighlight.add(currentId);
+
+            if (successors[currentId]) {
+                successors[currentId].forEach(succId => queue.push(succId));
+            }
+        }
+
+        // Find all predecessors (upstream)
+        queue.push(selectedTaskId);
+        while(queue.length > 0) {
+            const currentId = queue.shift();
+            if (visited.has(currentId)) continue;
+            visited.add(currentId);
+            toHighlight.add(currentId);
+
+            if (predecessors[currentId]) {
+                predecessors[currentId].forEach(predId => queue.push(predId));
+            }
+        }
+
+        // Update items in the timeline
+        const itemsToUpdate = [];
+        workerGantt.itemsData.forEach(item => {
+            let needsUpdate = false;
+            let newClassName = item.className || '';
+
+            if (toHighlight.has(item.id)) {
+                if (!newClassName.includes('wg-highlight')) {
+                    newClassName += ' wg-highlight';
+                    needsUpdate = true;
+                }
+            } else {
+                if (newClassName.includes('wg-highlight')) {
+                    newClassName = newClassName.replace(' wg-highlight', '');
+                    needsUpdate = true;
+                }
+            }
+
+            if (needsUpdate) {
+                itemsToUpdate.push({id: item.id, className: newClassName});
+            }
+        });
+
+        if (itemsToUpdate.length > 0) {
+            workerGantt.itemsData.update(itemsToUpdate);
+        }
     });
 }
 
@@ -722,6 +848,7 @@ function populateWorkerGanttFilters() {
     });
     teamSelect.value = currentTeam;
 
+
     // Populate Skillsets
     const currentSkill = skillsetSelect.value;
     skillsetSelect.innerHTML = '<option value="all">All Skillsets</option>';
@@ -745,69 +872,149 @@ function populateWorkerGanttFilters() {
     workerSelect.value = currentWorker;
 }
 
-const SHIFT_HOURS = {
-    '3rd': { start: 23, end: 6, duration: 7 },    // 11pm to 6am
-    '1st': { start: 6, end: 14.5, duration: 8.5 }, // 6am to 2:30pm
-    '2nd': { start: 14.5, end: 23, duration: 8.5 } // 2:30pm to 11pm
-};
+// New function to render the custom header for the advanced Gantt
+function renderAdvancedGanttHeader() {
+    const headerContainer = document.querySelector('.gantt-header-advanced');
+    if (!headerContainer || !workerGantt) return;
 
-// Helper to determine which shift a real-world time belongs to.
-function getShiftFromRealTime(realDate) {
-    const realHours = realDate.getHours() + realDate.getMinutes() / 60;
-    if (realHours >= 6 && realHours < 14.5) {
-        return '1st';
-    } else if (realHours >= 14.5 && realHours < 23) {
-        return '2nd';
-    } else {
-        return '3rd';
+    headerContainer.innerHTML = '';
+    const window = workerGantt.getWindow();
+    let current = new Date(window.start);
+    current.setHours(0, 0, 0, 0);
+
+    const totalWidth = workerGantt.body.dom.center.clientWidth;
+    const timeToPixels = totalWidth / (window.end - window.start);
+
+    // Create containers for each row of the header
+    const dateRow = document.createElement('div');
+    const shiftRow = document.createElement('div');
+    const timeRow = document.createElement('div');
+    dateRow.style.whiteSpace = 'nowrap';
+    shiftRow.style.whiteSpace = 'nowrap';
+    timeRow.style.whiteSpace = 'nowrap';
+
+
+    while (current < window.end) {
+        const dayStart = new Date(current);
+
+        const displayShift3Start = new Date(dayStart); displayShift3Start.setHours(0);
+        const displayShift1Start = new Date(dayStart); displayShift1Start.setHours(8);
+        const displayShift2Start = new Date(dayStart); displayShift2Start.setHours(16);
+        const displayShift2End = new Date(dayStart); displayShift2End.setHours(24);
+
+        const dateWidth = (displayShift2End - displayShift3Start) * timeToPixels;
+        const shiftWidth = dateWidth / 3;
+
+        // Date Header
+        const dateHeader = document.createElement('div');
+        dateHeader.className = 'gantt-header-item header-date';
+        dateHeader.textContent = dayStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        dateHeader.style.width = `${dateWidth}px`;
+        dateHeader.style.height = '25px';
+        dateRow.appendChild(dateHeader);
+
+        // Shift Headers
+        const shift3 = document.createElement('div');
+        shift3.className = 'gantt-header-item header-shift';
+        shift3.textContent = '3rd Shift';
+        shift3.style.width = `${shiftWidth}px`;
+        shift3.style.height = '20px';
+        shiftRow.appendChild(shift3);
+
+        const shift1 = document.createElement('div');
+        shift1.className = 'gantt-header-item header-shift';
+        shift1.textContent = '1st Shift';
+        shift1.style.width = `${shiftWidth}px`;
+        shift1.style.height = '20px';
+        shiftRow.appendChild(shift1);
+
+        const shift2 = document.createElement('div');
+        shift2.className = 'gantt-header-item header-shift';
+        shift2.textContent = '2nd Shift';
+        shift2.style.width = `${shiftWidth}px`;
+        shift2.style.height = '20px';
+        shiftRow.appendChild(shift2);
+
+        // Time Headers
+        const time3 = document.createElement('div');
+        time3.className = 'gantt-header-item header-time';
+        time3.textContent = '11pm - 6am';
+        time3.style.width = `${shiftWidth}px`;
+        time3.style.height = '20px';
+        timeRow.appendChild(time3);
+
+        const time1 = document.createElement('div');
+        time1.className = 'gantt-header-item header-time';
+        time1.textContent = '6am - 2:30pm';
+        time1.style.width = `${shiftWidth}px`;
+        time1.style.height = '20px';
+        timeRow.appendChild(time1);
+
+        const time2 = document.createElement('div');
+        time2.className = 'gantt-header-item header-time';
+        time2.textContent = '2:30pm - 11pm';
+        time2.style.width = `${shiftWidth}px`;
+        time2.style.height = '20px';
+        timeRow.appendChild(time2);
+
+
+        current.setDate(current.getDate() + 1);
     }
+     headerContainer.appendChild(dateRow);
+     headerContainer.appendChild(shiftRow);
+     headerContainer.appendChild(timeRow);
 }
 
 
-// This function maps a real timestamp to a "display" timestamp for the non-linear Gantt chart.
-function mapRealTimeToDisplayTime(realDate) {
-    if (!(realDate instanceof Date)) realDate = new Date(realDate);
+// New function to render the custom sidebar for the advanced Gantt
+function renderAdvancedGanttSidebar(teams) {
+    const sidebarContainer = document.querySelector('.gantt-sidebar-advanced');
+    if (!sidebarContainer) return;
 
-    const shift = getShiftFromRealTime(realDate);
-    const realHours = realDate.getHours() + realDate.getMinutes() / 60;
-    const dayStart = new Date(realDate);
-    dayStart.setHours(0, 0, 0, 0);
+    let sidebarHTML = '<div style="display: flex; flex-direction: column;">';
+    const workerRowHeight = 36; // This MUST match the height of rows in vis.js timeline items
 
-    let displayDate = new Date(dayStart);
-    let hoursIntoDisplayDay = 0;
+    Object.keys(teams).sort().forEach(teamName => {
+        const workersInTeam = teams[teamName];
+        if (workersInTeam.length > 0) {
+            const teamLabelHeight = workersInTeam.length * workerRowHeight;
 
-    const shiftInfo = SHIFT_HOURS[shift];
-    if (!shiftInfo) return realDate; // Fallback for unknown shifts
+            sidebarHTML += `<div style="display: flex; height: ${teamLabelHeight}px; border-bottom: 2px solid #ccc;">`;
+            sidebarHTML += `<div class="team-group-label" style="height: 100%; width: 40px;">${teamName}</div>`;
+            sidebarHTML += `<div style="display: flex; flex-direction: column; flex-grow: 1;">`;
 
-    let hoursIntoShift;
-    if (shift === '3rd') {
-        if (realHours >= shiftInfo.start) { // e.g., 23:30 on Day 1
-            hoursIntoShift = realHours - shiftInfo.start;
-        } else { // e.g., 01:00 on Day 2
-            hoursIntoShift = (24 - shiftInfo.start) + realHours;
+            workersInTeam.forEach(worker => {
+                const workerName = `${worker.name}${worker.skill ? ` (${worker.skill})` : ''}`;
+                sidebarHTML += `<div class="worker-group-label" style="height: ${workerRowHeight}px; line-height: ${workerRowHeight}px; border-top: 1px solid #eee;">${workerName}</div>`;
+            });
+
+            sidebarHTML += `</div></div>`;
         }
-    } else {
-        hoursIntoShift = realHours - shiftInfo.start;
-    }
-    hoursIntoShift = Math.max(0, Math.min(hoursIntoShift, shiftInfo.duration));
+    });
 
-    // Map the progress within the real shift to a standardized 8-hour display block
-    if (shift === '3rd') {
-        hoursIntoDisplayDay = (hoursIntoShift / shiftInfo.duration) * 8; // Display hours 0-8
-    } else if (shift === '1st') {
-        hoursIntoDisplayDay = 8 + (hoursIntoShift / shiftInfo.duration) * 8; // Display hours 8-16
-    } else if (shift === '2nd') {
-        hoursIntoDisplayDay = 16 + (hoursIntoShift / shiftInfo.duration) * 8; // Display hours 16-24
-    }
-
-    // A 3rd shift task starting late at night (e.g., 11 PM) belongs to the *next* day's schedule block.
-    if (shift === '3rd' && realHours >= shiftInfo.start) {
-        displayDate.setDate(displayDate.getDate() + 1);
-    }
-
-    displayDate.setHours(hoursIntoDisplayDay, (hoursIntoDisplayDay % 1) * 60, 0, 0);
-    return displayDate;
+    sidebarContainer.innerHTML = sidebarHTML + '</div>';
 }
+
+// New function to synchronize scrolling
+function setupAdvancedGanttScrollSync() {
+    const header = document.querySelector('.gantt-header-advanced');
+    const sidebar = document.querySelector('.gantt-sidebar-advanced');
+    const mainContainer = document.getElementById('worker-gantt-container-advanced');
+
+    if (!header || !sidebar || !mainContainer) return;
+
+    const visContent = mainContainer.querySelector('.vis-content');
+    if (!visContent) {
+        console.error("vis-content not found for scroll sync.");
+        return;
+    }
+
+    visContent.addEventListener('scroll', () => {
+        header.scrollLeft = visContent.scrollLeft;
+        sidebar.scrollTop = visContent.scrollTop;
+    });
+}
+
 
 function renderWorkerGantt() {
     console.log("Rendering Advanced Worker Gantt...");
@@ -818,13 +1025,13 @@ function renderWorkerGantt() {
 
     const assignments = savedAssignments[currentScenario] || {};
     if (!assignments.mechanicSchedules || Object.keys(assignments.mechanicSchedules).length === 0) {
-        document.getElementById('worker-gantt-container').innerHTML = `<div class="gantt-no-data"><h3>No Task Assignments Available</h3><p>Could not find any scheduled tasks for the current scenario.</p></div>`;
-        document.getElementById('gantt-header-container').innerHTML = '';
-        document.getElementById('gantt-sidebar-container').innerHTML = '';
+        document.getElementById('worker-gantt-container-advanced').innerHTML = `<div style="padding: 40px; text-align: center; color: #6b7280;"><h3>No Task Assignments Available</h3></div>`;
+        document.querySelector('.gantt-sidebar-advanced').innerHTML = '';
+        document.querySelector('.gantt-header-advanced').innerHTML = '';
         return;
     }
 
-    const selectedTeam = document.getElementById('wg-team-filter').value;
+    const selectedTeamFilter = document.getElementById('wg-team-filter').value;
     const selectedShift = document.getElementById('wg-shift-filter').value;
     const selectedSkill = document.getElementById('wg-skillset-filter').value;
     const selectedWorker = document.getElementById('wg-worker-filter').value;
@@ -838,81 +1045,58 @@ function renderWorkerGantt() {
         for (let i = 1; i <= capacity; i++) {
             const workerId = `${teamSkill}_${i}`;
             const shift = shifts[(i - 1) % shifts.length];
-            const descriptiveName = `${baseTeam} - Mechanic #${i}${skill ? ` (${skill})` : ''}`;
-            allWorkers.push({ id: workerId, name: `Mechanic #${i}`, descriptiveName: descriptiveName, team: baseTeam, skill: skill, shift: shift });
+            allWorkers.push({ id: workerId, name: `Mechanic #${i}`, team: baseTeam, skill: skill, shift: shift });
         }
     });
 
-    let filteredWorkers = allWorkers.filter(w => (selectedTeam === 'all' || w.team === selectedTeam) && (selectedShift === 'all' || w.shift === selectedShift) && (selectedSkill === 'all' || w.skill === selectedSkill) && (selectedWorker === 'all' || w.id === selectedWorker));
+    let filteredWorkers = allWorkers.filter(w => (selectedTeamFilter === 'all' || w.team === selectedTeamFilter) && (selectedShift === 'all' || w.shift === selectedShift) && (selectedSkill === 'all' || w.skill === selectedSkill) && (selectedWorker === 'all' || w.id === selectedWorker));
 
     if (filteredWorkers.length === 0) {
-        document.getElementById('worker-gantt-container').innerHTML = `<div class="gantt-no-data"><h3>No Workers Match Filters</h3><p>Try adjusting the filters to see assigned tasks.</p></div>`;
-        document.getElementById('gantt-header-container').innerHTML = '';
-        document.getElementById('gantt-sidebar-container').innerHTML = '';
+        document.getElementById('worker-gantt-container-advanced').innerHTML = `<div style="padding: 40px; text-align: center; color: #6b7280;"><h3>No Workers Match Filters</h3></div>`;
+        document.querySelector('.gantt-sidebar-advanced').innerHTML = '';
+        document.querySelector('.gantt-header-advanced').innerHTML = '';
         return;
     }
 
-    const teams = {}; // Structure: { teamName: { skillName: [worker, ...] } }
+    const teams = {};
     filteredWorkers.forEach(w => {
-        if (!teams[w.team]) {
-            teams[w.team] = {};
-        }
-        const skill = w.skill || 'General'; // Use 'General' for workers without a specific skill
-        if (!teams[w.team][skill]) {
-            teams[w.team][skill] = [];
-        }
-        teams[w.team][skill].push(w);
+        if (!teams[w.team]) teams[w.team] = [];
+        teams[w.team].push(w);
     });
 
     const visGroups = new vis.DataSet();
     const visItems = new vis.DataSet();
     let groupOrder = 0;
-    const sidebarData = [];
 
-    Object.keys(teams).sort().forEach(teamName => {
-        const teamSkills = teams[teamName];
-        const teamSidebarData = {
-            id: `team_${teamName.replace(/\s/g, '_')}`,
-            content: teamName,
-            isTeam: true,
-            skills: []
-        };
+    const sortedTeamNames = Object.keys(teams).sort();
+    const orderedWorkers = [];
 
-        Object.keys(teamSkills).sort().forEach(skillName => {
-            const workersInSkill = teamSkills[skillName];
-            const skillSidebarData = {
-                id: `skill_${skillName.replace(/\s/g, '_')}`,
-                content: skillName,
-                workers: []
-            };
-
-            const shiftOrder = { '1st': 1, '2nd': 2, '3rd': 3 };
-            workersInSkill.sort((a, b) => {
-                const shiftCompare = (shiftOrder[a.shift] || 99) - (shiftOrder[b.shift] || 99);
-                if (shiftCompare !== 0) return shiftCompare;
-                const numA = parseInt(a.name.match(/\d+$/)?.[0] || 0);
-                const numB = parseInt(b.name.match(/\d+$/)?.[0] || 0);
-                return numA - numB;
-            });
-
-            workersInSkill.forEach(worker => {
-                const shiftLabel = worker.shift.charAt(0).toUpperCase() + worker.shift.slice(1);
-                // Skill is now a label, so it can be removed from the worker's descriptive name if redundant
-                const workerContent = `${shiftLabel} Shift: ${worker.descriptiveName.replace(` (${worker.skill})`, '')}`;
-                visGroups.add({ id: worker.id, content: '&nbsp;', order: groupOrder++ });
-                skillSidebarData.workers.push({ id: worker.id, content: workerContent });
-            });
-            teamSidebarData.skills.push(skillSidebarData);
+    sortedTeamNames.forEach(teamName => {
+        const workersInTeam = teams[teamName];
+        const shiftOrder = { '1st': 1, '2nd': 2, '3rd': 3 };
+        workersInTeam.sort((a, b) => {
+            const shiftCompare = (shiftOrder[a.shift] || 99) - (shiftOrder[b.shift] || 99);
+            if (shiftCompare !== 0) return shiftCompare;
+            const numA = parseInt(a.name.match(/\d+$/)?.[0] || 0);
+            const numB = parseInt(b.name.match(/\d+$/)?.[0] || 0);
+            return numA - numB;
         });
-        sidebarData.push(teamSidebarData);
-    });
 
+        workersInTeam.forEach(worker => {
+            orderedWorkers.push(worker);
+            visGroups.add({
+                id: worker.id,
+                content: '', // Content is now in the custom sidebar
+                order: groupOrder++
+            });
+        });
+    });
 
     const productColors = {};
     const lightColors = ["#E0BBE4", "#957DAD", "#D291BC", "#FEC8D8", "#FFDFD3"];
     let colorIndex = 0;
 
-    Object.values(teams).flat().forEach(worker => {
+    orderedWorkers.forEach(worker => {
         const schedule = assignments.mechanicSchedules ? assignments.mechanicSchedules[worker.id] : null;
         if (schedule && schedule.tasks) {
             schedule.tasks.forEach(task => {
@@ -922,20 +1106,18 @@ function renderWorkerGantt() {
                 }
                 const realStart = new Date(task.startTime);
                 const realEnd = new Date(task.endTime);
-
-                // Use the mapping function to get display times
-                const displayStart = mapRealTimeToDisplayTime(realStart);
-                const displayEnd = mapRealTimeToDisplayTime(realEnd);
-
+                const displayStart = mapRealTimeToDisplayTime(realStart, worker.shift);
+                const displayEnd = mapRealTimeToDisplayTime(realEnd, worker.shift);
                 const uniqueItemId = `${worker.id}_${task.taskId}`;
+
                 visItems.add({
                     id: uniqueItemId,
                     group: worker.id,
                     content: task.taskId,
                     start: displayStart,
                     end: displayEnd,
-                    title: `Task: ${task.taskId}<br>Product: ${task.product}<br>Worker: ${worker.descriptiveName}<br>---<br>Real Start: ${realStart.toLocaleString()}<br>Real End: ${realEnd.toLocaleString()}`,
-                    style: `background-color: ${productColors[task.product]};`,
+                    title: `Task: ${task.taskId}<br>Product: ${task.product}<br>Worker: ${worker.name}<br>Shift: ${worker.shift}<br>Real Start: ${realStart.toLocaleString()}<br>Real End: ${realEnd.toLocaleString()}`,
+                    style: `background-color: ${productColors[task.product]}; border-color: ${productColors[task.product]};`,
                     className: `wg-task ${task.isCritical ? 'wg-critical' : ''}`
                 });
             });
@@ -945,78 +1127,24 @@ function renderWorkerGantt() {
     workerGantt.setGroups(visGroups);
     workerGantt.setItems(visItems);
 
-    setTimeout(() => {
-        renderAdvancedGanttHeader(workerGantt);
-        renderAdvancedGanttSidebar(sidebarData);
-        workerGantt.redraw();
-    }, 50);
-}
+    renderAdvancedGanttSidebar(teams);
+    renderAdvancedGanttHeader();
 
-function renderAdvancedGanttHeader(timeline) {
-    const headerContainer = document.getElementById('gantt-header-container');
-    if (!headerContainer || !timeline) return;
-
-    const { start, end } = timeline.getWindow(); // These are display times
-    let html = '<div class="adv-gantt-header-grid">';
-
-    let dayHeaders = '';
-    let shiftNameHeaders = '';
-    let shiftTimeHeaders = '';
-
-    let currentDate = new Date(start);
-    currentDate.setHours(0, 0, 0, 0);
-
-    while (currentDate < end) {
-        const nextDate = new Date(currentDate);
-        nextDate.setDate(nextDate.getDate() + 1);
-        const dayWidth = (Math.min(nextDate, end) - Math.max(currentDate, start)) / (end - start) * 100;
-
-        if (dayWidth > 0.1) {
-            dayHeaders += `<div class="header-date" style="width: ${dayWidth}%;">${currentDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric' }).toUpperCase()}</div>`;
-
-            const shiftWidth = dayWidth / 3;
-            shiftNameHeaders += `<div class="header-shift-label" style="width: ${shiftWidth}%;">3rd Shift</div>`;
-            shiftNameHeaders += `<div class="header-shift-label" style="width: ${shiftWidth}%;">1st Shift</div>`;
-            shiftNameHeaders += `<div class="header-shift-label" style="width: ${shiftWidth}%;">2nd Shift</div>`;
-
-            shiftTimeHeaders += `<div class="header-time" style="width: ${shiftWidth}%;">11pm - 6am</div>`;
-            shiftTimeHeaders += `<div class="header-time" style="width: ${shiftWidth}%;">6am - 2:30pm</div>`;
-            shiftTimeHeaders += `<div class="header-time" style="width: ${shiftWidth}%;">2:30pm - 11pm</div>`;
-        }
-        currentDate = nextDate;
-    }
-
-    html += `<div class="header-row-date">${dayHeaders}</div>`;
-    html += `<div class="header-row-shift">${shiftNameHeaders}</div>`;
-    html += `<div class="header-row-time">${shiftTimeHeaders}</div>`;
-    html += '</div>';
-    headerContainer.innerHTML = html;
-}
-
-function renderAdvancedGanttSidebar(sidebarData) {
-    const sidebarContainer = document.getElementById('gantt-sidebar-container');
-    if (!sidebarContainer) return;
-
-    let html = '';
-    sidebarData.forEach(team => {
-        html += `<div class="adv-gantt-sidebar-team">`;
-        html += `<div class="sidebar-team-label">${team.content}</div>`;
-
-        team.skills.forEach(skill => {
-            html += `<div class="adv-gantt-sidebar-skill">`;
-            html += `<div class="sidebar-skill-label">${skill.content}</div>`;
-            html += `<div class="sidebar-worker-container">`;
-            skill.workers.forEach(worker => {
-                html += `<div class="sidebar-worker-label" data-group-id="${worker.id}">${worker.content}</div>`;
-            });
-            html += `</div></div>`; // Close worker-container and sidebar-skill
-        });
-
-        html += `</div>`; // Close sidebar-team
+    workerGantt.on('rangechanged', () => {
+        renderAdvancedGanttHeader();
     });
 
-
-    sidebarContainer.innerHTML = html;
+    const legendContainer = document.getElementById('wg-product-legend');
+    if (legendContainer) {
+        legendContainer.innerHTML = '';
+        Object.keys(productColors).forEach(product => {
+            const color = productColors[product];
+            const legendItem = document.createElement('div');
+            legendItem.style.cssText = 'display: flex; align-items: center; gap: 6px; font-size: 12px;';
+            legendItem.innerHTML = `<div style="width: 16px; height: 16px; background-color: ${color}; border-radius: 3px;"></div> <span>${product}</span>`;
+            legendContainer.appendChild(legendItem);
+        });
+    }
 }
 
 // Main view update function
