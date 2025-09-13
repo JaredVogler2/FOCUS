@@ -939,18 +939,29 @@ function renderWorkerGanttHeader() {
 function renderWorkerGantt() {
     console.log("Rendering Worker Gantt...");
     if (!workerGantt) {
+        // This case should ideally not be hit if initialized properly, but as a fallback:
         initializeWorkerGantt();
         return;
     }
 
     const assignments = savedAssignments[currentScenario] || {};
+    // This check handles cases where auto-assignment might fail or produce no schedules.
     if (!assignments.mechanicSchedules || Object.keys(assignments.mechanicSchedules).length === 0) {
         const container = document.getElementById('worker-gantt-container');
-        container.innerHTML = `<div style="padding: 40px; text-align: center; color: #6b7280;"><h3>No Assigned Tasks</h3><p>Please use the <strong>Team Lead</strong> view to assign tasks first.</p></div>`;
-        workerGantt.setItems(new vis.DataSet([]));
-        workerGantt.setGroups(new vis.DataSet([]));
+        container.innerHTML = `<div style="padding: 40px; text-align: center; color: #6b7280;"><h3>No Task Assignments Available</h3><p>Could not find any scheduled tasks to display for the current scenario.</p></div>`;
+        if (workerGantt) {
+            workerGantt.setItems(new vis.DataSet([]));
+            workerGantt.setGroups(new vis.DataSet([]));
+        }
         return;
     }
+
+    const container = document.getElementById('worker-gantt-container');
+    // Clear previous "no tasks" messages if any
+    if (container.querySelector('h3')) {
+        container.innerHTML = '';
+    }
+
 
     const selectedTeam = document.getElementById('wg-team-filter').value;
     const selectedShift = document.getElementById('wg-shift-filter').value;
@@ -971,6 +982,17 @@ function renderWorkerGantt() {
     });
 
     let filteredWorkers = allWorkers.filter(w => (selectedTeam === 'all' || w.team === selectedTeam) && (selectedShift === 'all' || w.shift === selectedShift) && (selectedSkill === 'all' || w.skill === selectedSkill) && (selectedWorker === 'all' || w.id === selectedWorker));
+
+    // Handle case where filters result in no workers
+    if (filteredWorkers.length === 0) {
+        const container = document.getElementById('worker-gantt-container');
+        container.innerHTML = `<div style="padding: 40px; text-align: center; color: #6b7280;"><h3>No Workers Match Filters</h3><p>Try adjusting the filters to see assigned tasks.</p></div>`;
+        if (workerGantt) {
+            workerGantt.setItems(new vis.DataSet([]));
+            workerGantt.setGroups(new vis.DataSet([]));
+        }
+        return;
+    }
 
     const teams = {};
     filteredWorkers.forEach(w => {
@@ -3957,345 +3979,187 @@ function formatDateTime(date) {
     });
 }
 
-// Auto-assign function with capacity limits and persistent storage
-// Auto-assign function with proper skill-based nomenclature
-async function autoAssign() {
-    // Get visible tasks from the table (these are already filtered)
-    const taskRows = document.querySelectorAll('#taskTableBody tr');
+// --- Core Task Assignment Logic ---
+
+/**
+ * Generates task assignments for a given set of tasks and workers.
+ * This is the core logic, free of UI interactions.
+ * @param {Array} tasksToAssign - The tasks to be assigned.
+ * @param {Object} workerPool - An object of all available workers for the scenario.
+ * @returns {Object} An object containing the new mechanicSchedules and assignment stats.
+ */
+function generateAssignments(tasksToAssign, workerPool) {
+    const newSchedules = {};
     let successCount = 0;
-    let conflictCount = 0;
     let partialCount = 0;
+    let conflictCount = 0;
 
-    // Initialize saved assignments for this scenario if not exists
-    if (!savedAssignments[currentScenario]) {
-        savedAssignments[currentScenario] = {};
-    }
-
-    // Build mechanic availability tracking based on current filter
-    const mechanicAvailability = {};
-
-    // Determine which teams to include based on current selection
-    let teamsToInclude = [];
-    if (selectedTeam === 'all') {
-        teamsToInclude = Object.keys(scenarioData.teamCapacities || {});
-    } else if (selectedTeam === 'all-mechanics') {
-        teamsToInclude = Object.keys(scenarioData.teamCapacities || {})
-            .filter(t => t.toLowerCase().includes('mechanic') && !t.toLowerCase().includes('quality') && !t.toLowerCase().includes('customer'));
-    } else if (selectedTeam === 'all-quality') {
-        teamsToInclude = Object.keys(scenarioData.teamCapacities || {})
-            .filter(t => t.toLowerCase().includes('quality'));
-    } else if (selectedTeam === 'all-customer') {
-        teamsToInclude = Object.keys(scenarioData.teamCapacities || {})
-            .filter(t => t.toLowerCase().includes('customer'));
-    } else {
-        // For specific team selection, include all skill variations
-        teamsToInclude = Object.keys(scenarioData.teamCapacities || {})
-            .filter(t => {
-                const baseTeam = t.split(' (')[0];
-                return baseTeam === selectedTeam || t === selectedTeam;
-            });
-    }
-
-    // Apply skill filter if not 'all'
-    if (selectedSkill !== 'all') {
-        teamsToInclude = teamsToInclude.filter(teamSkill => {
-            const skillMatch = teamSkill.match(/\((.+?)\)/);
-            return !skillMatch || skillMatch[1] === selectedSkill;
-        });
-    }
-
-    // Create mechanics/inspectors/customers for each team-skill combination
-    teamsToInclude.forEach(teamSkill => {
-        const capacity = (scenarioData.teamCapacities && scenarioData.teamCapacities[teamSkill]) || 0;
-
-        // Parse team and skill from the teamSkill string
-        const skillMatch = teamSkill.match(/^(.+?)\s*\((.+?)\)\s*$/);
-        let baseTeam, skill;
-
-        if (skillMatch) {
-            baseTeam = skillMatch[1].trim();
-            skill = skillMatch[2].trim();
-        } else {
-            baseTeam = teamSkill;
-            skill = null;
-        }
-
-        const isQuality = baseTeam.toLowerCase().includes('quality');
-        const isCustomer = baseTeam.toLowerCase().includes('customer');
-
-        for (let i = 1; i <= capacity; i++) {
-            // Use the full team-skill identifier as the mechanic ID base
-            const mechId = `${teamSkill}_${i}`;
-
-            // Create display name with appropriate role
-            let displayName;
-            if (isCustomer) {
-                displayName = `Customer #${i} - ${baseTeam}`;
-            } else if (isQuality) {
-                displayName = `Inspector #${i} - ${baseTeam}`;
-            } else {
-                displayName = `Mechanic #${i} - ${baseTeam}`;
-            }
-            if (skill) {
-                displayName += ` (${skill})`;
-            }
-
-            mechanicAvailability[mechId] = {
-                id: mechId,
-                teamSkill: teamSkill,  // Full team-skill identifier
-                baseTeam: baseTeam,    // Base team name
-                skill: skill,           // Skill code
-                displayName: displayName,
-                busyUntil: null,
-                assignedTasks: [],
-                isQuality: isQuality,
-                isCustomer: isCustomer,
-                teamPosition: i
-            };
-        }
+    // Create a temporary, mutable copy of the worker pool for this run
+    const tempWorkerAvailability = JSON.parse(JSON.stringify(workerPool));
+    Object.values(tempWorkerAvailability).forEach(w => {
+        w.busyUntil = null; // Reset availability
+        w.assignedTasks = [];
     });
 
-    console.log(`Created ${Object.keys(mechanicAvailability).length} workers with skills:`,
-                Object.values(mechanicAvailability).slice(0, 3).map(m => m.displayName));
-
-    // Process each visible task row
-    taskRows.forEach(row => {
-        const taskId = row.dataset.taskId;
-        if (!taskId) return;
-
-        // Find the task data
-        const task = scenarioData.tasks.find(t => t.taskId === taskId);
-        if (!task) {
-            console.warn(`Task ${taskId} not found in scenario data`);
-            return;
-        }
-
+    // Process each task
+    tasksToAssign.forEach(task => {
         const mechanicsNeeded = task.mechanics || 1;
         const taskStart = new Date(task.startTime);
         const taskEnd = new Date(task.endTime);
 
-        // Get the task's team-skill requirement
-        const taskTeamSkill = task.teamSkill || task.team;
-        const taskSkill = task.skill;
-
-        // Check if this is a customer task
-        const isCustomerTask = task.isCustomerTask ||
-                              task.type === 'Customer' ||
-                              task.taskId.includes('CC_');
-
-        // Find available mechanics that match the task's team-skill requirement
-        const availableMechanics = [];
-        for (const [mechId, mech] of Object.entries(mechanicAvailability)) {
-            let matches = false;
-
-            // First, filter by the primary role (Customer, Quality, or Mechanic)
-            if (isCustomerTask) {
-                if (!mech.isCustomer) continue; // Skip non-customer inspectors
-                // For now, any customer inspector is a match. Skill checks can be added here.
-                matches = true;
-
-            } else if (task.isQualityTask || task.type === 'Quality Inspection') {
-                if (!mech.isQuality) continue; // Skip non-quality inspectors
-
-                // Now, apply skill-matching logic for Quality Inspectors
-                if (mech.teamSkill === taskTeamSkill) { // Exact team & skill match
-                    matches = true;
-                } else if (mech.baseTeam === task.team && (!taskSkill || taskSkill === mech.skill)) { // Same base team, and skill matches or is not required
-                    matches = true;
-                }
-
-            } else { // This is a standard Mechanic task
-                if (mech.isQuality || mech.isCustomer) continue; // Skip non-mechanics
-
-                // Apply skill-matching logic for Mechanics
-                if (mech.teamSkill === taskTeamSkill) { // Exact team & skill match
-                    matches = true;
-                } else if (mech.baseTeam === task.team && (!taskSkill || taskSkill === mech.skill)) { // Same base team, and skill matches or is not required
-                    matches = true;
-                }
-            }
-
-            if (matches) {
-                // Check if mechanic is available
-                if (!mech.busyUntil || mech.busyUntil <= taskStart) {
-                    availableMechanics.push(mech);
-                    if (availableMechanics.length >= mechanicsNeeded) break;
-                }
-            }
-        }
-
-        // Sort available mechanics by skill match priority
-        availableMechanics.sort((a, b) => {
-            // Prefer exact skill match
-            if (taskSkill) {
-                const aMatch = a.skill === taskSkill ? 0 : 1;
-                const bMatch = b.skill === taskSkill ? 0 : 1;
-                if (aMatch !== bMatch) return aMatch - bMatch;
-            }
-            // Then by team position
-            return a.teamPosition - b.teamPosition;
+        // Find available workers matching team and skill who are free
+        const availableWorkers = Object.values(tempWorkerAvailability).filter(worker => {
+            const teamMatch = worker.baseTeam === task.team;
+            const skillMatch = !task.skill || worker.skill === task.skill;
+            const isAvailable = !worker.busyUntil || new Date(worker.busyUntil) <= taskStart;
+            return teamMatch && skillMatch && isAvailable;
         });
 
-        // Assign mechanics to task
-        const assignedMechanics = [];
-
-        if (availableMechanics.length >= mechanicsNeeded) {
-            // Full assignment possible
-            for (let i = 0; i < mechanicsNeeded; i++) {
-                const mech = availableMechanics[i];
-                mech.busyUntil = taskEnd;
-                mech.assignedTasks.push({
-                    taskId: taskId,
-                    startTime: task.startTime,
-                    endTime: task.endTime,
-                    type: task.type,
-                    product: task.product,
-                    duration: task.duration,
-                    team: task.team,
-                    teamSkill: taskTeamSkill,
-                    skill: taskSkill,
-                    isCustomerTask: isCustomerTask
-                });
-                assignedMechanics.push(mech.id);
-
-                // Update the dropdown
-                const selectElement = row.querySelector(`.assign-select[data-task-id="${taskId}"][data-position="${i}"]`) ||
-                                    row.querySelector(`.assign-select[data-task-id="${taskId}"]`);
-                if (selectElement) {
-                    selectElement.value = mech.id;
-                    selectElement.style.backgroundColor = '#d4edda';
-                    setTimeout(() => {
-                        selectElement.style.backgroundColor = '';
-                        selectElement.classList.add('has-saved-assignment');
-                    }, 2000);
-                }
-            }
-
-            // Save the assignment
-            savedAssignments[currentScenario][taskId] = {
-                mechanics: assignedMechanics,
-                team: task.team,
-                teamSkill: taskTeamSkill,
-                skill: taskSkill,
-                mechanicsNeeded: mechanicsNeeded,
-                isCustomerTask: isCustomerTask
-            };
-
+        if (availableWorkers.length >= mechanicsNeeded) {
             successCount++;
-            row.style.backgroundColor = '#f0fdf4';
-        } else if (availableMechanics.length > 0) {
-            // Partial assignment
-            for (let i = 0; i < availableMechanics.length; i++) {
-                const mech = availableMechanics[i];
-                mech.busyUntil = taskEnd;
-                mech.assignedTasks.push({
-                    taskId: taskId,
-                    startTime: task.startTime,
-                    endTime: task.endTime,
-                    type: task.type,
-                    product: task.product,
-                    duration: task.duration,
-                    team: task.team,
-                    teamSkill: taskTeamSkill,
-                    skill: taskSkill,
-                    isCustomerTask: isCustomerTask
-                });
-                assignedMechanics.push(mech.id);
-
-                const selectElement = row.querySelector(`.assign-select[data-task-id="${taskId}"][data-position="${i}"]`);
-                if (selectElement) {
-                    selectElement.value = mech.id;
-                    selectElement.style.backgroundColor = '#fff3cd';
-                    setTimeout(() => {
-                        selectElement.style.backgroundColor = '';
-                        selectElement.classList.add('partial');
-                    }, 2000);
-                }
-            }
-
-            // Save partial assignment
-            savedAssignments[currentScenario][taskId] = {
-                mechanics: assignedMechanics,
-                team: task.team,
-                teamSkill: taskTeamSkill,
-                skill: taskSkill,
-                mechanicsNeeded: mechanicsNeeded,
-                partial: true,
-                isCustomerTask: isCustomerTask
-            };
-
-            partialCount++;
-            row.style.backgroundColor = '#fffbeb';
+            const workersToAssign = availableWorkers.slice(0, mechanicsNeeded);
+            workersToAssign.forEach(worker => {
+                worker.busyUntil = taskEnd.toISOString();
+                worker.assignedTasks.push(task);
+            });
         } else {
-            // No mechanics available
             conflictCount++;
-            row.style.backgroundColor = '#fef2f2';
-
-            console.log(`No workers available for task ${taskId}:`,
-                       `Team: ${task.team}, TeamSkill: ${taskTeamSkill}, Skill: ${taskSkill}`,
-                       `IsCustomer: ${isCustomerTask}`);
+            // In this silent version, we don't do partial assignments, just note the conflict.
         }
-
-        // Clear row color after a delay
-        setTimeout(() => {
-            row.style.backgroundColor = '';
-        }, 3000);
     });
 
-    // Store assignments for the Individual view
-    if (!savedAssignments[currentScenario].mechanicSchedules) {
-        savedAssignments[currentScenario].mechanicSchedules = {};
-    }
-
-    // Build mechanic schedules for Individual view
-    for (const [mechId, mech] of Object.entries(mechanicAvailability)) {
-        if (mech.assignedTasks.length > 0) {
-            savedAssignments[currentScenario].mechanicSchedules[mechId] = {
-                mechanicId: mechId,
-                displayName: mech.displayName,
-                team: mech.baseTeam,
-                teamSkill: mech.teamSkill,
-                skill: mech.skill,
-                isCustomer: mech.isCustomer,
-                isQuality: mech.isQuality,
-                tasks: mech.assignedTasks.sort((a, b) =>
-                    new Date(a.startTime) - new Date(b.startTime)
-                )
+    // Populate the new schedules object from the temporary tracker
+    Object.values(tempWorkerAvailability).forEach(worker => {
+        if (worker.assignedTasks.length > 0) {
+            newSchedules[worker.id] = {
+                mechanicId: worker.id,
+                displayName: worker.displayName,
+                team: worker.baseTeam,
+                skill: worker.skill,
+                tasks: worker.assignedTasks.sort((a, b) => new Date(a.startTime) - new Date(b.startTime))
             };
         }
-    }
+    });
 
-    // Update assignment summary
+    return {
+        schedules: newSchedules,
+        successCount: successCount,
+        conflictCount: conflictCount
+    };
+}
+
+
+// Auto-assign function with capacity limits and persistent storage
+// Auto-assign function with proper skill-based nomenclature
+async function autoAssign() {
+    // 1. Get tasks currently visible in the UI table
+    const taskRows = document.querySelectorAll('#taskTableBody tr');
+    const taskIdsToAssign = Array.from(taskRows).map(row => row.dataset.taskId).filter(Boolean);
+    const tasksToAssign = scenarioData.tasks.filter(task => taskIdsToAssign.includes(task.taskId));
+
+    // 2. Build the pool of available workers based on current UI filters
+    const workerPool = {};
+    const teamsToInclude = getFilteredTeams(); // Using a new helper for clarity
+
+    teamsToInclude.forEach(teamSkill => {
+        const capacity = (scenarioData.teamCapacities && scenarioData.teamCapacities[teamSkill]) || 0;
+        const skillMatch = teamSkill.match(/^(.+?)\s*\((.+?)\)\s*$/);
+        const baseTeam = skillMatch ? skillMatch[1].trim() : teamSkill;
+        const skill = skillMatch ? skillMatch[2].trim() : null;
+
+        for (let i = 1; i <= capacity; i++) {
+            const workerId = `${teamSkill}_${i}`;
+            workerPool[workerId] = { id: workerId, baseTeam, skill };
+        }
+    });
+
+    // 3. Call the core assignment logic
+    const assignmentResult = generateAssignments(tasksToAssign, workerPool);
+
+    // 4. Update UI and global state based on results
+    // This part remains in `autoAssign` because it's UI-specific
+    if (!savedAssignments[currentScenario]) savedAssignments[currentScenario] = {};
+    savedAssignments[currentScenario].mechanicSchedules = assignmentResult.schedules;
+
+    // Update dropdowns and provide visual feedback
+    updateAssignmentsInUI(assignmentResult.schedules);
+
+    // Update summary stats
     if (typeof updateAssignmentSummary === 'function') {
         updateAssignmentSummary();
     }
 
-    // Show results with skill information
-    const totalWorkers = Object.keys(mechanicAvailability).length;
-    const roleBreakdown = {};
-    Object.values(mechanicAvailability).forEach(mech => {
-        let role;
-        if (mech.isCustomer) role = 'Customer';
-        else if (mech.isQuality) role = 'Quality Inspector';
-        else role = 'Mechanic';
+    // 5. Show alert with results
+    const totalWorkers = Object.keys(workerPool).length;
+    alert(`Auto-Assignment Complete!\n\n` +
+          `Assigned Tasks: ${assignmentResult.successCount}\n` +
+          `Conflicts (No worker available): ${assignmentResult.conflictCount}\n\n` +
+          `Total Visible Tasks: ${tasksToAssign.length}\n` +
+          `Available Workforce for Filters: ${totalWorkers}\n\n` +
+          `Assignments have been saved.`);
 
-        roleBreakdown[role] = (roleBreakdown[role] || 0) + 1;
+    console.log('Auto-assigned schedules:', savedAssignments[currentScenario].mechanicSchedules);
+}
+
+// Helper to get filtered teams based on UI dropdowns
+function getFilteredTeams() {
+    let teamsToInclude = [];
+    if (selectedTeam === 'all') {
+        teamsToInclude = Object.keys(scenarioData.teamCapacities || {});
+    } else if (selectedTeam === 'all-mechanics') {
+        teamsToInclude = Object.keys(scenarioData.teamCapacities || {}).filter(t => t.toLowerCase().includes('mechanic') && !t.toLowerCase().includes('quality'));
+    } else if (selectedTeam === 'all-quality') {
+        teamsToInclude = Object.keys(scenarioData.teamCapacities || {}).filter(t => t.toLowerCase().includes('quality'));
+    } else {
+        teamsToInclude = Object.keys(scenarioData.teamCapacities || {}).filter(t => t.startsWith(selectedTeam));
+    }
+
+    if (selectedSkill !== 'all') {
+        teamsToInclude = teamsToInclude.filter(teamSkill => {
+            const skillMatch = teamSkill.match(/\((.+?)\)/);
+            return skillMatch && skillMatch[1] === selectedSkill;
+        });
+    }
+    return teamsToInclude;
+}
+
+// Helper to update the UI after auto-assignment
+function updateAssignmentsInUI(schedules) {
+    // First, clear all existing assignments from the UI
+    document.querySelectorAll('.assign-select').forEach(select => {
+        select.value = '';
+        select.classList.remove('has-saved-assignment');
+        select.style.backgroundColor = '';
     });
 
-    let roleInfo = Object.entries(roleBreakdown)
-        .map(([role, count]) => `${role}: ${count}`)
-        .join(', ');
+    // Create a map of task assignments to handle multi-worker tasks correctly
+    const taskToWorkerMap = {};
+    Object.entries(schedules).forEach(([workerId, schedule]) => {
+        schedule.tasks.forEach(task => {
+            if (!taskToWorkerMap[task.taskId]) {
+                taskToWorkerMap[task.taskId] = [];
+            }
+            taskToWorkerMap[task.taskId].push(workerId);
+        });
+    });
 
-    alert(`Auto-Assignment Complete!\n\n` +
-          `Fully Assigned: ${successCount}\n` +
-          `Partially Assigned: ${partialCount}\n` +
-          `Conflicts: ${conflictCount}\n\n` +
-          `Total Tasks: ${taskRows.length}\n` +
-          `Available Workforce: ${totalWorkers}\n` +
-          `Roles: ${roleInfo}\n\n` +
-          `Assignments have been saved and will persist across filter changes.`);
-
-    console.log('Saved assignments with customer tracking:', savedAssignments[currentScenario]);
+    // Now, populate the UI with the new assignments
+    Object.entries(taskToWorkerMap).forEach(([taskId, workerIds]) => {
+        const taskRow = document.querySelector(`#taskTableBody tr[data-task-id="${taskId}"]`);
+        if (taskRow) {
+            const selectElements = taskRow.querySelectorAll('.assign-select');
+            workerIds.forEach((workerId, index) => {
+                if (selectElements[index]) {
+                    selectElements[index].value = workerId;
+                    selectElements[index].style.backgroundColor = '#d4edda';
+                    setTimeout(() => {
+                        selectElements[index].style.backgroundColor = '';
+                        selectElements[index].classList.add('has-saved-assignment');
+                    }, 2000);
+                }
+            });
+        }
+    });
 }
 
 // Load saved assignments into the table
