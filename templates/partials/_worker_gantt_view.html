@@ -33,6 +33,19 @@
         .wg-group-label {
             font-size: 0.9em;
         }
+        /* Make the parent team group label bold */
+        .vis-timeline .vis-label.team-parent-group .vis-inner {
+            font-weight: bold !important;
+            color: #111827;
+        }
+        /* Style for the divider line on the left label side */
+        .vis-timeline .vis-label.worker-set-divider {
+            border-bottom: 2px solid #a0a0a0 !important;
+        }
+        /* Style for the divider line on the right timeline side */
+        .vis-timeline .vis-group.worker-set-divider {
+            border-bottom: 2px solid #e5e7eb !important;
+        }
     </style>
     <h2>Worker Gantt</h2>
     <p>Visual schedule organized by worker and shift, with a non-linear timeline representing shifts.</p>
