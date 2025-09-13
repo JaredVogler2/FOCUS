@@ -6215,22 +6215,35 @@ function setupWorkerGanttEventListeners() {
 
 function populateWorkerGanttFilters() {
     console.log("Populating Worker Gantt filters...");
-    if (!scenarioData || !scenarioData.tasks) return;
+    if (!scenarioData || !scenarioData.teamCapacities) return;
 
     const teamSelect = document.getElementById('wg-team-filter');
     const skillsetSelect = document.getElementById('wg-skillset-filter');
+    const workerSelect = document.getElementById('wg-worker-filter');
 
-    if (!teamSelect || !skillsetSelect) return;
+    if (!teamSelect || !skillsetSelect || !workerSelect) return;
 
     const teams = new Set();
     const skills = new Set();
+    const allWorkers = [];
 
-    (scenarioData.tasks || []).forEach(task => {
-        if (task.team) teams.add(task.team);
-        if (task.skill) skills.add(task.skill);
+    Object.entries(scenarioData.teamCapacities).forEach(([teamSkill, capacity]) => {
+        const skillMatch = teamSkill.match(/^(.+?)\s*\((.+?)\)\s*$/);
+        const baseTeam = skillMatch ? skillMatch[1].trim() : teamSkill;
+        const skill = skillMatch ? skillMatch[2].trim() : null;
+
+        teams.add(baseTeam);
+        if(skill) skills.add(skill);
+
+        for (let i = 1; i <= capacity; i++) {
+            const workerId = `${teamSkill}_${i}`;
+            const workerName = `${baseTeam} - Mechanic #${i}${skill ? ` (${skill})` : ''}`;
+            allWorkers.push({ id: workerId, name: workerName });
+        }
     });
 
     // Populate Teams
+    const currentTeam = teamSelect.value;
     teamSelect.innerHTML = '<option value="all">All Teams</option>';
     [...teams].sort().forEach(team => {
         const option = document.createElement('option');
@@ -6238,8 +6251,11 @@ function populateWorkerGanttFilters() {
         option.textContent = team;
         teamSelect.appendChild(option);
     });
+    teamSelect.value = currentTeam;
+
 
     // Populate Skillsets
+    const currentSkill = skillsetSelect.value;
     skillsetSelect.innerHTML = '<option value="all">All Skillsets</option>';
     [...skills].sort().forEach(skill => {
         const option = document.createElement('option');
@@ -6247,24 +6263,18 @@ function populateWorkerGanttFilters() {
         option.textContent = skill;
         skillsetSelect.appendChild(option);
     });
+    skillsetSelect.value = currentSkill;
 
     // Populate Workers
-    const workerSelect = document.getElementById('wg-worker-filter');
-    if (!workerSelect) return;
+    const currentWorker = workerSelect.value;
     workerSelect.innerHTML = '<option value="all">All Workers</option>';
-    let allWorkers = [];
-    Object.entries(scenarioData.teamCapacities).forEach(([teamSkill, capacity]) => {
-        for (let i = 1; i <= capacity; i++) {
-            const workerId = `${teamSkill}_${i}`;
-            allWorkers.push({ id: workerId, name: `${workerId}` });
-        }
-    });
     allWorkers.sort((a, b) => a.name.localeCompare(b.name)).forEach(worker => {
         const option = document.createElement('option');
         option.value = worker.id;
         option.textContent = worker.name;
         workerSelect.appendChild(option);
     });
+    workerSelect.value = currentWorker;
 }
 
 function renderWorkerGantt() {
@@ -6278,6 +6288,26 @@ function renderWorkerGantt() {
         console.warn("Worker Gantt: teamCapacities data not available.");
         return;
     }
+
+    // Check if assignments have been made. If not, show a message.
+    const assignments = savedAssignments[currentScenario] || {};
+    if (!assignments.mechanicSchedules || Object.keys(assignments.mechanicSchedules).length === 0) {
+        const container = document.getElementById('worker-gantt-container');
+        container.innerHTML = `
+            <div style="padding: 40px; text-align: center; color: #6b7280;">
+                <div style="font-size: 48px; margin-bottom: 10px;">📋</div>
+                <h3 style="color: #1f2937;">No Assigned Tasks to Display</h3>
+                <p style="font-size: 14px; margin-top: 5px;">
+                    Please go to the <strong>Team Lead</strong> view and use the <strong>Auto-Assign</strong> button first.
+                </p>
+            </div>
+        `;
+        // Clear timeline items and groups if they exist from a previous render
+        workerGantt.setItems(new vis.DataSet([]));
+        workerGantt.setGroups(new vis.DataSet([]));
+        return;
+    }
+
 
     // 1. Get filter values
     const selectedTeam = document.getElementById('wg-team-filter').value;
