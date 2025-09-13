@@ -1014,54 +1014,43 @@ function renderWorkerGantt() {
         const teamGroupId = `team_${teamName.replace(/\s/g, '_')}`;
         const workersInTeam = teams[teamName];
 
-        // Group workers by shift and sort them to have a consistent order
-        const workersByShift = {
-            '1st': workersInTeam.filter(w => w.shift === '1st').sort((a,b) => a.name.localeCompare(b.name)),
-            '2nd': workersInTeam.filter(w => w.shift === '2nd').sort((a,b) => a.name.localeCompare(b.name)),
-            '3rd': workersInTeam.filter(w => w.shift === '3rd').sort((a,b) => a.name.localeCompare(b.name)),
-        };
+        if (workersInTeam.length === 0) return;
 
-        const numSets = Math.max(workersByShift['1st'].length, workersByShift['2nd'].length, workersByShift['3rd'].length);
-
-        if (numSets === 0) return;
-
-        // Add the main team group, which will be collapsible
+        // Add the main team group.
         visGroups.add({
             id: teamGroupId,
             content: teamName,
-            treeLevel: 0,
             order: groupOrder++,
-            className: 'team-parent-group'
+            className: 'team-parent-group' // This class bolds the team name
         });
 
-        // Loop through the sets to create the worker rows
-        for (let i = 0; i < numSets; i++) {
-            const setWorkers = [
-                workersByShift['1st'][i],
-                workersByShift['2nd'][i],
-                workersByShift['3rd'][i]
-            ].filter(Boolean); // Filter out undefined workers if shifts are uneven
+        // Sort workers within the team by shift, then by their name/number.
+        const shiftOrder = { '1st': 1, '2nd': 2, '3rd': 3 };
+        workersInTeam.sort((a, b) => {
+            const shiftCompare = (shiftOrder[a.shift] || 99) - (shiftOrder[b.shift] || 99);
+            if (shiftCompare !== 0) {
+                return shiftCompare;
+            }
+            // Extract number from name like "Mechanic #12" for proper numeric sorting
+            const numA = parseInt(a.name.match(/\d+$/)?.[0] || 0);
+            const numB = parseInt(b.name.match(/\d+$/)?.[0] || 0);
+            return numA - numB;
+        });
 
-            setWorkers.forEach((worker, index) => {
-                const isLastInSet = index === setWorkers.length - 1;
-                const isLastSet = i === numSets - 1;
+        // Add each worker as a nested group under the team.
+        workersInTeam.forEach((worker, index) => {
+            const isLastInTeam = index === workersInTeam.length - 1;
+            const shiftLabel = worker.shift.charAt(0).toUpperCase() + worker.shift.slice(1);
 
-                let groupClassName = '';
-                // Add a divider class to the last worker of a set, but not for the very last set in the team
-                if (isLastInSet && !isLastSet) {
-                    groupClassName = 'worker-set-divider';
-                }
-
-                const shiftLabel = worker.shift.charAt(0).toUpperCase() + worker.shift.slice(1);
-                visGroups.add({
-                    id: worker.id,
-                    content: `<div class='wg-group-label'><b>${shiftLabel} Shift:</b> ${worker.name}</div>`,
-                    nestedIn: teamGroupId,
-                    order: groupOrder++,
-                    className: groupClassName
-                });
+            visGroups.add({
+                id: worker.id,
+                content: `<div class='wg-group-label'>${shiftLabel} Shift: ${worker.name}</div>`,
+                nestedIn: teamGroupId,
+                order: groupOrder++,
+                // Add a divider class to the last worker of a team to visually separate the teams
+                className: isLastInTeam ? 'worker-set-divider' : ''
             });
-        }
+        });
     });
 
     // Add Tasks using the mapping function
@@ -4107,7 +4096,7 @@ function getFilteredTeams() {
     if (selectedTeam === 'all') {
         teamsToInclude = Object.keys(scenarioData.teamCapacities || {});
     } else if (selectedTeam === 'all-mechanics') {
-        teamsToInclude = Object.keys(scenarioData.teamCapacities || {}).filter(t => t.toLowerCase().includes('mechanic') && !t.toLowerCase().includes('quality'));
+        teamsToInclude = Object.keys(scenarioData.teamCapacities || {}).filter(t => t.toLowerCase().includes('mechanic'));
     } else if (selectedTeam === 'all-quality') {
         teamsToInclude = Object.keys(scenarioData.teamCapacities || {}).filter(t => t.toLowerCase().includes('quality'));
     } else {
