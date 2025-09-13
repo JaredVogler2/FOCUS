@@ -740,6 +740,56 @@ function populateWorkerGanttFilters() {
     workerSelect.value = currentWorker;
 }
 
+const SHIFT_HOURS = {
+    '3rd': { start: 23, end: 6, duration: 7 },    // 11pm to 6am
+    '1st': { start: 6, end: 14.5, duration: 8.5 }, // 6am to 2:30pm
+    '2nd': { start: 14.5, end: 23, duration: 8.5 } // 2:30pm to 11pm
+};
+
+// This function maps a real timestamp to a "display" timestamp for the non-linear Gantt chart.
+function mapRealTimeToDisplayTime(realDate, shift) {
+    if (!(realDate instanceof Date)) realDate = new Date(realDate);
+
+    const realHours = realDate.getHours() + realDate.getMinutes() / 60;
+    const dayStart = new Date(realDate);
+    dayStart.setHours(0, 0, 0, 0);
+
+    let displayDate = new Date(dayStart);
+    let hoursIntoDisplayDay = 0;
+
+    const shiftInfo = SHIFT_HOURS[shift];
+    if (!shiftInfo) return realDate; // Fallback for unknown shifts
+
+    let hoursIntoShift;
+    if (shift === '3rd') {
+        if (realHours >= shiftInfo.start) { // e.g., 23:30 on Day 1
+            hoursIntoShift = realHours - shiftInfo.start;
+        } else { // e.g., 01:00 on Day 2
+            hoursIntoShift = (24 - shiftInfo.start) + realHours;
+        }
+    } else {
+        hoursIntoShift = realHours - shiftInfo.start;
+    }
+    hoursIntoShift = Math.max(0, Math.min(hoursIntoShift, shiftInfo.duration));
+
+    // Map the progress within the real shift to a standardized 8-hour display block
+    if (shift === '3rd') {
+        hoursIntoDisplayDay = (hoursIntoShift / shiftInfo.duration) * 8; // Display hours 0-8
+    } else if (shift === '1st') {
+        hoursIntoDisplayDay = 8 + (hoursIntoShift / shiftInfo.duration) * 8; // Display hours 8-16
+    } else if (shift === '2nd') {
+        hoursIntoDisplayDay = 16 + (hoursIntoShift / shiftInfo.duration) * 8; // Display hours 16-24
+    }
+
+    // A 3rd shift task starting late at night (e.g., 11 PM) belongs to the *next* day's schedule block.
+    if (shift === '3rd' && realHours >= shiftInfo.start) {
+        displayDate.setDate(displayDate.getDate() + 1);
+    }
+
+    displayDate.setHours(hoursIntoDisplayDay, (hoursIntoDisplayDay % 1) * 60, 0, 0);
+    return displayDate;
+}
+
 function renderWorkerGantt() {
     console.log("Rendering Advanced Worker Gantt...");
     if (!workerGantt) {
@@ -769,7 +819,8 @@ function renderWorkerGantt() {
         for (let i = 1; i <= capacity; i++) {
             const workerId = `${teamSkill}_${i}`;
             const shift = shifts[(i - 1) % shifts.length];
-            allWorkers.push({ id: workerId, name: `Mechanic #${i}`, team: baseTeam, skill: skill, shift: shift });
+            const descriptiveName = `${baseTeam} - Mechanic #${i}${skill ? ` (${skill})` : ''}`;
+            allWorkers.push({ id: workerId, name: `Mechanic #${i}`, descriptiveName: descriptiveName, team: baseTeam, skill: skill, shift: shift });
         }
     });
 
@@ -791,22 +842,14 @@ function renderWorkerGantt() {
     const visGroups = new vis.DataSet();
     const visItems = new vis.DataSet();
     let groupOrder = 0;
-
     const sidebarData = [];
 
     Object.keys(teams).sort().forEach(teamName => {
         const teamGroupId = `team_${teamName.replace(/\s/g, '_')}`;
         const workersInTeam = teams[teamName];
-
         if (workersInTeam.length === 0) return;
 
-        const teamSidebarData = {
-            id: teamGroupId,
-            content: teamName,
-            isTeam: true,
-            workers: []
-        };
-
+        const teamSidebarData = { id: teamGroupId, content: teamName, isTeam: true, workers: [] };
         const shiftOrder = { '1st': 1, '2nd': 2, '3rd': 3 };
         workersInTeam.sort((a, b) => {
             const shiftCompare = (shiftOrder[a.shift] || 99) - (shiftOrder[b.shift] || 99);
@@ -818,13 +861,8 @@ function renderWorkerGantt() {
 
         workersInTeam.forEach(worker => {
             const shiftLabel = worker.shift.charAt(0).toUpperCase() + worker.shift.slice(1);
-            const workerContent = `${shiftLabel} Shift: ${worker.name}`;
-
-            visGroups.add({
-                id: worker.id,
-                content: '&nbsp;', // Use non-breaking space to ensure row height
-                order: groupOrder++
-            });
+            const workerContent = `${shiftLabel} Shift: ${worker.descriptiveName}`;
+            visGroups.add({ id: worker.id, content: '&nbsp;', order: groupOrder++ });
             teamSidebarData.workers.push({ id: worker.id, content: workerContent });
         });
         sidebarData.push(teamSidebarData);
@@ -845,16 +883,18 @@ function renderWorkerGantt() {
                 const realStart = new Date(task.startTime);
                 const realEnd = new Date(task.endTime);
 
-                // FIX: Create a unique ID for each item to prevent console errors
-                const uniqueItemId = `${worker.id}_${task.taskId}`;
+                // Use the mapping function to get display times
+                const displayStart = mapRealTimeToDisplayTime(realStart, worker.shift);
+                const displayEnd = mapRealTimeToDisplayTime(realEnd, worker.shift);
 
+                const uniqueItemId = `${worker.id}_${task.taskId}`;
                 visItems.add({
                     id: uniqueItemId,
                     group: worker.id,
-                    content: `JOB ${task.taskId.split('_').pop()}`,
-                    start: realStart,
-                    end: realEnd,
-                    title: `Task: ${task.taskId}<br>Product: ${task.product}<br>Worker: ${worker.name}`,
+                    content: task.taskId,
+                    start: displayStart,
+                    end: displayEnd,
+                    title: `Task: ${task.taskId}<br>Product: ${task.product}<br>Worker: ${worker.descriptiveName}<br>---<br>Real Start: ${realStart.toLocaleString()}<br>Real End: ${realEnd.toLocaleString()}`,
                     style: `background-color: ${productColors[task.product]};`,
                     className: `wg-task ${task.isCritical ? 'wg-critical' : ''}`
                 });
@@ -865,11 +905,10 @@ function renderWorkerGantt() {
     workerGantt.setGroups(visGroups);
     workerGantt.setItems(visItems);
 
-    // Defer rendering of custom elements until after vis.js has drawn the timeline
     setTimeout(() => {
         renderAdvancedGanttHeader(workerGantt);
         renderAdvancedGanttSidebar(sidebarData);
-        workerGantt.redraw(); // Redraw to ensure alignment
+        workerGantt.redraw();
     }, 50);
 }
 
@@ -877,62 +916,39 @@ function renderAdvancedGanttHeader(timeline) {
     const headerContainer = document.getElementById('gantt-header-container');
     if (!headerContainer || !timeline) return;
 
-    const { start, end } = timeline.getWindow();
+    const { start, end } = timeline.getWindow(); // These are display times
     let html = '<div class="adv-gantt-header-grid">';
 
-    // Row 1: Date (e.g., AUGUST 22)
+    let dayHeaders = '';
+    let shiftNameHeaders = '';
+    let shiftTimeHeaders = '';
+
     let currentDate = new Date(start);
     currentDate.setHours(0, 0, 0, 0);
-    let dateHeaders = '';
+
     while (currentDate < end) {
         const nextDate = new Date(currentDate);
         nextDate.setDate(nextDate.getDate() + 1);
         const dayWidth = (Math.min(nextDate, end) - Math.max(currentDate, start)) / (end - start) * 100;
-        if (dayWidth > 0) {
-            dateHeaders += `<div class="header-date" style="width: ${dayWidth}%;">${currentDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric' }).toUpperCase()}</div>`;
+
+        if (dayWidth > 0.1) {
+            dayHeaders += `<div class="header-date" style="width: ${dayWidth}%;">${currentDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric' }).toUpperCase()}</div>`;
+
+            const shiftWidth = dayWidth / 3;
+            shiftNameHeaders += `<div class="header-shift-label" style="width: ${shiftWidth}%;">3rd Shift</div>`;
+            shiftNameHeaders += `<div class="header-shift-label" style="width: ${shiftWidth}%;">1st Shift</div>`;
+            shiftNameHeaders += `<div class="header-shift-label" style="width: ${shiftWidth}%;">2nd Shift</div>`;
+
+            shiftTimeHeaders += `<div class="header-time" style="width: ${shiftWidth}%;">11pm - 6am</div>`;
+            shiftTimeHeaders += `<div class="header-time" style="width: ${shiftWidth}%;">6am - 2:30pm</div>`;
+            shiftTimeHeaders += `<div class="header-time" style="width: ${shiftWidth}%;">2:30pm - 11pm</div>`;
         }
         currentDate = nextDate;
     }
-    html += `<div class="header-row-date">${dateHeaders}</div>`;
 
-    // Row 2: Shifts (e.g., 3rd Shift, 1st Shift, 2nd Shift)
-    let shiftHeaders = '';
-    const totalHours = (end - start) / (1000 * 60 * 60);
-    const shiftDefs = [
-        { name: '3rd Shift', startHour: 23, endHour: 6 },
-        { name: '1st Shift', startHour: 6, endHour: 15 }, // Ends 3 PM
-        { name: '2nd Shift', startHour: 15, endHour: 23 }
-    ];
-
-    let currentHourDate = new Date(start);
-    while (currentHourDate < end) {
-        const h = currentHourDate.getHours();
-        let shiftName = '';
-        if (h >= 6 && h < 15) shiftName = '1st Shift';
-        else if (h >= 15 && h < 23) shiftName = '2nd Shift';
-        else shiftName = '3rd Shift';
-
-        const hourWidth = 1 / totalHours * 100;
-        shiftHeaders += `<div class="header-shift" style="width: ${hourWidth}%;" title="${shiftName}"></div>`;
-        currentHourDate.setHours(currentHourDate.getHours() + 1);
-    }
-    // This is a simplified representation. A more accurate one would group these.
-    // For now, let's use a simple placeholder for the shift names above the hours.
-    html += `<div class="header-row-shift"><div class="header-shift-label">3rd SHIFT</div><div class="header-shift-label">1st SHIFT</div><div class="header-shift-label">2nd SHIFT</div></div>`;
-
-
-    // Row 3: Hours (e.g., 11pm, 12am, 1am...)
-    let timeHeaders = '';
-    let currentTime = new Date(start);
-    while(currentTime < end) {
-        const hourWidth = 1 / totalHours * 100;
-        if (hourWidth > 1) { // Only render label if it's wide enough
-             timeHeaders += `<div class="header-time" style="width: ${hourWidth}%;">${currentTime.toLocaleTimeString('en-US', { hour: 'numeric', hour12: true })}</div>`;
-        }
-        currentTime.setHours(currentTime.getHours() + 1);
-    }
-    html += `<div class="header-row-time">${timeHeaders}</div>`;
-
+    html += `<div class="header-row-date">${dayHeaders}</div>`;
+    html += `<div class="header-row-shift">${shiftNameHeaders}</div>`;
+    html += `<div class="header-row-time">${shiftTimeHeaders}</div>`;
     html += '</div>';
     headerContainer.innerHTML = html;
 }
