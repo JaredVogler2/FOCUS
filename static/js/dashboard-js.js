@@ -8164,25 +8164,11 @@ function updateMechanicView() {
         }
     }
 
-    // Update mechanic schedules from current assignments
-    updateMechanicSchedulesFromAssignments();
-
-    // Handle current selection without changing it
-    const selection = mechanicSelect ? mechanicSelect.value : 'none';
-
-    if (!selection || selection === 'none') {
-        displayNoSelection();
-        return;
-    }
-
-    // Process the current selection - USE FEEDBACK VERSION for individual workers
-    if (selection === 'all' || selection === 'all-mechanics' || selection === 'all-quality' || selection === 'all-customer') {
-        const viewData = getAggregatedTasks(selection, 'all');
-        displayAggregatedView(viewData, 'aggregate', selection);
-    } else {
-        // For individual mechanics, use the feedback-enabled version
-        const mechanicSchedule = getIndividualMechanicTasks(selection);
-        displayIndividualViewWithFeedback(mechanicSchedule, selection);
+    // After populating, or if it was already populated,
+    // get a fresh reference and call the handler with the correct `this` context.
+    const freshMechanicSelect = document.getElementById('mechanicSelect');
+    if (freshMechanicSelect) {
+        handleMechanicSelection.call(freshMechanicSelect);
     }
 }
 
