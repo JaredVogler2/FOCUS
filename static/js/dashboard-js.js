@@ -31,9 +31,7 @@ function initializeSavedAssignments() {
     if (!savedAssignments[currentScenario]) {
         savedAssignments[currentScenario] = {};
     }
-    if (!savedAssignments[currentScenario].mechanicSchedules) {
-        savedAssignments[currentScenario].mechanicSchedules = {};
-    }
+    // The mechanicSchedules object will now be generated on-the-fly, not stored.
 }
 
 // Initialize dashboard on page load
@@ -373,7 +371,7 @@ function setupEventListeners() {
                 e.target.classList.remove('has-saved-assignment');
             }
 
-            updateMechanicSchedulesFromAssignments();
+            // updateMechanicSchedulesFromAssignments(); // This is no longer needed as schedules are generated on-demand.
 
             if (mechanicId) {
                 fetch('/api/assign_task', {
@@ -1020,7 +1018,9 @@ function renderWorkerGantt() {
     }
 
     const assignments = savedAssignments[currentScenario] || {};
-    if (!assignments.mechanicSchedules || Object.keys(assignments.mechanicSchedules).length === 0) {
+    const mechanicSchedules = generateMechanicSchedulesFromAssignments(assignments);
+
+    if (Object.keys(mechanicSchedules).length === 0) {
         document.getElementById('worker-gantt-container-advanced').innerHTML = `<div style="padding: 40px; text-align: center; color: #6b7280;"><h3>No Task Assignments Available</h3></div>`;
         document.querySelector('.gantt-sidebar-advanced').innerHTML = '';
         document.querySelector('.gantt-header-advanced').innerHTML = '';
@@ -1093,7 +1093,7 @@ function renderWorkerGantt() {
     let colorIndex = 0;
 
     orderedWorkers.forEach(worker => {
-        const schedule = assignments.mechanicSchedules ? assignments.mechanicSchedules[worker.id] : null;
+        const schedule = mechanicSchedules[worker.id] || null;
         if (schedule && schedule.tasks) {
             schedule.tasks.forEach(task => {
                 if (!productColors[task.product]) {
@@ -2600,11 +2600,12 @@ function getAggregatedTasks(selection, skillFilter) {
     const allTasks = [];
     const mechanicsSummary = {};
 
-    if (!savedAssignments[currentScenario] || !savedAssignments[currentScenario].mechanicSchedules) {
+    const assignments = savedAssignments[currentScenario] || {};
+    const schedules = generateMechanicSchedulesFromAssignments(assignments);
+
+    if (Object.keys(schedules).length === 0) {
         return { tasks: [], mechanics: {}, totalMechanics: 0 };
     }
-
-    const schedules = savedAssignments[currentScenario].mechanicSchedules;
 
     Object.entries(schedules).forEach(([mechanicId, schedule]) => {
         // Determine if this worker should be included based on selection
@@ -2706,11 +2707,9 @@ function getTeamTasks(teamName, skillFilter) {
 }
 
 function getIndividualMechanicTasks(mechanicId) {
-    if (!savedAssignments[currentScenario] || !savedAssignments[currentScenario].mechanicSchedules) {
-        return null;
-    }
-
-    return savedAssignments[currentScenario].mechanicSchedules[mechanicId];
+    const assignments = savedAssignments[currentScenario] || {};
+    const schedules = generateMechanicSchedulesFromAssignments(assignments);
+    return schedules[mechanicId] || null;
 }
 
 function formatTime(date) {
@@ -4121,7 +4120,27 @@ async function autoAssign() {
     // 4. Update UI and global state based on results
     // This part remains in `autoAssign` because it's UI-specific
     if (!savedAssignments[currentScenario]) savedAssignments[currentScenario] = {};
-    savedAssignments[currentScenario].mechanicSchedules = assignmentResult.schedules;
+    // DEPRECATED: savedAssignments[currentScenario].mechanicSchedules = assignmentResult.schedules;
+
+    // Convert the mechanic-keyed schedule back into a task-keyed assignment object
+    const newAssignmentsByTask = {};
+    Object.entries(assignmentResult.schedules).forEach(([mechanicId, schedule]) => {
+        schedule.tasks.forEach(task => {
+            if (!newAssignmentsByTask[task.taskId]) {
+                const originalTask = scenarioData.tasks.find(t => t.taskId === task.taskId);
+                newAssignmentsByTask[task.taskId] = {
+                    mechanics: [],
+                    team: originalTask.team,
+                    mechanicsNeeded: originalTask.mechanics || 1
+                };
+            }
+            newAssignmentsByTask[task.taskId].mechanics.push(mechanicId);
+        });
+    });
+
+    // Merge these new assignments into the main savedAssignments object, which is the source of truth
+    Object.assign(savedAssignments[currentScenario], newAssignmentsByTask);
+
 
     // Update dropdowns and provide visual feedback
     updateAssignmentsInUI(assignmentResult.schedules);
@@ -4244,7 +4263,7 @@ function loadSavedAssignments() {
     if (loadedCount > 0) {
         console.log(`Loaded ${loadedCount} saved assignments for ${currentScenario}`);
     }
-    updateMechanicSchedulesFromAssignments();
+    // updateMechanicSchedulesFromAssignments(); // No longer needed
 }
 
 // Save assignments to localStorage for persistence across sessions
@@ -4264,8 +4283,6 @@ function loadAssignmentsFromStorage(silent = false) {
         const stored = localStorage.getItem(`assignments_${currentScenario}`);
         if (stored) {
             savedAssignments[currentScenario] = JSON.parse(stored);
-            // Ensure the mechanicSchedules are rebuilt from the loaded assignments
-            updateMechanicSchedulesFromAssignments();
             if (!silent) {
                 alert('Previous assignments loaded successfully!');
             }
@@ -8065,89 +8082,64 @@ function handleMechanicSelection() {
     }
 }
 
-// Function to update mechanic schedules from current assignments
-function updateMechanicSchedulesFromAssignments() {
-    if (!savedAssignments[currentScenario]) {
-        savedAssignments[currentScenario] = {};
-    }
+/**
+ * Generates a mechanic-keyed schedule object from the task-keyed assignment data.
+ * This is a non-destructive, on-the-fly generator.
+ * @param {Object} taskAssignments - The source of truth for assignments, keyed by taskId.
+ * @returns {Object} A new object keyed by mechanicId, for use in views.
+ */
+function generateMechanicSchedulesFromAssignments(taskAssignments) {
+    const schedules = {};
+    if (!taskAssignments) return schedules;
 
-    if (!savedAssignments[currentScenario].mechanicSchedules) {
-        savedAssignments[currentScenario].mechanicSchedules = {};
-    }
+    // Process all task assignments to build up the mechanic-keyed view
+    Object.entries(taskAssignments).forEach(([taskId, assignment]) => {
+        if (taskId === 'mechanicSchedules') return; // Should not happen anymore, but good guard
+        if (!assignment.mechanics || assignment.mechanics.length === 0) return;
 
-    // Clear existing schedules
-    savedAssignments[currentScenario].mechanicSchedules = {};
+        const task = scenarioData.tasks.find(t => t.taskId === taskId);
+        if (!task) return;
 
-    // Process all task assignments
-    Object.entries(savedAssignments[currentScenario]).forEach(([taskId, assignment]) => {
-        if (taskId === 'mechanicSchedules') return; // Skip the schedules object itself
+        assignment.mechanics.forEach(mechanicId => {
+            if (!mechanicId) return;
 
-        if (assignment.mechanics && assignment.mechanics.length > 0) {
-            const task = scenarioData.tasks.find(t => t.taskId === taskId);
-            if (!task) return;
+            if (!schedules[mechanicId]) {
+                const parts = mechanicId.split('_');
+                const teamSkill = parts.slice(0, -1).join('_');
+                const position = parts[parts.length - 1];
+                const skillMatch = teamSkill.match(/^(.+?)\s*\((.+?)\)\s*$/);
+                const baseTeam = skillMatch ? skillMatch[1].trim() : teamSkill;
+                const skill = skillMatch ? skillMatch[2].trim() : null;
+                const isCustomer = baseTeam.toLowerCase().includes('customer');
+                const isQuality = baseTeam.toLowerCase().includes('quality');
+                let displayName;
+                if (isCustomer) displayName = `Customer #${position} - ${baseTeam}${skill ? ` (${skill})` : ''}`;
+                else if (isQuality) displayName = `Inspector #${position} - ${baseTeam}${skill ? ` (${skill})` : ''}`;
+                else displayName = `Mechanic #${position} - ${baseTeam}${skill ? ` (${skill})` : ''}`;
 
-            assignment.mechanics.forEach(mechanicId => {
-                if (!mechanicId) return; // Skip empty assignments
+                schedules[mechanicId] = {
+                    mechanicId: mechanicId,
+                    displayName: displayName,
+                    team: baseTeam,
+                    skill: skill,
+                    tasks: []
+                };
+            }
 
-                // Initialize mechanic schedule if needed
-                if (!savedAssignments[currentScenario].mechanicSchedules[mechanicId]) {
-                    // Parse the mechanic ID to get display info
-                    const parts = mechanicId.split('_');
-                    const teamSkill = parts.slice(0, -1).join('_');
-                    const position = parts[parts.length - 1];
-
-                    const skillMatch = teamSkill.match(/^(.+?)\s*\((.+?)\)\s*$/);
-                    let baseTeam = skillMatch ? skillMatch[1].trim() : teamSkill;
-                    let skill = skillMatch ? skillMatch[2].trim() : null;
-
-                    const isCustomer = baseTeam.toLowerCase().includes('customer');
-                    const isQuality = baseTeam.toLowerCase().includes('quality');
-
-                    let displayName;
-                    if (isCustomer) {
-                        displayName = `Customer #${position} - ${baseTeam}${skill ? ` (${skill})` : ''}`;
-                    } else if (isQuality) {
-                        displayName = `Inspector #${position} - ${baseTeam}${skill ? ` (${skill})` : ''}`;
-                    } else {
-                        displayName = `Mechanic #${position} - ${baseTeam}${skill ? ` (${skill})` : ''}`;
-                    }
-
-                    savedAssignments[currentScenario].mechanicSchedules[mechanicId] = {
-                        mechanicId: mechanicId,
-                        displayName: displayName,
-                        team: baseTeam,
-                        teamSkill: teamSkill,
-                        skill: skill,
-                        isCustomer: isCustomer,
-                        isQuality: isQuality,
-                        tasks: []
-                    };
-                }
-
-                // Add task to mechanic's schedule
-                savedAssignments[currentScenario].mechanicSchedules[mechanicId].tasks.push({
-                    taskId: taskId,
-                    startTime: task.startTime,
-                    endTime: task.endTime,
-                    type: task.type,
-                    product: task.product,
-                    duration: task.duration,
-                    team: task.team,
-                    teamSkill: assignment.teamSkill,
-                    skill: assignment.skill,
-                    isCustomerTask: assignment.isCustomerTask
-                });
-            });
-        }
+            schedules[mechanicId].tasks.push(task);
+        });
     });
 
-    // Sort tasks within each mechanic's schedule
-    Object.values(savedAssignments[currentScenario].mechanicSchedules).forEach(schedule => {
+    // Sort tasks within each schedule
+    Object.values(schedules).forEach(schedule => {
         schedule.tasks.sort((a, b) => new Date(a.startTime) - new Date(b.startTime));
     });
 
-    console.log('Updated mechanic schedules:', savedAssignments[currentScenario].mechanicSchedules);
+    return schedules;
 }
+
+// DEPRECATED: This function was replaced by the on-the-fly generateMechanicSchedulesFromAssignments
+// function updateMechanicSchedulesFromAssignments() { ... }
 
 // Enhanced updateMechanicView that uses the new feedback system
 function updateMechanicView() {
