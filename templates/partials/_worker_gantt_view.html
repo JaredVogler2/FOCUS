@@ -1,84 +1,7 @@
 <!-- Worker Gantt View -->
 <div id="worker-gantt-view" class="view-content" style="display: none;">
-    <style>
-        /* General styling for the new header items rendered inside vis.js */
-        .vis-timeline .vis-item.gantt-header-item {
-            background-color: #f8fafc;
-            border: none;
-            border-right: 1px solid #e5e7eb;
-            border-bottom: 1px solid #e5e7eb;
-            text-align: center;
-            font-weight: bold;
-            color: #374151;
-            z-index: 0; /* Place behind tasks */
-            padding: 4px;
-            box-sizing: border-box;
-        }
-        .vis-timeline .vis-item.vis-background.header-date {
-            font-size: 1.1em;
-            font-weight: 600;
-        }
-        .vis-timeline .vis-item.vis-background.header-shift {
-            font-size: 1em;
-        }
-        .vis-timeline .vis-item.vis-background.header-time {
-            font-size: 0.9em;
-            color: #6b7280;
-        }
-        /* Hide the group labels for our special header groups */
-        .vis-timeline .vis-labelset .vis-label.gantt-header-group {
-            display: none;
-        }
-        /* Style for the nested group labels (worker names) */
-        .wg-group-label {
-            font-size: 0.9em;
-        }
-        /* Make the parent team group label bold */
-        .vis-timeline .vis-label.team-parent-group .vis-inner {
-            font-weight: bold !important;
-            color: #111827;
-        }
-        /* Style for the divider line on the left label side */
-        .vis-timeline .vis-label.worker-set-divider {
-            border-bottom: 2px solid #a0a0a0 !important;
-        }
-        /* Style for the divider line on the right timeline side */
-        .vis-timeline .vis-group.worker-set-divider {
-            border-bottom: 2px solid #e5e7eb !important;
-        }
-
-        /* --- STICKY / FROZEN PANES --- */
-        /* Make the timeline header sticky */
-        .vis-timeline .vis-time-axis {
-            position: -webkit-sticky; /* For Safari */
-            position: sticky;
-            top: 0;
-            z-index: 10;
-            background: white;
-        }
-
-        /* Make the group labels (worker names) sticky */
-        .vis-timeline .vis-labelset {
-            position: -webkit-sticky; /* For Safari */
-            position: sticky;
-            left: 0;
-            z-index: 10;
-            background: white;
-        }
-
-        /* Ensure the top-left corner (where header and labels meet) is also sticky and on top */
-        .vis-timeline .vis-labelset .vis-label.vis-nesting-group.vis-group-level-0,
-        .vis-timeline .vis-labelset .vis-label.gantt-header-group {
-             position: -webkit-sticky; /* For Safari */
-             position: sticky;
-             top: 0;
-             z-index: 11; /* Higher than time-axis and labelset */
-             background: white;
-        }
-
-    </style>
-    <h2>Worker Gantt</h2>
-    <p>Visual schedule organized by worker and shift, with a non-linear timeline representing shifts.</p>
+    <h2>Advanced Worker Gantt</h2>
+    <p>A visual schedule organized by worker and shift, designed to match a specific advanced layout.</p>
 
     <!-- Filter Controls -->
     <div class="worker-gantt-controls" style="display: flex; gap: 15px; margin-bottom: 15px; align-items: center; flex-wrap: wrap; background: #f9fafb; padding: 15px; border-radius: 8px;">
@@ -86,7 +9,6 @@
             <label for="wg-team-filter">Team:</label>
             <select id="wg-team-filter">
                 <option value="all">All Teams</option>
-                <!-- Options will be populated by JS -->
             </select>
         </div>
         <div class="filter-group">
@@ -102,21 +24,24 @@
             <label for="wg-skillset-filter">Skillset:</label>
             <select id="wg-skillset-filter">
                 <option value="all">All Skillsets</option>
-                <!-- Options will be populated by JS -->
             </select>
         </div>
         <div class="filter-group">
             <label for="wg-worker-filter">Worker:</label>
             <select id="wg-worker-filter">
                 <option value="all">All Workers</option>
-                <!-- Options will be populated by JS -->
             </select>
         </div>
         <button id="wg-refresh-btn" class="btn btn-primary">Refresh</button>
     </div>
 
-    <!-- The container for the vis.js Timeline -->
-    <div id="worker-gantt-container" style="width: 100%; border: 1px solid #ddd; overflow: auto; position: relative;"></div>
+    <!-- New Gantt Layout Structure -->
+    <div class="advanced-gantt-wrapper">
+        <div id="gantt-corner-box"></div>
+        <div id="gantt-header-container"></div>
+        <div id="gantt-sidebar-container"></div>
+        <div id="worker-gantt-container"></div> <!-- This is where the vis.js timeline will be mounted -->
+    </div>
 
     <!-- Legend -->
     <div class="gantt-legend" style="display: flex; gap: 20px; margin-top: 15px; flex-wrap: wrap; align-items: center;">
