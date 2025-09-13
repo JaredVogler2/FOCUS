@@ -719,86 +719,84 @@ function setupWorkerGanttEventListeners() {
 
     workerGantt.on('select', function(properties) {
         const selectedIds = properties.items;
+
+        // First, clear all existing highlights from all items
+        const itemsToClear = [];
+        workerGantt.itemsData.forEach(item => {
+            if (item.className && item.className.includes('wg-highlight')) {
+                itemsToClear.push({ id: item.id, className: item.className.replace(' wg-highlight', '').trim() });
+            }
+        });
+        if (itemsToClear.length > 0) {
+            workerGantt.itemsData.update(itemsToClear);
+        }
+
+        // If nothing is selected, we're done.
         if (selectedIds.length === 0) {
-            // If nothing is selected, remove all highlights
-            const allItems = workerGantt.itemsData.get({
-                filter: item => item.className && item.className.includes('wg-highlight')
-            });
-            allItems.forEach(item => {
-                item.className = item.className.replace(' wg-highlight', '');
-                workerGantt.itemsData.update(item);
-            });
             return;
         }
 
-        const selectedTaskId = selectedIds[0];
+        // --- Start Highlighting Logic ---
+        const selectedCompositeId = selectedIds[0];
+        const originalSelectedTaskId = selectedCompositeId.split('_').pop();
         const allTasks = scenarioData.tasks;
 
         // Build dependency maps for efficient lookup
         const successors = {};
         const predecessors = {};
         allTasks.forEach(task => {
+            if (!task.taskId) return;
             successors[task.taskId] = [];
             predecessors[task.taskId] = task.dependencies || [];
+        });
+        allTasks.forEach(task => {
             if (task.dependencies) {
                 task.dependencies.forEach(dep => {
-                    if (!successors[dep]) {
-                        successors[dep] = [];
+                    if (successors[dep]) {
+                        successors[dep].push(task.taskId);
                     }
-                    successors[dep].push(task.taskId);
                 });
             }
         });
 
         const toHighlight = new Set();
-        const queue = [selectedTaskId];
-        const visited = new Set();
+        let queue = [];
+        let visited = new Set();
 
         // Find all successors (downstream)
+        queue.push(originalSelectedTaskId);
         while(queue.length > 0) {
             const currentId = queue.shift();
-            if (visited.has(currentId)) continue;
+            if (visited.has(currentId) || !currentId) continue;
             visited.add(currentId);
             toHighlight.add(currentId);
-
             if (successors[currentId]) {
                 successors[currentId].forEach(succId => queue.push(succId));
             }
         }
 
         // Find all predecessors (upstream)
-        queue.push(selectedTaskId);
+        queue = [originalSelectedTaskId]; // Reset queue
+        visited = new Set(); // Reset visited
         while(queue.length > 0) {
             const currentId = queue.shift();
-            if (visited.has(currentId)) continue;
+            if (visited.has(currentId) || !currentId) continue;
             visited.add(currentId);
             toHighlight.add(currentId);
-
             if (predecessors[currentId]) {
                 predecessors[currentId].forEach(predId => queue.push(predId));
             }
         }
 
-        // Update items in the timeline
+        // Apply the 'wg-highlight' class to all items whose original task ID is in the set
         const itemsToUpdate = [];
         workerGantt.itemsData.forEach(item => {
-            let needsUpdate = false;
-            let newClassName = item.className || '';
-
-            if (toHighlight.has(item.id)) {
-                if (!newClassName.includes('wg-highlight')) {
-                    newClassName += ' wg-highlight';
-                    needsUpdate = true;
+            const itemOriginalId = item.id.split('_').pop();
+            if (toHighlight.has(itemOriginalId)) {
+                // Ensure the class is not duplicated
+                if (!item.className || !item.className.includes('wg-highlight')) {
+                    itemsToUpdate.push({ id: item.id, className: `${item.className || ''} wg-highlight`.trim() });
                 }
-            } else {
-                if (newClassName.includes('wg-highlight')) {
-                    newClassName = newClassName.replace(' wg-highlight', '');
-                    needsUpdate = true;
-                }
-            }
-
-            if (needsUpdate) {
-                itemsToUpdate.push({id: item.id, className: newClassName});
             }
         });
 
