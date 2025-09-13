@@ -1606,3 +1606,130 @@ tr.has-conflict {
     border-color: #d1d5db;
     opacity: 1;
 }
+
+/* ========= ADVANCED WORKER GANTT STYLES ========= */
+
+.advanced-gantt-wrapper {
+    display: grid;
+    grid-template-areas:
+        "corner header"
+        "sidebar timeline";
+    grid-template-columns: 250px 1fr; /* Fixed width for sidebar */
+    grid-template-rows: auto 1fr; /* Auto height for header, rest for timeline */
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    overflow: hidden; /* This is key to making it work */
+    height: calc(100vh - 300px); /* Adjust as needed */
+}
+
+#gantt-corner-box {
+    grid-area: corner;
+    background-color: #f8fafc;
+    border-right: 1px solid #d1d5db;
+    border-bottom: 1px solid #d1d5db;
+}
+
+#gantt-header-container {
+    grid-area: header;
+    overflow: hidden; /* Hide scrollbars, JS will sync scroll */
+    background-color: #f8fafc;
+}
+
+#gantt-sidebar-container {
+    grid-area: sidebar;
+    overflow: hidden; /* Hide scrollbars, JS will sync scroll */
+    background-color: #f8fafc;
+    border-right: 1px solid #d1d5db;
+}
+
+#worker-gantt-container {
+    grid-area: timeline;
+    overflow: auto; /* This is the main scrolling container */
+    position: relative;
+}
+
+/* --- Custom Header Styles --- */
+.adv-gantt-header-grid {
+    display: flex;
+    flex-direction: column;
+    min-width: fit-content; /* Allow header to expand beyond container */
+}
+.header-row-date, .header-row-shift, .header-row-time {
+    display: flex;
+    flex-direction: row;
+    border-bottom: 1px solid #e5e7eb;
+}
+.header-date, .header-shift-label, .header-time {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    padding: 4px;
+    white-space: nowrap;
+}
+.header-date {
+    font-weight: 600;
+    font-size: 13px;
+    color: #1f2937;
+    border-right: 1px solid #d1d5db;
+}
+.header-row-shift {
+    justify-content: space-around; /* Distribute shift labels */
+}
+.header-shift-label {
+    flex-grow: 1;
+    font-weight: 500;
+    font-size: 12px;
+    border-right: 1px solid #e5e7eb;
+}
+.header-time {
+    font-size: 10px;
+    color: #6b7280;
+    border-right: 1px solid #f3f4f6;
+}
+.header-row-time {
+    min-height: 25px; /* Ensure it has height */
+}
+
+/* --- Custom Sidebar Styles --- */
+.adv-gantt-sidebar-team {
+    border-bottom: 2px solid #a0a0a0;
+}
+.sidebar-team-label {
+    font-weight: bold;
+    font-size: 14px;
+    padding: 8px;
+    background-color: #eef2ff;
+    color: #4338ca;
+}
+.sidebar-worker-label {
+    font-size: 12px;
+    padding: 8px 8px 8px 16px; /* Indent worker labels */
+    height: 36px; /* Match vis.js default group height */
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    border-top: 1px solid #f3f4f6;
+}
+
+/* --- Vis.js Timeline Tweaks --- */
+#worker-gantt-container .vis-labelset {
+    display: none; /* Hide the default labels, we use our own sidebar */
+}
+#worker-gantt-container .vis-timeline {
+    border: none; /* Remove default border */
+}
+#worker-gantt-container .vis-item.wg-task {
+    height: 28px;
+    border-radius: 4px;
+    border: 1px solid rgba(0,0,0,0.2);
+    box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+    color: white;
+    font-size: 11px;
+    padding: 0 5px;
+}
+.gantt-no-data {
+    padding: 40px;
+    text-align: center;
+    color: #6b7280;
+}
