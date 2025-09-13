@@ -669,7 +669,6 @@ function mapRealTimeToDisplayTime(realDate, shift) {
     return displayDate;
 }
 
-
 function initializeWorkerGantt() {
     console.log("Initializing Worker Gantt...");
 
@@ -679,31 +678,51 @@ function initializeWorkerGantt() {
         return;
     }
 
-    // Destroy previous instance if it exists
     if (workerGantt) {
         workerGantt.destroy();
     }
 
-    // Create a new timeline
     const items = new vis.DataSet([]);
     const groups = new vis.DataSet([]);
 
     const options = {
         stack: false,
         start: new Date(),
-        end: new Date(1000 * 60 * 60 * 4 + (new Date()).valueOf()), // 4-hour window
+        end: new Date(new Date().getTime() + 24 * 60 * 60 * 1000), // 1-day window
         editable: false,
         orientation: 'top',
-        height: '100%',
-        groupOrder: 'content', // or a custom function
-        timeAxis: { scale: 'minute', step: 5 }
+        height: 'calc(100vh - 250px)', // Adjust height dynamically
+        groupOrder: function(a, b) {
+            // Custom sort for headers on top, then by team/worker order
+            if (a.isHeader && !b.isHeader) return -1;
+            if (!a.isHeader && b.isHeader) return 1;
+            return a.order - b.order;
+        },
+        timeAxis: {
+            scale: 'hour',
+            step: 1,
+            // We hide the default labels because we are creating our own custom header
+            format: {
+                majorLabels: () => '',
+                minorLabels: () => ''
+            }
+        },
+        onInitialDrawComplete: () => {
+             // Redraw headers after the timeline has been drawn to ensure correct window
+            renderWorkerGanttHeader();
+        }
     };
 
     workerGantt = new vis.Timeline(container, items, groups, options);
 
+    // Re-render header on zoom/pan
+    workerGantt.on('rangechanged', () => {
+        renderWorkerGanttHeader();
+    });
+
     setupWorkerGanttEventListeners();
     populateWorkerGanttFilters();
-    renderWorkerGantt();
+    renderWorkerGantt(); // Initial render
 }
 
 function setupWorkerGanttEventListeners() {
@@ -871,6 +890,51 @@ function populateWorkerGanttFilters() {
     workerSelect.value = currentWorker;
 }
 
+function renderWorkerGanttHeader() {
+    if (!workerGantt) return;
+
+    // Get existing header items to remove them before adding new ones
+    const headerItems = workerGantt.itemsData.get({
+        filter: item => item.isHeader
+    });
+    if (headerItems.length > 0) {
+        workerGantt.itemsData.remove(headerItems.map(item => item.id));
+    }
+
+    const newHeaderItems = [];
+    const window = workerGantt.getWindow();
+    let current = new Date(window.start);
+    current.setHours(0, 0, 0, 0); // Start at the beginning of the day
+
+    while (current < window.end) {
+        const dayStart = new Date(current);
+        const dayEnd = new Date(current);
+        dayEnd.setDate(dayEnd.getDate() + 1);
+
+        // --- Display Times (for the 24-hour blocks) ---
+        const displayShift3Start = new Date(dayStart); displayShift3Start.setHours(0);
+        const displayShift1Start = new Date(dayStart); displayShift1Start.setHours(8);
+        const displayShift2Start = new Date(dayStart); displayShift2Start.setHours(16);
+        const displayShift2End = new Date(dayStart); displayShift2End.setHours(24);
+
+        // Add Date Header Item (spans the full 24-hour display block)
+        newHeaderItems.push({ id: `h-date-${dayStart.getTime()}`, group: 'header-date', content: dayStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }), start: displayShift3Start, end: displayShift2End, type: 'background', className: 'gantt-header-item header-date', isHeader: true });
+
+        // Add Shift Header Items
+        newHeaderItems.push({ id: `h-shift3-${dayStart.getTime()}`, group: 'header-shift', content: '3rd Shift', start: displayShift3Start, end: displayShift1Start, type: 'background', className: 'gantt-header-item header-shift', isHeader: true });
+        newHeaderItems.push({ id: `h-shift1-${dayStart.getTime()}`, group: 'header-shift', content: '1st Shift', start: displayShift1Start, end: displayShift2Start, type: 'background', className: 'gantt-header-item header-shift', isHeader: true });
+        newHeaderItems.push({ id: `h-shift2-${dayStart.getTime()}`, group: 'header-shift', content: '2nd Shift', start: displayShift2Start, end: displayShift2End, type: 'background', className: 'gantt-header-item header-shift', isHeader: true });
+
+        // Add Time Header Items
+        newHeaderItems.push({ id: `h-time3-${dayStart.getTime()}`, group: 'header-time', content: '11pm - 6am', start: displayShift3Start, end: displayShift1Start, type: 'background', className: 'gantt-header-item header-time', isHeader: true });
+        newHeaderItems.push({ id: `h-time1-${dayStart.getTime()}`, group: 'header-time', content: '6am - 2:30pm', start: displayShift1Start, end: displayShift2Start, type: 'background', className: 'gantt-header-item header-time', isHeader: true });
+        newHeaderItems.push({ id: `h-time2-${dayStart.getTime()}`, group: 'header-time', content: '2:30pm - 11pm', start: displayShift2Start, end: displayShift2End, type: 'background', className: 'gantt-header-item header-time', isHeader: true });
+
+        current.setDate(current.getDate() + 1);
+    }
+    workerGantt.itemsData.add(newHeaderItems);
+}
+
 function renderWorkerGantt() {
     console.log("Rendering Worker Gantt...");
     if (!workerGantt) {
@@ -878,23 +942,10 @@ function renderWorkerGantt() {
         return;
     }
 
-    if (!scenarioData || !scenarioData.teamCapacities) {
-        console.warn("Worker Gantt: teamCapacities data not available.");
-        return;
-    }
-
     const assignments = savedAssignments[currentScenario] || {};
     if (!assignments.mechanicSchedules || Object.keys(assignments.mechanicSchedules).length === 0) {
         const container = document.getElementById('worker-gantt-container');
-        container.innerHTML = `
-            <div style="padding: 40px; text-align: center; color: #6b7280;">
-                <div style="font-size: 48px; margin-bottom: 10px;">📋</div>
-                <h3 style="color: #1f2937;">No Assigned Tasks to Display</h3>
-                <p style="font-size: 14px; margin-top: 5px;">
-                    Please go to the <strong>Team Lead</strong> view and use the <strong>Auto-Assign</strong> button first.
-                </p>
-            </div>
-        `;
+        container.innerHTML = `<div style="padding: 40px; text-align: center; color: #6b7280;"><h3>No Assigned Tasks</h3><p>Please use the <strong>Team Lead</strong> view to assign tasks first.</p></div>`;
         workerGantt.setItems(new vis.DataSet([]));
         workerGantt.setGroups(new vis.DataSet([]));
         return;
@@ -911,157 +962,96 @@ function renderWorkerGantt() {
         const baseTeam = skillMatch ? skillMatch[1].trim() : teamSkill;
         const skill = skillMatch ? skillMatch[2].trim() : null;
         const shifts = scenarioData.teamShifts ? (scenarioData.teamShifts[baseTeam] || ['1st', '2nd', '3rd']) : ['1st', '2nd', '3rd'];
-
         for (let i = 1; i <= capacity; i++) {
             const workerId = `${teamSkill}_${i}`;
             const shift = shifts[(i - 1) % shifts.length];
-            allWorkers.push({
-                id: workerId,
-                name: `Mechanic #${i}`,
-                team: baseTeam,
-                skill: skill,
-                shift: shift
-            });
+            allWorkers.push({ id: workerId, name: `Mechanic #${i}`, team: baseTeam, skill: skill, shift: shift });
         }
     });
 
-    let filteredWorkers = allWorkers.filter(worker => {
-        const teamMatch = selectedTeam === 'all' || worker.team === selectedTeam;
-        const shiftMatch = selectedShift === 'all' || worker.shift === selectedShift;
-        const skillMatch = selectedSkill === 'all' || worker.skill === selectedSkill;
-        const workerMatch = selectedWorker === 'all' || worker.id === selectedWorker;
-        return teamMatch && shiftMatch && skillMatch && workerMatch;
-    });
+    let filteredWorkers = allWorkers.filter(w => (selectedTeam === 'all' || w.team === selectedTeam) && (selectedShift === 'all' || w.shift === selectedShift) && (selectedSkill === 'all' || w.skill === selectedSkill) && (selectedWorker === 'all' || w.id === selectedWorker));
 
     const teams = {};
-    filteredWorkers.forEach(worker => {
-        if (!teams[worker.team]) {
-            teams[worker.team] = [];
-        }
-        teams[worker.team].push(worker);
+    filteredWorkers.forEach(w => {
+        if (!teams[w.team]) teams[w.team] = [];
+        teams[w.team].push(w);
     });
 
     const visGroups = new vis.DataSet();
+    const visItems = new vis.DataSet();
+    let groupOrder = 0;
+
+    // Add Header Groups first
+    visGroups.add({ id: 'header-date', content: '', isHeader: true, className: 'gantt-header-group', order: groupOrder++ });
+    visGroups.add({ id: 'header-shift', content: '', isHeader: true, className: 'gantt-header-group', order: groupOrder++ });
+    visGroups.add({ id: 'header-time', content: '', isHeader: true, className: 'gantt-header-group', order: groupOrder++ });
+
+    // Add Team and Worker Groups
     Object.keys(teams).sort().forEach(teamName => {
         const teamGroupId = `team_${teamName.replace(/\s/g, '_')}`;
-        visGroups.add({
-            id: teamGroupId,
-            content: teamName,
-            treeLevel: 0,
-        });
-
+        visGroups.add({ id: teamGroupId, content: teamName, treeLevel: 0, order: groupOrder++ });
         const workersInTeam = teams[teamName];
-        const workersByShift = { '1st': [], '2nd': [], '3rd': [] };
-        workersInTeam.forEach(w => {
-            if (workersByShift[w.shift]) {
-                workersByShift[w.shift].push(w);
-            }
-        });
-
-        ['1st', '2nd', '3rd'].forEach(shift => {
-            const shiftGroupId = `${teamGroupId}_${shift}`;
-            const shiftWorkers = workersByShift[shift];
-            let mechanicNames = shiftWorkers.map(w => w.name).join(', ');
-            if (!mechanicNames) {
-                mechanicNames = "No workers assigned";
-            }
-            let content = `<div class='wg-group-label'><b>${shift} Shift:</b> ${mechanicNames}</div>`;
+        workersInTeam.forEach(worker => {
+            const shiftLabel = worker.shift.charAt(0).toUpperCase() + worker.shift.slice(1);
             visGroups.add({
-                id: shiftGroupId,
-                content: content,
-                treeLevel: 1,
+                id: worker.id,
+                content: `<div class='wg-group-label'><b>${shiftLabel} Shift:</b> ${worker.name}</div>`,
                 nestedIn: teamGroupId,
+                order: groupOrder++
             });
         });
     });
-    workerGantt.setGroups(visGroups);
 
-    const visItems = new vis.DataSet();
+    // Add Tasks using the mapping function
     const productColors = {};
     const lightColors = ["#E0BBE4", "#957DAD", "#D291BC", "#FEC8D8", "#FFDFD3"];
     let colorIndex = 0;
 
-    const allTasks = Object.values(teams).flat().map(worker => {
-        const workerSchedule = assignments.mechanicSchedules ? assignments.mechanicSchedules[worker.id] : null;
-        if (workerSchedule && workerSchedule.tasks) {
-            return workerSchedule.tasks.map(task => ({ ...task, worker: worker }));
+    Object.values(teams).flat().forEach(worker => {
+        const schedule = assignments.mechanicSchedules ? assignments.mechanicSchedules[worker.id] : null;
+        if (schedule && schedule.tasks) {
+            schedule.tasks.forEach(task => {
+                if (!productColors[task.product]) {
+                    productColors[task.product] = lightColors[colorIndex % lightColors.length];
+                    colorIndex++;
+                }
+                const realStart = new Date(task.startTime);
+                const realEnd = new Date(task.endTime);
+
+                // This is the crucial change
+                const displayStart = mapRealTimeToDisplayTime(realStart, worker.shift);
+                const displayEnd = mapRealTimeToDisplayTime(realEnd, worker.shift);
+
+                visItems.add({
+                    id: task.taskId,
+                    group: worker.id,
+                    content: task.taskId,
+                    start: displayStart,
+                    end: displayEnd,
+                    title: `Task: ${task.taskId}<br>Product: ${task.product}<br>Worker: ${worker.name}<br>Shift: ${worker.shift}<br>Real Start: ${realStart.toLocaleString()}<br>Real End: ${realEnd.toLocaleString()}`,
+                    style: `background-color: ${productColors[task.product]};`,
+                    className: `wg-task ${task.isCritical ? 'wg-critical' : ''}`
+                });
+            });
         }
-        return [];
-    }).flat();
-
-    if (allTasks.length > 0) {
-        const minDate = new Date(Math.min(...allTasks.map(t => new Date(t.startTime))));
-        const maxDate = new Date(Math.max(...allTasks.map(t => new Date(t.endTime))));
-        minDate.setDate(minDate.getDate() - 1);
-        maxDate.setDate(maxDate.getDate() + 1);
-        let currentDate = new Date(minDate);
-        currentDate.setHours(0, 0, 0, 0);
-
-        while (currentDate <= maxDate) {
-            let shift3_start = new Date(currentDate);
-            shift3_start.setDate(shift3_start.getDate() - 1);
-            shift3_start.setHours(23, 0, 0, 0);
-            let shift3_end = new Date(currentDate);
-            shift3_end.setHours(6, 0, 0, 0);
-            visItems.add({ start: shift3_start, end: shift3_end, type: 'background', className: 'wg-shift-3rd' });
-
-            let shift1_start = new Date(currentDate);
-            shift1_start.setHours(6, 0, 0, 0);
-            let shift1_end = new Date(currentDate);
-            shift1_end.setHours(14, 30, 0, 0);
-            visItems.add({ start: shift1_start, end: shift1_end, type: 'background', className: 'wg-shift-1st' });
-
-            let shift2_start = new Date(currentDate);
-            shift2_start.setHours(14, 30, 0, 0);
-            let shift2_end = new Date(currentDate);
-            shift2_end.setHours(23, 0, 0, 0);
-            visItems.add({ start: shift2_start, end: shift2_end, type: 'background', className: 'wg-shift-2nd' });
-
-            currentDate.setDate(currentDate.getDate() + 1);
-        }
-    }
-
-    allTasks.forEach(task => {
-        const worker = task.worker;
-        const realStart = new Date(task.startTime);
-        const realEnd = new Date(task.endTime);
-
-        if (!productColors[task.product]) {
-            productColors[task.product] = lightColors[colorIndex % lightColors.length];
-            colorIndex++;
-        }
-
-        let className = 'wg-task';
-        if (task.isCritical) {
-            className += ' wg-critical';
-        }
-
-        const teamGroupId = `team_${worker.team.replace(/\s/g, '_')}`;
-        const shiftGroupId = `${teamGroupId}_${worker.shift}`;
-
-        visItems.add({
-            id: task.taskId,
-            group: shiftGroupId,
-            content: task.taskId,
-            start: realStart,
-            end: realEnd,
-            title: `Task: ${task.taskId}<br>Product: ${task.product}<br>Worker: ${worker.name}`,
-            style: `background-color: ${productColors[task.product]};`,
-            className: className
-        });
     });
 
+    workerGantt.setGroups(visGroups);
     workerGantt.setItems(visItems);
+    renderWorkerGanttHeader(); // Render header items after everything else
 
+    // Update Legend
     const legendContainer = document.getElementById('wg-product-legend');
-    legendContainer.innerHTML = '';
-    Object.keys(productColors).forEach(product => {
-        const color = productColors[product];
-        const legendItem = document.createElement('div');
-        legendItem.style.cssText = 'display: flex; align-items: center; gap: 6px; font-size: 12px;';
-        legendItem.innerHTML = `<div style="width: 16px; height: 16px; background-color: ${color}; border-radius: 3px;"></div> <span>${product}</span>`;
-        legendContainer.appendChild(legendItem);
-    });
+    if (legendContainer) {
+        legendContainer.innerHTML = '';
+        Object.keys(productColors).forEach(product => {
+            const color = productColors[product];
+            const legendItem = document.createElement('div');
+            legendItem.style.cssText = 'display: flex; align-items: center; gap: 6px; font-size: 12px;';
+            legendItem.innerHTML = `<div style="width: 16px; height: 16px; background-color: ${color}; border-radius: 3px;"></div> <span>${product}</span>`;
+            legendContainer.appendChild(legendItem);
+        });
+    }
 }
 
 // Main view update function
