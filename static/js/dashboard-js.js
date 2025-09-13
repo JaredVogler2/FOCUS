@@ -4834,27 +4834,6 @@ function showNotification(message, type = 'success') {
 let customGanttTasks = [];
 let customGanttViewMode = 'days';
 
-// Enhanced update view to use custom Gantt
-function updateView() {
-    if (!scenarioData && currentView !== 'scenario') return; // Allow scenario view to init without full scenarioData
-
-    if (currentView === 'team-lead') {
-        updateTeamLeadView();
-    } else if (currentView === 'management') {
-        updateManagementView();
-    } else if (currentView === 'mechanic') {
-        updateMechanicView();
-    } else if (currentView === 'project') {
-        initializeCustomGantt();
-    } else if (currentView === 'supply-chain') {
-        updateSupplyChainView();
-    } else if (currentView === 'industrial-engineering') {
-        updateIEView();
-    } else if (currentView === 'scenario') {
-        initScenarioView();
-    }
-}
-
 // Initialize custom Gantt chart
 // Initialize custom Gantt chart with enhanced time scale support
 function initializeCustomGantt() {
