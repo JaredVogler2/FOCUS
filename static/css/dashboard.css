@@ -1619,8 +1619,6 @@ tr.has-conflict {
 .advanced-gantt-grid-container {
     display: grid;
     grid-template-columns: 150px 1fr; /* Sidebar and main content */
-    grid-template-rows: auto 1fr; /* Let header be its own height, content fills the rest */
-    height: 100%; /* Make the grid fill the wrapper's height */
     position: relative; /* Needed for z-indexing context of sticky items */
 }
 
