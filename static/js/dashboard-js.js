@@ -691,6 +691,10 @@ function initializeWorkerGantt() {
     const items = new vis.DataSet([]);
     const groups = new vis.DataSet([]);
 
+    const today = new Date();
+    const minDate = new Date(today.getFullYear() - 1, today.getMonth(), today.getDate());
+    const maxDate = new Date(today.getFullYear() + 1, today.getMonth(), today.getDate());
+
     const options = {
         stack: false,
         editable: false,
@@ -698,6 +702,8 @@ function initializeWorkerGantt() {
         moveable: true, // Allow pan for the main timeline
         orientation: 'top',
         height: '100%',
+        min: minDate,
+        max: maxDate,
         showMajorLabels: false, // Hide all default labels
         showMinorLabels: false,
         groupOrder: 'order' // Use a simple order property
