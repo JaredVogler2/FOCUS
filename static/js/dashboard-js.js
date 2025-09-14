@@ -742,16 +742,18 @@ function setupWorkerGanttEventListeners() {
     const scrollWrapper = document.querySelector('.advanced-gantt-scroll-wrapper');
     let lastScrollLeft = scrollWrapper ? scrollWrapper.scrollLeft : 0;
 
-    const handleWrapperScroll = () => {
-        if (!workerGantt) return;
+    const handleGanttWrapperScroll = () => {
+        // Detach the listener to prevent loops.
+        scrollWrapper.removeEventListener('scroll', debouncedScrollHandler);
 
-        const currentScrollLeft = scrollWrapper.scrollLeft;
-        // A small threshold prevents noise from minor scroll adjustments.
-        if (Math.abs(currentScrollLeft - lastScrollLeft) < 20) {
+        if (!workerGantt) {
+            // Re-attach listener before exiting if something is wrong
+            scrollWrapper.addEventListener('scroll', debouncedScrollHandler);
             return;
         }
+
+        const currentScrollLeft = scrollWrapper.scrollLeft;
         const direction = currentScrollLeft > lastScrollLeft ? 'right' : 'left';
-        lastScrollLeft = currentScrollLeft;
 
         const window = workerGantt.getWindow();
         const SHIFT_DURATION_MS = 8 * 60 * 60 * 1000;
@@ -765,12 +767,32 @@ function setupWorkerGanttEventListeners() {
         }
         const newEnd = new Date(newStart.getTime() + windowDuration);
 
-        workerGantt.setWindow(newStart, newEnd, { animation: { duration: 100, easingFunction: 'easeOutCubic' } });
+        workerGantt.setWindow(newStart, newEnd, { animation: false });
+
+        // Use a timeout to re-center the scrollbar and re-attach the listener
+        // after the DOM has had a chance to update from the setWindow call.
+        setTimeout(() => {
+            const center = (scrollWrapper.scrollWidth - scrollWrapper.clientWidth) / 2;
+            scrollWrapper.scrollLeft = center;
+            lastScrollLeft = center; // Update the last known position to the new center
+            // Re-attach the listener for the next user interaction.
+            scrollWrapper.addEventListener('scroll', debouncedScrollHandler);
+        }, 50);
     };
 
+    // Create a debounced version of the handler.
+    const debouncedScrollHandler = debounce(handleGanttWrapperScroll, 150);
+
     if (scrollWrapper) {
-        // We use a debounced handler to only act when the user has stopped scrolling.
-        scrollWrapper.addEventListener('scroll', debounce(handleWrapperScroll, 200));
+        // Center the scrollbar initially after a short delay
+        setTimeout(() => {
+            const center = (scrollWrapper.scrollWidth - scrollWrapper.clientWidth) / 2;
+            scrollWrapper.scrollLeft = center;
+            lastScrollLeft = center;
+        }, 500);
+
+        // Attach the master listener.
+        scrollWrapper.addEventListener('scroll', debouncedScrollHandler);
     }
 
     workerGantt.on('select', function(properties) {
