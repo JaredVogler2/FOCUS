@@ -436,10 +436,10 @@ class SchedulerValidator:
             if constraint['Second'] == task_id:
                 dependencies.append(constraint['First'])
         
+        unscheduled_deps = []
         if dependencies:
             print(f"\nDependency Check:")
             print(f"  Task depends on: {len(dependencies)} other tasks")
-            unscheduled_deps = []
             for dep in dependencies:
                 if dep not in self.scheduler.task_schedule:
                     unscheduled_deps.append(dep)

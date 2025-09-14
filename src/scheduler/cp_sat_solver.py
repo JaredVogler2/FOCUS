@@ -143,6 +143,88 @@ class CpSatScheduler:
 
         print(f"[INFO] Added cumulative constraints for {len(resource_to_tasks)} unique resources.")
 
+    def _add_shift_constraints(self):
+        """
+        Adds constraints to ensure tasks are only scheduled during a team's working shifts.
+        This is a more robust implementation that correctly handles overnight shifts.
+        """
+        print("[INFO] Adding shift constraints...")
+        s = self.scheduler
+        minutes_in_day = 24 * 60
+
+        for task_id, task_info in s.tasks.items():
+            task_vars = self.task_vars[task_id]
+            start_var = task_vars['start']
+            duration = task_vars['duration']
+
+            # Determine the team's shifts
+            if task_info.get('is_quality'):
+                team_shifts = s.quality_team_shifts.get(task_info['team'], [])
+            elif task_info.get('is_customer'):
+                team_shifts = s.customer_team_shifts.get(task_info['team'], [])
+            else:
+                team_key = task_info.get('team_skill', task_info.get('team'))
+                base_team = team_key.split(' (')[0] if '(' in team_key else team_key
+                team_shifts = s.team_shifts.get(base_team, [])
+
+            if not team_shifts:
+                if s.debug:
+                    print(f"[WARNING] Task {task_id} belongs to a team with no shifts defined. Assuming 24/7 availability.")
+                continue
+
+            # Create a boolean variable for each shift the task could be in
+            shift_literals = []
+            for shift_name in team_shifts:
+                shift_info = s.shift_hours.get(shift_name)
+                if not shift_info: continue
+
+                literal = self.model.NewBoolVar(f'{task_id}_in_{shift_name}')
+                shift_literals.append(literal)
+
+                # Define shift start/end times in minutes from midnight
+                start_h, start_m = s._parse_shift_time(shift_info['start'])
+                end_h, end_m = s._parse_shift_time(shift_info['end'])
+                shift_start_min = start_h * 60 + start_m
+                shift_end_min = end_h * 60 + end_m
+
+                # Model task's start time relative to the day
+                time_of_day = self.model.NewIntVar(0, minutes_in_day - 1, f'{task_id}_time_of_day_{shift_name}')
+                self.model.AddModuloEquality(time_of_day, start_var, minutes_in_day)
+
+                # Constrain the task to be within the shift if this literal is true
+                if shift_start_min < shift_end_min:  # Normal day shift
+                    # Task must start and end within the shift's daily window
+                    self.model.Add(time_of_day >= shift_start_min).OnlyEnforceIf(literal)
+                    self.model.Add(time_of_day + duration <= shift_end_min).OnlyEnforceIf(literal)
+                else:  # Overnight shift
+                    # For overnight shifts, the task can't start in the dead zone
+                    # e.g., for 23:00-06:00, dead zone is 06:00-23:00
+                    # So, time_of_day must be OUTSIDE [shift_end_min, shift_start_min)
+                    is_after_start = self.model.NewBoolVar(f'{task_id}_{shift_name}_after_start')
+                    is_before_end = self.model.NewBoolVar(f'{task_id}_{shift_name}_before_end')
+
+                    self.model.Add(time_of_day >= shift_start_min).OnlyEnforceIf(is_after_start)
+                    self.model.Add(time_of_day < shift_start_min).OnlyEnforceIf(is_after_start.Not())
+
+                    self.model.Add(time_of_day < shift_end_min).OnlyEnforceIf(is_before_end)
+                    self.model.Add(time_of_day >= shift_end_min).OnlyEnforceIf(is_before_end.Not())
+
+                    # The start time must be in the valid range
+                    self.model.AddBoolOr([is_after_start, is_before_end]).OnlyEnforceIf(literal)
+
+                    # Additionally, ensure the task does not cross the dead zone
+                    # If it starts before midnight, it must end before the dead zone starts (e.g., 06:00)
+                    self.model.Add(time_of_day + duration <= shift_end_min + minutes_in_day).OnlyEnforceIf(literal, is_after_start)
+                    # If it starts after midnight, it must end before the dead zone starts
+                    self.model.Add(time_of_day + duration <= shift_end_min).OnlyEnforceIf(literal, is_before_end)
+
+
+            # A task must be assigned to exactly one of its possible shifts
+            if shift_literals:
+                self.model.Add(sum(shift_literals) == 1)
+
+        print(f"[INFO] Added shift constraints for all applicable tasks.")
+
     def _set_objective(self):
         """
         Defines the optimization objective for the model to minimize total lateness.
@@ -177,6 +259,7 @@ class CpSatScheduler:
         self._create_task_variables()
         self._add_precedence_constraints()
         self._add_resource_constraints()
+        self._add_shift_constraints()
         self._set_objective()
         print("[INFO] Starting CP-SAT solver...")
         solver = cp_model.CpSolver()
