@@ -1611,7 +1611,7 @@ tr.has-conflict {
 .advanced-gantt-scroll-wrapper {
     width: 100%;
     max-height: calc(100vh - 300px); /* Adjust height as needed */
-    overflow: auto; /* This makes the wrapper the main scroll container */
+    /* overflow: auto; */ /* This makes the wrapper the main scroll container */
     border: 1px solid #ddd;
     position: relative;
 }
