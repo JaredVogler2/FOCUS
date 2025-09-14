@@ -21,6 +21,16 @@ function sanitizeForQuerySelector(key) {
     return key.replace(/[^a-zA-Z0-9-_]/g, '_');
 }
 
+// Debounce helper function
+function debounce(func, delay) {
+    let timeout;
+    return function(...args) {
+        const context = this;
+        clearTimeout(timeout);
+        timeout = setTimeout(() => func.apply(context, args), delay);
+    };
+}
+
 let savedAssignments = {}; // Store assignments per scenario
 
 // Initialize savedAssignments structure
@@ -718,6 +728,11 @@ function setupWorkerGanttEventListeners() {
     document.getElementById('wg-view-date').addEventListener('change', updateWorkerGanttWindow);
     document.getElementById('wg-timescale-filter').addEventListener('change', updateWorkerGanttWindow);
 
+    // Add a debounced event listener for the 'rangechanged' event to handle snap-to-shift scrolling.
+    const debouncedScrollHandler = debounce(handleGanttScroll, 250); // 250ms delay
+    workerGantt.on('rangechanged', debouncedScrollHandler);
+
+
     workerGantt.on('select', function(properties) {
         const selectedIds = properties.items;
 
@@ -1146,6 +1161,44 @@ function updateWorkerGanttWindow() {
     workerGantt.setWindow(startDate, endDate, { animation: true });
     console.log(`Gantt window updated to: ${startDate.toLocaleDateString()} - ${endDate.toLocaleDateString()}`);
 }
+
+// Handles the "snap-to-shift" scrolling behavior for the worker gantt chart
+function handleGanttScroll(properties) {
+    // We only care about events triggered by user dragging the timeline
+    if (properties.byUser) {
+        if (!workerGantt) return;
+
+        const window = workerGantt.getWindow();
+        const windowDuration = window.end - window.start;
+
+        // In our display timeline, each shift is exactly 8 hours.
+        const SHIFT_DURATION_MS = 8 * 60 * 60 * 1000;
+
+        // Get the start of the day for the current window's start time
+        const dayStart = new Date(window.start);
+        dayStart.setHours(0, 0, 0, 0);
+
+        const msFromDayStart = window.start.getTime() - dayStart.getTime();
+
+        // Calculate which shift boundary is closest
+        const nearestShiftIndex = Math.round(msFromDayStart / SHIFT_DURATION_MS);
+        const snappedMsFromDayStart = nearestShiftIndex * SHIFT_DURATION_MS;
+
+        const snappedStartDate = new Date(dayStart.getTime() + snappedMsFromDayStart);
+        const snappedEndDate = new Date(snappedStartDate.getTime() + windowDuration);
+
+        // Only set the window if it's not already snapped (with a small tolerance)
+        // This prevents infinite loops of rangechanged events.
+        if (Math.abs(snappedStartDate.getTime() - window.start.getTime()) > 100) {
+            // The setWindow call will trigger another 'rangechanged' event.
+            // The debounce and the check above will prevent this from causing a loop.
+            workerGantt.setWindow(snappedStartDate, snappedEndDate, {
+                animation: { duration: 250, easingFunction: 'easeOutCubic' }
+            });
+        }
+    }
+}
+
 
 // Main view update function
 function updateView() {
