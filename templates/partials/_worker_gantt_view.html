@@ -33,12 +33,17 @@
             </select>
         </div>
          <div class="filter-group">
-            <label for="wg-start-date">Start Date:</label>
-            <input type="date" id="wg-start-date" class="form-control">
+            <label for="wg-view-date">View Date:</label>
+            <input type="date" id="wg-view-date" class="form-control">
         </div>
         <div class="filter-group">
-            <label for="wg-end-date">End Date:</label>
-            <input type="date" id="wg-end-date" class="form-control">
+            <label for="wg-timescale-filter">Show:</label>
+            <select id="wg-timescale-filter">
+                <option value="1">1 Day</option>
+                <option value="2" selected>2 Days</option>
+                <option value="7">1 Week</option>
+                <option value="14">2 Weeks</option>
+            </select>
         </div>
         <button id="wg-refresh-btn" class="btn btn-primary">Refresh</button>
     </div>

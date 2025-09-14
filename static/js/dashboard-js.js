@@ -327,7 +327,6 @@ function setupEventListeners() {
     // Task assignment selects (dynamic)
     document.addEventListener('change', function(e) {
         if (e.target.classList.contains('assign-select')) {
-            console.log(`[Assign] User assigned task ${e.target.dataset.taskId} to ${e.target.value}`);
             const taskId = e.target.dataset.taskId;
             const position = e.target.dataset.position || '0';
             const mechanicId = e.target.value;
@@ -683,10 +682,8 @@ function initializeWorkerGantt() {
 
     const options = {
         stack: false,
-        start: new Date(),
-        end: new Date(new Date().getTime() + 24 * 60 * 60 * 1000),
         editable: false,
-        zoomable: true, // Allow zoom for the main timeline
+        zoomable: false, // Zoom is now controlled by timescale dropdown
         moveable: true, // Allow pan for the main timeline
         orientation: 'top',
         height: '100%',
@@ -697,9 +694,16 @@ function initializeWorkerGantt() {
 
     workerGantt = new vis.Timeline(container, items, groups, options);
 
+    // Set default view date to today
+    const viewDateInput = document.getElementById('wg-view-date');
+    if (viewDateInput && !viewDateInput.value) {
+        viewDateInput.valueAsDate = new Date();
+    }
+
     setupWorkerGanttEventListeners();
     populateWorkerGanttFilters();
-    renderWorkerGantt(); // Initial render
+    renderWorkerGantt(); // Renders the data
+    updateWorkerGanttWindow(); // Sets the initial view window
 }
 
 function setupWorkerGanttEventListeners() {
@@ -711,8 +715,8 @@ function setupWorkerGanttEventListeners() {
     document.getElementById('wg-skillset-filter').addEventListener('change', renderWorkerGantt);
     document.getElementById('wg-worker-filter').addEventListener('change', renderWorkerGantt);
     document.getElementById('wg-refresh-btn').addEventListener('click', renderWorkerGantt);
-    document.getElementById('wg-start-date').addEventListener('change', renderWorkerGantt);
-    document.getElementById('wg-end-date').addEventListener('change', renderWorkerGantt);
+    document.getElementById('wg-view-date').addEventListener('change', updateWorkerGanttWindow);
+    document.getElementById('wg-timescale-filter').addEventListener('change', updateWorkerGanttWindow);
 
     workerGantt.on('select', function(properties) {
         const selectedIds = properties.items;
@@ -991,7 +995,7 @@ function renderAdvancedGanttSidebar(teams) {
 }
 
 function renderWorkerGantt() {
-    console.log("Rendering Advanced Worker Gantt with date filtering...");
+    console.log("Rendering Advanced Worker Gantt...");
     if (!workerGantt) {
         initializeWorkerGantt();
         return;
@@ -1000,54 +1004,18 @@ function renderWorkerGantt() {
     const assignments = savedAssignments[currentScenario] || {};
     const mechanicSchedules = generateMechanicSchedulesFromAssignments(assignments);
 
-    // Get all filter values
-    const selectedTeamFilter = document.getElementById('wg-team-filter').value;
-    const selectedShift = document.getElementById('wg-shift-filter').value;
-    const selectedSkill = document.getElementById('wg-skillset-filter').value;
-    const selectedWorker = document.getElementById('wg-worker-filter').value;
-    const startDateFilter = document.getElementById('wg-start-date').value;
-    const endDateFilter = document.getElementById('wg-end-date').value;
-
-    // Parse date filters
-    const filterStart = startDateFilter ? new Date(startDateFilter) : null;
-    const filterEnd = endDateFilter ? new Date(endDateFilter) : null;
-    if (filterEnd) {
-        filterEnd.setHours(23, 59, 59, 999); // Make end date inclusive
-    }
-
-    // Filter schedules by date first
-    const filteredMechanicSchedules = {};
-    Object.keys(mechanicSchedules).forEach(mechanicId => {
-        const schedule = mechanicSchedules[mechanicId];
-        const tasks = schedule.tasks.filter(task => {
-            if (!filterStart && !filterEnd) return true; // No date filters
-            const taskStart = new Date(task.startTime);
-            const taskEnd = new Date(task.endTime);
-
-            // A task overlaps with the filter range if: (task.start < filter.end) AND (task.end > filter.start)
-            const startsBeforeEnd = filterEnd ? taskStart < filterEnd : true;
-            const endsAfterStart = filterStart ? taskEnd > filterStart : true;
-            return startsBeforeEnd && endsAfterStart;
-        });
-
-        if (tasks.length > 0) {
-            filteredMechanicSchedules[mechanicId] = { ...schedule,
-                tasks: tasks
-            };
-        }
-    });
-
-    const hasAssignments = Object.keys(mechanicSchedules).length > 0;
-    const hasVisibleAssignments = Object.keys(filteredMechanicSchedules).length > 0;
-
-    if (!hasAssignments) {
+    if (Object.keys(mechanicSchedules).length === 0) {
         document.getElementById('worker-gantt-container-advanced').innerHTML = `<div style="padding: 40px; text-align: center; color: #6b7280;"><h3>No Task Assignments Available</h3></div>`;
         document.querySelector('.gantt-sidebar-advanced').innerHTML = '';
         document.querySelector('.gantt-header-advanced').innerHTML = '';
         return;
     }
 
-    // Now, build the list of all possible workers
+    const selectedTeamFilter = document.getElementById('wg-team-filter').value;
+    const selectedShift = document.getElementById('wg-shift-filter').value;
+    const selectedSkill = document.getElementById('wg-skillset-filter').value;
+    const selectedWorker = document.getElementById('wg-worker-filter').value;
+
     let allWorkers = [];
     Object.entries(scenarioData.teamCapacities).forEach(([teamSkill, capacity]) => {
         const skillMatch = teamSkill.match(/^(.+?)\s*\((.+?)\)\s*$/);
@@ -1057,43 +1025,25 @@ function renderWorkerGantt() {
         for (let i = 1; i <= capacity; i++) {
             const workerId = `${teamSkill}_${i}`;
             const shift = shifts[(i - 1) % shifts.length];
-            allWorkers.push({
-                id: workerId,
-                name: `Mechanic #${i}`,
-                team: baseTeam,
-                skill: skill,
-                shift: shift
-            });
+            allWorkers.push({ id: workerId, name: `Mechanic #${i}`, team: baseTeam, skill: skill, shift: shift });
         }
     });
 
-    // Filter workers based on dropdowns AND if they have tasks in the filtered schedules
-    let filteredWorkers = allWorkers.filter(w =>
-        (selectedTeamFilter === 'all' || w.team === selectedTeamFilter) &&
-        (selectedShift === 'all' || w.shift === selectedShift) &&
-        (selectedSkill === 'all' || w.skill === selectedSkill) &&
-        (selectedWorker === 'all' || w.id === selectedWorker) &&
-        (filteredMechanicSchedules[w.id] && filteredMechanicSchedules[w.id].tasks.length > 0)
-    );
+    let filteredWorkers = allWorkers.filter(w => (selectedTeamFilter === 'all' || w.team === selectedTeamFilter) && (selectedShift === 'all' || w.shift === selectedShift) && (selectedSkill === 'all' || w.skill === selectedSkill) && (selectedWorker === 'all' || w.id === selectedWorker));
 
     if (filteredWorkers.length === 0) {
-        const message = hasVisibleAssignments ?
-            `<h3>No Workers Match Dropdown Filters</h3><p>Try adjusting the Team, Shift, Skillset, or Worker filters.</p>` :
-            `<h3>No Tasks Match Date Range</h3><p>Try expanding the start and end dates.</p>`;
-        document.getElementById('worker-gantt-container-advanced').innerHTML = `<div style="padding: 40px; text-align: center; color: #6b7280;">${message}</div>`;
+        document.getElementById('worker-gantt-container-advanced').innerHTML = `<div style="padding: 40px; text-align: center; color: #6b7280;"><h3>No Workers Match Filters</h3></div>`;
         document.querySelector('.gantt-sidebar-advanced').innerHTML = '';
         document.querySelector('.gantt-header-advanced').innerHTML = '';
         return;
     }
 
-    // Build the hierarchy for the sidebar (Teams -> Workers)
     const teams = {};
     filteredWorkers.forEach(w => {
         if (!teams[w.team]) teams[w.team] = [];
         teams[w.team].push(w);
     });
 
-    // Create vis.js groups and items
     const visGroups = new vis.DataSet();
     const visItems = new vis.DataSet();
     let groupOrder = 0;
@@ -1103,16 +1053,12 @@ function renderWorkerGantt() {
 
     sortedTeamNames.forEach(teamName => {
         const workersInTeam = teams[teamName];
-        const shiftOrder = {
-            '1st': 1,
-            '2nd': 2,
-            '3rd': 3
-        };
+        const shiftOrder = { '1st': 1, '2nd': 2, '3rd': 3 };
         workersInTeam.sort((a, b) => {
             const shiftCompare = (shiftOrder[a.shift] || 99) - (shiftOrder[b.shift] || 99);
             if (shiftCompare !== 0) return shiftCompare;
-            const numA = parseInt(a.name.match(/\d+$/) ?.[0] || 0);
-            const numB = parseInt(b.name.match(/\d+$/) ?.[0] || 0);
+            const numA = parseInt(a.name.match(/\d+$/)?.[0] || 0);
+            const numB = parseInt(b.name.match(/\d+$/)?.[0] || 0);
             return numA - numB;
         });
 
@@ -1131,9 +1077,9 @@ function renderWorkerGantt() {
     let colorIndex = 0;
 
     orderedWorkers.forEach(worker => {
-        const schedule = filteredMechanicSchedules[worker.id] || null; // Use the date-filtered schedule
+        const schedule = mechanicSchedules[worker.id] || null;
         if (schedule && schedule.tasks) {
-            schedule.tasks.forEach(task => { // These tasks are already filtered
+            schedule.tasks.forEach(task => {
                 if (!productColors[task.product]) {
                     productColors[task.product] = lightColors[colorIndex % lightColors.length];
                     colorIndex++;
@@ -1179,6 +1125,26 @@ function renderWorkerGantt() {
             legendContainer.appendChild(legendItem);
         });
     }
+}
+
+function updateWorkerGanttWindow() {
+    if (!workerGantt) return;
+
+    const viewDateInput = document.getElementById('wg-view-date');
+    const timescaleSelect = document.getElementById('wg-timescale-filter');
+
+    if (!viewDateInput || !timescaleSelect) return;
+
+    const startDate = new Date(viewDateInput.value || new Date());
+    startDate.setHours(0, 0, 0, 0); // Start at the beginning of the selected day
+
+    const durationDays = parseInt(timescaleSelect.value, 10);
+
+    const endDate = new Date(startDate);
+    endDate.setDate(startDate.getDate() + durationDays);
+
+    workerGantt.setWindow(startDate, endDate, { animation: true });
+    console.log(`Gantt window updated to: ${startDate.toLocaleDateString()} - ${endDate.toLocaleDateString()}`);
 }
 
 // Main view update function
@@ -4197,7 +4163,7 @@ async function autoAssign() {
           `Available Workforce for Filters: ${totalWorkers}\n\n` +
           `Assignments have been saved.`);
 
-    console.log('Auto-assigned schedules:', savedAssignments[currentScenario].mechanicSchedules);
+    // console.log('Auto-assigned schedules:', savedAssignments[currentScenario].mechanicSchedules);
 }
 
 // Helper to get filtered teams based on UI dropdowns
@@ -4325,6 +4291,8 @@ function loadAssignmentsFromStorage(silent = false) {
                 alert('Previous assignments loaded successfully!');
             }
             console.log(`Successfully loaded ${Object.keys(savedAssignments[currentScenario]).length} assignment entries from localStorage for ${currentScenario}.`);
+            // Refresh the view to apply loaded assignments to the UI
+            updateView();
         } else {
             if (!silent) {
                 alert('No saved assignments found for this scenario.');
