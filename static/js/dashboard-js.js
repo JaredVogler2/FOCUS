@@ -734,66 +734,11 @@ function setupWorkerGanttEventListeners() {
     document.getElementById('wg-refresh-btn').addEventListener('click', renderWorkerGantt);
     document.getElementById('wg-view-date').addEventListener('change', updateWorkerGanttWindow);
     document.getElementById('wg-timescale-filter').addEventListener('change', updateWorkerGanttWindow);
+    document.getElementById('wg-back-btn').addEventListener('click', () => moveTimeline('back'));
+    document.getElementById('wg-forward-btn').addEventListener('click', () => moveTimeline('forward'));
 
     // This event updates the custom header whenever the window changes.
     workerGantt.on('rangechanged', renderAdvancedGanttHeader);
-
-    // --- NEW: Scrollbar-driven "snap-to-shift" logic ---
-    const scrollWrapper = document.querySelector('.advanced-gantt-scroll-wrapper');
-    let lastScrollLeft = scrollWrapper ? scrollWrapper.scrollLeft : 0;
-
-    const handleGanttWrapperScroll = () => {
-        // Detach the listener to prevent loops.
-        scrollWrapper.removeEventListener('scroll', debouncedScrollHandler);
-
-        if (!workerGantt) {
-            // Re-attach listener before exiting if something is wrong
-            scrollWrapper.addEventListener('scroll', debouncedScrollHandler);
-            return;
-        }
-
-        const currentScrollLeft = scrollWrapper.scrollLeft;
-        const direction = currentScrollLeft > lastScrollLeft ? 'right' : 'left';
-
-        const window = workerGantt.getWindow();
-        const SHIFT_DURATION_MS = 8 * 60 * 60 * 1000;
-        const windowDuration = window.end.getTime() - window.start.getTime();
-
-        let newStart;
-        if (direction === 'right') {
-            newStart = new Date(window.start.getTime() + SHIFT_DURATION_MS);
-        } else {
-            newStart = new Date(window.start.getTime() - SHIFT_DURATION_MS);
-        }
-        const newEnd = new Date(newStart.getTime() + windowDuration);
-
-        workerGantt.setWindow(newStart, newEnd, { animation: false });
-
-        // Use a timeout to re-center the scrollbar and re-attach the listener
-        // after the DOM has had a chance to update from the setWindow call.
-        setTimeout(() => {
-            const center = (scrollWrapper.scrollWidth - scrollWrapper.clientWidth) / 2;
-            scrollWrapper.scrollLeft = center;
-            lastScrollLeft = center; // Update the last known position to the new center
-            // Re-attach the listener for the next user interaction.
-            scrollWrapper.addEventListener('scroll', debouncedScrollHandler);
-        }, 50);
-    };
-
-    // Create a debounced version of the handler.
-    const debouncedScrollHandler = debounce(handleGanttWrapperScroll, 150);
-
-    if (scrollWrapper) {
-        // Center the scrollbar initially after a short delay
-        setTimeout(() => {
-            const center = (scrollWrapper.scrollWidth - scrollWrapper.clientWidth) / 2;
-            scrollWrapper.scrollLeft = center;
-            lastScrollLeft = center;
-        }, 500);
-
-        // Attach the master listener.
-        scrollWrapper.addEventListener('scroll', debouncedScrollHandler);
-    }
 
     workerGantt.on('select', function(properties) {
         const selectedIds = properties.items;
@@ -1220,6 +1165,28 @@ function updateWorkerGanttWindow() {
     // Set the last known scroll start time whenever the window is programmatically set.
     lastKnownScrollStart = startDate.getTime();
     console.log(`Gantt window updated to: ${startDate.toLocaleDateString()} - ${endDate.toLocaleDateString()}`);
+}
+
+// Moves the timeline window back or forward by a set amount
+function moveTimeline(direction) {
+    if (!workerGantt) return;
+
+    const currentWindow = workerGantt.getWindow();
+    const shiftAmount = 8 * 60 * 60 * 1000; // 8 hours in milliseconds
+
+    let newStart, newEnd;
+
+    if (direction === 'back') {
+        newStart = new Date(currentWindow.start.getTime() - shiftAmount);
+        newEnd = new Date(currentWindow.end.getTime() - shiftAmount);
+    } else if (direction === 'forward') {
+        newStart = new Date(currentWindow.start.getTime() + shiftAmount);
+        newEnd = new Date(currentWindow.end.getTime() + shiftAmount);
+    } else {
+        return; // Invalid direction
+    }
+
+    workerGantt.setWindow(newStart, newEnd, { animation: true });
 }
 
 
