@@ -11,7 +11,7 @@ class ProductionScheduler:
     to the various specialized modules.
     """
 
-    def __init__(self, csv_file_path='scheduling_data.csv', debug=False, late_part_delay_days=1.0):
+    def __init__(self, csv_file_path='scheduling_data_2.csv', debug=False, late_part_delay_days=1.0):
         """Initialize scheduler with all its data structures."""
         self.csv_file_path = utils.resource_path(csv_file_path)
         self.debug = debug

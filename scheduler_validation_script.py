@@ -570,8 +570,8 @@ def main():
                        help='Validate specific scenario (1, 2, or 3)')
     parser.add_argument('--debug-task', type=str,
                        help='Debug why a specific task cannot be scheduled')
-    parser.add_argument('--csv', type=str, default='scheduling_data.csv',
-                       help='Path to CSV file (default: scheduling_data.csv)')
+    parser.add_argument('--csv', type=str, default='scheduling_data_2.csv',
+                       help='Path to CSV file (default: scheduling_data_2.csv)')
     parser.add_argument('--all', action='store_true',
                        help='Validate all scenarios')
     

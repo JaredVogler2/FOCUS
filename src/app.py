@@ -50,7 +50,7 @@ def create_app():
                 print("Initializing Production Scheduler Dashboard")
                 print("=" * 80)
 
-                scheduler = ProductionScheduler('scheduling_data.csv', debug=False, late_part_delay_days=1.0)
+                scheduler = ProductionScheduler('scheduling_data_2.csv', debug=False, late_part_delay_days=1.0)
                 scheduler.load_data_from_csv()
                 app.scheduler = scheduler
 
