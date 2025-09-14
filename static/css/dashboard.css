@@ -1611,7 +1611,7 @@ tr.has-conflict {
 .advanced-gantt-scroll-wrapper {
     width: 100%;
     max-height: calc(100vh - 300px); /* Adjust height as needed */
-    /* overflow: auto; */ /* This makes the wrapper the main scroll container */
+    overflow: auto; /* This makes the wrapper the main scroll container */
     border: 1px solid #ddd;
     position: relative;
 }
@@ -1619,6 +1619,8 @@ tr.has-conflict {
 .advanced-gantt-grid-container {
     display: grid;
     grid-template-columns: 150px 1fr; /* Sidebar and main content */
+    grid-template-rows: auto 1fr; /* Let header be its own height, content fills the rest */
+    height: 100%; /* Make the grid fill the wrapper's height */
     position: relative; /* Needed for z-indexing context of sticky items */
 }
 

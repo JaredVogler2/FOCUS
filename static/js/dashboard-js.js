@@ -615,6 +615,8 @@ function switchView(view) {
 // ========= WORKER GANTT CHART IMPLEMENTATION =========
 let workerGantt = null;
 let lastKnownScrollStart = null; // Variable to track scroll direction
+let lastScrollLeft = 0;
+let isProgrammaticScroll = false;
 
 const SHIFT_HOURS = {
     '3rd': { start: 23, end: 6, duration: 7 }, // Crosses midnight
@@ -701,7 +703,6 @@ function initializeWorkerGantt() {
         zoomable: false, // Zoom is now controlled by timescale dropdown
         moveable: false, // Allow pan for the main timeline
         orientation: 'top',
-        height: '100%',
         min: minDate,
         max: maxDate,
         showMajorLabels: false, // Hide all default labels
@@ -735,16 +736,23 @@ function setupWorkerGanttEventListeners() {
     document.getElementById('wg-view-date').addEventListener('change', updateWorkerGanttWindow);
     document.getElementById('wg-timescale-filter').addEventListener('change', updateWorkerGanttWindow);
 
-    // This single 'rangechanged' event handler now manages both the immediate header update
-    // and the debounced "snap-to-shift" functionality.
-    const debouncedSnapFunction = debounce(handleGanttScroll, 250); // Debounce the snapping logic
+    // The 'rangechanged' event is now only used to re-render the custom header.
+    // All navigation is handled by the scroll wrapper listener below.
+    workerGantt.on('rangechanged', renderAdvancedGanttHeader);
 
-    workerGantt.on('rangechanged', (properties) => {
-        // 1. Render the header immediately on any scroll for a smooth UX.
-        renderAdvancedGanttHeader();
-        // 2. Trigger the debounced snap function, which will execute after the user stops scrolling.
-        debouncedSnapFunction(properties);
-    });
+    // --- New Scroll Wrapper Handling ---
+    const scrollWrapper = document.querySelector('.advanced-gantt-scroll-wrapper');
+    if (scrollWrapper) {
+        // Center the scrollbar initially to allow scrolling left and right.
+        setTimeout(() => {
+            const centerPos = (scrollWrapper.scrollWidth - scrollWrapper.clientWidth) / 2;
+            scrollWrapper.scrollLeft = centerPos;
+            lastScrollLeft = centerPos;
+        }, 500); // Delay to ensure timeline has rendered and scrollWidth is correct.
+
+        const debouncedWrapperScroll = debounce(handleGanttWrapperScroll, 150);
+        scrollWrapper.addEventListener('scroll', debouncedWrapperScroll);
+    }
 
     workerGantt.on('select', function(properties) {
         const selectedIds = properties.items;
@@ -1173,67 +1181,51 @@ function updateWorkerGanttWindow() {
     console.log(`Gantt window updated to: ${startDate.toLocaleDateString()} - ${endDate.toLocaleDateString()}`);
 }
 
-// Handles the "snap-to-shift" scrolling behavior for the worker gantt chart
-function handleGanttScroll(properties) {
-    // We only care about events triggered by user dragging the timeline
-    if (properties.event) {
-        if (!workerGantt) return;
+// New handler for the scroll wrapper element that drives navigation
+function handleGanttWrapperScroll(event) {
+    if (isProgrammaticScroll || !workerGantt) return;
 
-        const window = workerGantt.getWindow();
-        const currentStartTime = window.start.getTime();
+    const scrollWrapper = event.target;
+    const currentScrollLeft = scrollWrapper.scrollLeft;
 
-        // If lastKnownScrollStart isn't set, initialize it and do nothing else.
-        if (lastKnownScrollStart === null) {
-            lastKnownScrollStart = currentStartTime;
-            return;
-        }
-
-        // Determine scroll direction
-        const direction = currentStartTime > lastKnownScrollStart ? 'right' : 'left';
-
-        // Enforce a fixed window duration by reading it directly from the dropdown.
-        const timescaleSelect = document.getElementById('wg-timescale-filter');
-        const durationDays = parseInt(timescaleSelect.value, 10);
-        const windowDuration = durationDays * 24 * 60 * 60 * 1000;
-        const SHIFT_DURATION_MS = 8 * 60 * 60 * 1000;
-
-        // Get the start of the day for the current window's start time
-        const dayStart = new Date(window.start);
-        dayStart.setHours(0, 0, 0, 0);
-        const msFromDayStart = window.start.getTime() - dayStart.getTime();
-
-        let targetShiftIndex;
-        if (direction === 'right') {
-            targetShiftIndex = Math.ceil(msFromDayStart / SHIFT_DURATION_MS);
-        } else {
-            targetShiftIndex = Math.floor(msFromDayStart / SHIFT_DURATION_MS);
-        }
-
-        const snappedMsFromDayStart = targetShiftIndex * SHIFT_DURATION_MS;
-        const snappedStartDate = new Date(dayStart.getTime() + snappedMsFromDayStart);
-
-        // If the snap results in no movement, force a move of one full shift.
-        if (snappedStartDate.getTime() === lastKnownScrollStart) {
-            if (direction === 'right') {
-                snappedStartDate.setTime(snappedStartDate.getTime() + SHIFT_DURATION_MS);
-            } else {
-                snappedStartDate.setTime(snappedStartDate.getTime() - SHIFT_DURATION_MS);
-            }
-        }
-
-        const snappedEndDate = new Date(snappedStartDate.getTime() + windowDuration);
-
-        // Use a one-time event listener to update the scroll position state *after* the animation finishes.
-        // This prevents a race condition where a new scroll could be miscalculated.
-        workerGantt.once('animationFinished', () => {
-            lastKnownScrollStart = snappedStartDate.getTime();
-        });
-
-        // Programmatically set the window to the new snapped position.
-        workerGantt.setWindow(snappedStartDate, snappedEndDate, {
-            animation: { duration: 200, easingFunction: 'easeOutCubic' }
-        });
+    // Determine direction. A small threshold prevents jitter from programmatic scrolling.
+    const scrollThreshold = 10;
+    if (Math.abs(currentScrollLeft - lastScrollLeft) < scrollThreshold) {
+        return;
     }
+    const direction = currentScrollLeft > lastScrollLeft ? 'right' : 'left';
+
+    const window = workerGantt.getWindow();
+    const SHIFT_DURATION_MS = 8 * 60 * 60 * 1000; // 8-hour shift jump
+
+    let newStartDate;
+    if (direction === 'right') {
+        newStartDate = new Date(window.start.getTime() + SHIFT_DURATION_MS);
+    } else {
+        newStartDate = new Date(window.start.getTime() - SHIFT_DURATION_MS);
+    }
+
+    const timescaleSelect = document.getElementById('wg-timescale-filter');
+    const durationDays = parseInt(timescaleSelect.value, 10);
+    const windowDurationMs = durationDays * 24 * 60 * 60 * 1000;
+    const newEndDate = new Date(newStartDate.getTime() + windowDurationMs);
+
+    isProgrammaticScroll = true; // Set flag to prevent this handler from re-triggering
+
+    workerGantt.setWindow(newStartDate, newEndDate, { animation: false });
+
+    // After the window is moved, reset the scrollbar to the middle.
+    // This creates the effect of an "infinite" scroll area.
+    setTimeout(() => {
+        const newScrollCenter = (scrollWrapper.scrollWidth - scrollWrapper.clientWidth) / 2;
+        scrollWrapper.scrollLeft = newScrollCenter;
+        lastScrollLeft = newScrollCenter;
+
+        // Release the lock after the programmatic scroll has settled.
+        setTimeout(() => {
+            isProgrammaticScroll = false;
+        }, 50);
+    }, 100);
 }
 
 
