@@ -614,6 +614,7 @@ function switchView(view) {
 
 // ========= WORKER GANTT CHART IMPLEMENTATION =========
 let workerGantt = null;
+let lastKnownScrollStart = null; // Variable to track scroll direction
 
 const SHIFT_HOURS = {
     '3rd': { start: 23, end: 6, duration: 7 }, // Crosses midnight
@@ -1161,6 +1162,8 @@ function updateWorkerGanttWindow() {
     endDate.setDate(startDate.getDate() + durationDays);
 
     workerGantt.setWindow(startDate, endDate, { animation: true });
+    // Set the last known scroll start time whenever the window is programmatically set.
+    lastKnownScrollStart = startDate.getTime();
     console.log(`Gantt window updated to: ${startDate.toLocaleDateString()} - ${endDate.toLocaleDateString()}`);
 }
 
@@ -1171,9 +1174,18 @@ function handleGanttScroll(properties) {
         if (!workerGantt) return;
 
         const window = workerGantt.getWindow();
-        const windowDuration = window.end - window.start;
+        const currentStartTime = window.start.getTime();
 
-        // In our display timeline, each shift is exactly 8 hours.
+        // If lastKnownScrollStart isn't set, initialize it and do nothing else.
+        // This establishes a baseline for the first user scroll.
+        if (lastKnownScrollStart === null) {
+            lastKnownScrollStart = currentStartTime;
+            return;
+        }
+
+        // Determine scroll direction
+        const direction = currentStartTime > lastKnownScrollStart ? 'right' : 'left';
+        const windowDuration = window.end - window.start;
         const SHIFT_DURATION_MS = 8 * 60 * 60 * 1000;
 
         // Get the start of the day for the current window's start time
@@ -1182,22 +1194,38 @@ function handleGanttScroll(properties) {
 
         const msFromDayStart = window.start.getTime() - dayStart.getTime();
 
-        // Calculate which shift boundary is closest
-        const nearestShiftIndex = Math.round(msFromDayStart / SHIFT_DURATION_MS);
-        const snappedMsFromDayStart = nearestShiftIndex * SHIFT_DURATION_MS;
+        let targetShiftIndex;
+        if (direction === 'right') {
+            // For a rightward scroll, we want to snap to the *next* shift boundary
+            targetShiftIndex = Math.ceil(msFromDayStart / SHIFT_DURATION_MS);
+        } else { // direction === 'left'
+            // For a leftward scroll, we want to snap to the *previous* shift boundary
+            targetShiftIndex = Math.floor(msFromDayStart / SHIFT_DURATION_MS);
+        }
 
+        const snappedMsFromDayStart = targetShiftIndex * SHIFT_DURATION_MS;
         const snappedStartDate = new Date(dayStart.getTime() + snappedMsFromDayStart);
+
+        // If the snap results in no movement (e.g., scrolling slightly right but not enough to cross the halfway point for ceil),
+        // force a move of one full shift in the direction of the scroll.
+        if (snappedStartDate.getTime() === lastKnownScrollStart) {
+            if (direction === 'right') {
+                snappedStartDate.setTime(snappedStartDate.getTime() + SHIFT_DURATION_MS);
+            } else {
+                snappedStartDate.setTime(snappedStartDate.getTime() - SHIFT_DURATION_MS);
+            }
+        }
+
         const snappedEndDate = new Date(snappedStartDate.getTime() + windowDuration);
 
-        // Only set the window if it's not already snapped (with a small tolerance)
-        // This prevents infinite loops of rangechanged events.
-        if (Math.abs(snappedStartDate.getTime() - window.start.getTime()) > 100) {
-            // The setWindow call will trigger another 'rangechanged' event.
-            // The debounce and the check above will prevent this from causing a loop.
-            workerGantt.setWindow(snappedStartDate, snappedEndDate, {
-                animation: { duration: 250, easingFunction: 'easeOutCubic' }
-            });
-        }
+        // Update the last known start time to our new snapped position.
+        // This is crucial for the next scroll calculation.
+        lastKnownScrollStart = snappedStartDate.getTime();
+
+        // Set the new window. The event listener's `byUser` check will prevent this from causing a loop.
+        workerGantt.setWindow(snappedStartDate, snappedEndDate, {
+            animation: { duration: 200, easingFunction: 'easeOutCubic' }
+        });
     }
 }
 
