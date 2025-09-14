@@ -1191,7 +1191,14 @@ function handleGanttScroll(properties) {
 
         // Determine scroll direction
         const direction = currentStartTime > lastKnownScrollStart ? 'right' : 'left';
-        const windowDuration = window.end - window.start;
+
+        // ** THE FIX IS HERE **
+        // Enforce a fixed window duration by reading it directly from the dropdown,
+        // preventing small errors from accumulating and changing the window size.
+        const timescaleSelect = document.getElementById('wg-timescale-filter');
+        const durationDays = parseInt(timescaleSelect.value, 10);
+        const windowDuration = durationDays * 24 * 60 * 60 * 1000;
+
         const SHIFT_DURATION_MS = 8 * 60 * 60 * 1000;
 
         // Get the start of the day for the current window's start time
