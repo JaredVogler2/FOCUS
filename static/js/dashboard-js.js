@@ -699,7 +699,7 @@ function initializeWorkerGantt() {
         stack: false,
         editable: false,
         zoomable: false, // Zoom is now controlled by timescale dropdown
-        moveable: true, // Allow pan for the main timeline
+        moveable: false, // Allow pan for the main timeline
         orientation: 'top',
         height: '100%',
         min: minDate,
