@@ -909,10 +909,12 @@ function renderAdvancedGanttHeader() {
     // Create containers for each row of the header
     const dateRow = document.createElement('div');
     const shiftRow = document.createElement('div');
-    const timeRow = document.createElement('div');
     dateRow.style.whiteSpace = 'nowrap';
     shiftRow.style.whiteSpace = 'nowrap';
-    timeRow.style.whiteSpace = 'nowrap';
+
+    dateRow.style.display = 'flex';
+    shiftRow.style.display = 'flex';
+
 
     // Get timescale value
     const timescale = document.getElementById('wg-timescale-filter').value;
@@ -928,35 +930,47 @@ function renderAdvancedGanttHeader() {
         const dateWidth = (displayShift2End - displayShift3Start) * timeToPixels;
         const shiftWidth = dateWidth / 3;
 
-        // Date Header
-        const dateHeader = document.createElement('div');
-        dateHeader.className = 'gantt-header-item header-date';
-        dateHeader.textContent = dayStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-        dateHeader.style.width = `${dateWidth}px`;
-        dateHeader.style.height = '25px';
-        dateRow.appendChild(dateHeader);
+        // Date Header - create three cells to position date over 1st shift
+        const dateCell1 = document.createElement('div');
+        dateCell1.style.width = `${shiftWidth}px`;
+        dateRow.appendChild(dateCell1);
 
-        // Shift Headers
+        const dateCell2 = document.createElement('div');
+        dateCell2.className = 'gantt-header-item header-date';
+        dateCell2.textContent = dayStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        dateCell2.style.width = `${shiftWidth}px`;
+        dateCell2.style.textAlign = 'center';
+        dateRow.appendChild(dateCell2);
+
+        const dateCell3 = document.createElement('div');
+        dateCell3.style.width = `${shiftWidth}px`;
+        dateRow.appendChild(dateCell3);
+
+
+        // Combined Shift and Time Headers
         const shifts = ['3rd', '1st', '2nd'];
         shifts.forEach(shiftText => {
-            const shiftHeader = document.createElement('div');
-            shiftHeader.className = 'gantt-header-item header-shift';
-            shiftHeader.textContent = shiftText;
-            shiftHeader.style.width = `${shiftWidth}px`;
-            shiftHeader.style.height = '20px';
-            shiftRow.appendChild(shiftHeader);
-        });
+            const shiftContainer = document.createElement('div');
+            shiftContainer.className = 'gantt-header-item';
+            shiftContainer.style.width = `${shiftWidth}px`;
+            shiftContainer.style.display = 'flex';
+            shiftContainer.style.flexDirection = 'column';
+            shiftContainer.style.alignItems = 'center';
+            shiftContainer.style.height = '40px'; // Combined height
 
-        // Time Headers
-        shifts.forEach(shiftText => {
-            const timeHeader = document.createElement('div');
-            timeHeader.className = 'gantt-header-item header-time';
-            timeHeader.style.width = `${shiftWidth}px`;
-            timeHeader.style.height = '20px';
-            timeHeader.style.display = 'flex';
-            timeHeader.style.alignItems = 'center';
-            timeHeader.style.padding = '0 5px';
-            timeHeader.style.fontSize = '12px';
+            const shiftNameDiv = document.createElement('div');
+            shiftNameDiv.className = 'header-shift';
+            shiftNameDiv.textContent = shiftText;
+            shiftContainer.appendChild(shiftNameDiv);
+
+            const timeContainer = document.createElement('div');
+            timeContainer.className = 'header-time';
+            timeContainer.style.width = '100%';
+            timeContainer.style.display = 'flex';
+            timeContainer.style.alignItems = 'center';
+            timeContainer.style.padding = '0 5px';
+            timeContainer.style.fontSize = '12px';
+            timeContainer.style.boxSizing = 'border-box';
 
 
             const shiftInfo = SHIFT_HOURS[shiftText];
@@ -972,26 +986,26 @@ function renderAdvancedGanttHeader() {
             const endTime = formatTime(shiftInfo.end);
 
             if (timescale === '1' || timescale === '2') {
-                timeHeader.style.justifyContent = 'space-between';
+                timeContainer.style.justifyContent = 'space-between';
                 const midTimeValue = shiftInfo.start + shiftInfo.duration / 2;
                 const midTime = formatTime(midTimeValue >= 24 ? midTimeValue - 24 : midTimeValue);
-                timeHeader.innerHTML = `
+                timeContainer.innerHTML = `
                     <span style="text-align: left;">${startTime}</span>
                     <span style="text-align: center;">${midTime}</span>
                     <span style="text-align: right;">${endTime}</span>
                 `;
             } else { // 1 week and 2 week views
-                timeHeader.style.justifyContent = 'flex-start';
-                timeHeader.innerHTML = `<span style="text-align: left;">${startTime}</span>`;
+                timeContainer.style.justifyContent = 'flex-start';
+                timeContainer.innerHTML = `<span style="text-align: left;">${startTime}</span>`;
             }
-            timeRow.appendChild(timeHeader);
+            shiftContainer.appendChild(timeContainer);
+            shiftRow.appendChild(shiftContainer);
         });
 
         current.setDate(current.getDate() + 1);
     }
      headerContainer.appendChild(dateRow);
      headerContainer.appendChild(shiftRow);
-     headerContainer.appendChild(timeRow);
 }
 
 
