@@ -294,7 +294,7 @@ Task,Duration (minutes),Resource Type,Skill Code,Mechanics Required
 993,50,Mechanic Team 1,Skill 1,1
 992,90,Mechanic Team 2,Skill 3,3
 
-==== Mechanic Team WORKING CALENDARS ====
+==== MECHANIC TEAM WORKING CALENDARS ====
 Mechanic Team,Working Shifts
 Mechanic Team 1,1st
 Mechanic Team 1,2nd
@@ -303,13 +303,14 @@ Mechanic Team 3,1st
 Mechanic Team 3,2nd
 Mechanic Team 2,3rd
 
+
 ==== SHIFT WORKING HOURS ====
 Shift,Start Time,End Time,Duration
 1st,6:00,14:30,8.5 hours
 2nd,14:30,23:00,8.5 hours
 3rd,23:00,6:00,7 hours
 
-==== Mechanic Team CAPACITY ====
+==== MECHANIC TEAM CAPACITY ====
 Mechanic Team,Total Capacity (People)
 Mechanic Team 1 (Skill 1),6
 Mechanic Team 1 (Skill 2),6
@@ -335,6 +336,7 @@ Mechanic Team 3 (Skill 1),6
 Mechanic Team 3 (Skill 2),6
 Mechanic Team 3 (Skill 3),6
 Mechanic Team 3 (Skill 4),6
+
 
 ==== PRODUCT LINE DELIVERY SCHEDULE ====
 Product Line,Delivery Date
@@ -472,6 +474,7 @@ LP_308,75,Mechanic Team 2,1
 LP_309,120,Mechanic Team 1,2
 LP_310,90,Mechanic Team 3,1
 LP_311,60,Mechanic Team 1,1
+
 
 ==== CUSTOMER INSPECTION REQUIREMENTS ====
 Primary Task,Customer Task,Customer Headcount Required,Quality Duration (minutes)
