@@ -1183,7 +1183,6 @@ function handleGanttScroll(properties) {
         const currentStartTime = window.start.getTime();
 
         // If lastKnownScrollStart isn't set, initialize it and do nothing else.
-        // This establishes a baseline for the first user scroll.
         if (lastKnownScrollStart === null) {
             lastKnownScrollStart = currentStartTime;
             return;
@@ -1192,35 +1191,28 @@ function handleGanttScroll(properties) {
         // Determine scroll direction
         const direction = currentStartTime > lastKnownScrollStart ? 'right' : 'left';
 
-        // ** THE FIX IS HERE **
-        // Enforce a fixed window duration by reading it directly from the dropdown,
-        // preventing small errors from accumulating and changing the window size.
+        // Enforce a fixed window duration by reading it directly from the dropdown.
         const timescaleSelect = document.getElementById('wg-timescale-filter');
         const durationDays = parseInt(timescaleSelect.value, 10);
         const windowDuration = durationDays * 24 * 60 * 60 * 1000;
-
         const SHIFT_DURATION_MS = 8 * 60 * 60 * 1000;
 
         // Get the start of the day for the current window's start time
         const dayStart = new Date(window.start);
         dayStart.setHours(0, 0, 0, 0);
-
         const msFromDayStart = window.start.getTime() - dayStart.getTime();
 
         let targetShiftIndex;
         if (direction === 'right') {
-            // For a rightward scroll, we want to snap to the *next* shift boundary
             targetShiftIndex = Math.ceil(msFromDayStart / SHIFT_DURATION_MS);
-        } else { // direction === 'left'
-            // For a leftward scroll, we want to snap to the *previous* shift boundary
+        } else {
             targetShiftIndex = Math.floor(msFromDayStart / SHIFT_DURATION_MS);
         }
 
         const snappedMsFromDayStart = targetShiftIndex * SHIFT_DURATION_MS;
         const snappedStartDate = new Date(dayStart.getTime() + snappedMsFromDayStart);
 
-        // If the snap results in no movement (e.g., scrolling slightly right but not enough to cross the halfway point for ceil),
-        // force a move of one full shift in the direction of the scroll.
+        // If the snap results in no movement, force a move of one full shift.
         if (snappedStartDate.getTime() === lastKnownScrollStart) {
             if (direction === 'right') {
                 snappedStartDate.setTime(snappedStartDate.getTime() + SHIFT_DURATION_MS);
@@ -1231,11 +1223,13 @@ function handleGanttScroll(properties) {
 
         const snappedEndDate = new Date(snappedStartDate.getTime() + windowDuration);
 
-        // Update the last known start time to our new snapped position.
-        // This is crucial for the next scroll calculation.
-        lastKnownScrollStart = snappedStartDate.getTime();
+        // Use a one-time event listener to update the scroll position state *after* the animation finishes.
+        // This prevents a race condition where a new scroll could be miscalculated.
+        workerGantt.once('animationFinished', () => {
+            lastKnownScrollStart = snappedStartDate.getTime();
+        });
 
-        // Set the new window. The event listener's `byUser` check will prevent this from causing a loop.
+        // Programmatically set the window to the new snapped position.
         workerGantt.setWindow(snappedStartDate, snappedEndDate, {
             animation: { duration: 200, easingFunction: 'easeOutCubic' }
         });
