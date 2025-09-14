@@ -1176,7 +1176,7 @@ function updateWorkerGanttWindow() {
 // Handles the "snap-to-shift" scrolling behavior for the worker gantt chart
 function handleGanttScroll(properties) {
     // We only care about events triggered by user dragging the timeline
-    if (properties.byUser) {
+    if (properties.event) {
         if (!workerGantt) return;
 
         const window = workerGantt.getWindow();
