@@ -937,21 +937,21 @@ function renderAdvancedGanttHeader() {
         // Shift Headers
         const shift3 = document.createElement('div');
         shift3.className = 'gantt-header-item header-shift';
-        shift3.textContent = '3rd Shift';
+        shift3.textContent = '3rd';
         shift3.style.width = `${shiftWidth}px`;
         shift3.style.height = '20px';
         shiftRow.appendChild(shift3);
 
         const shift1 = document.createElement('div');
         shift1.className = 'gantt-header-item header-shift';
-        shift1.textContent = '1st Shift';
+        shift1.textContent = '1st';
         shift1.style.width = `${shiftWidth}px`;
         shift1.style.height = '20px';
         shiftRow.appendChild(shift1);
 
         const shift2 = document.createElement('div');
         shift2.className = 'gantt-header-item header-shift';
-        shift2.textContent = '2nd Shift';
+        shift2.textContent = '2nd';
         shift2.style.width = `${shiftWidth}px`;
         shift2.style.height = '20px';
         shiftRow.appendChild(shift2);
@@ -1153,40 +1153,56 @@ function updateWorkerGanttWindow() {
 
     if (!viewDateInput || !timescaleSelect) return;
 
+    // Get the start date from the picker and set it to the beginning of that day (midnight)
     const startDate = new Date(viewDateInput.value || new Date());
-    startDate.setHours(0, 0, 0, 0); // Start at the beginning of the selected day
+    startDate.setHours(0, 0, 0, 0);
 
     const durationDays = parseInt(timescaleSelect.value, 10);
 
-    const endDate = new Date(startDate);
-    endDate.setDate(startDate.getDate() + durationDays);
+    // Calculate the end date by adding the duration to the start date
+    const endDate = new Date(startDate.getTime());
+    endDate.setDate(endDate.getDate() + durationDays);
 
+    // Set the timeline window. The key is to ensure the start and end are aligned with midnight.
     workerGantt.setWindow(startDate, endDate, { animation: true });
-    // Set the last known scroll start time whenever the window is programmatically set.
-    lastKnownScrollStart = startDate.getTime();
-    console.log(`Gantt window updated to: ${startDate.toLocaleDateString()} - ${endDate.toLocaleDateString()}`);
+
+    console.log(`Gantt window updated to: ${startDate.toLocaleString()} - ${endDate.toLocaleString()}`);
 }
 
-// Moves the timeline window back or forward by a set amount
+// Moves the timeline window back or forward based on the selected timescale.
 function moveTimeline(direction) {
     if (!workerGantt) return;
 
-    const currentWindow = workerGantt.getWindow();
-    const shiftAmount = 8 * 60 * 60 * 1000; // 8 hours in milliseconds
+    // Get the number of days to jump from the timescale filter
+    const timescaleSelect = document.getElementById('wg-timescale-filter');
+    const daysToJump = parseInt(timescaleSelect.value, 10);
 
-    let newStart, newEnd;
+    // If the value is not a valid number, default to 1 day
+    if (isNaN(daysToJump)) {
+        console.error("Invalid timescale value:", timescaleSelect.value);
+        return;
+    }
 
+    // Get the current date from the date picker, which is our source of truth
+    const viewDateInput = document.getElementById('wg-view-date');
+    const currentDate = new Date(viewDateInput.value || new Date());
+
+    // Calculate the new date
+    let newDate = new Date(currentDate);
     if (direction === 'back') {
-        newStart = new Date(currentWindow.start.getTime() - shiftAmount);
-        newEnd = new Date(currentWindow.end.getTime() - shiftAmount);
+        newDate.setDate(newDate.getDate() - daysToJump);
     } else if (direction === 'forward') {
-        newStart = new Date(currentWindow.start.getTime() + shiftAmount);
-        newEnd = new Date(currentWindow.end.getTime() + shiftAmount);
+        newDate.setDate(newDate.getDate() + daysToJump);
     } else {
         return; // Invalid direction
     }
 
-    workerGantt.setWindow(newStart, newEnd, { animation: true });
+    // Set the new date in the date picker
+    // This will trigger the 'change' event on the date input,
+    // which in turn calls updateWorkerGanttWindow() to redraw the timeline.
+    // This ensures we are using the existing logic and keeping the UI consistent.
+    viewDateInput.valueAsDate = newDate;
+    viewDateInput.dispatchEvent(new Event('change'));
 }
 
 
