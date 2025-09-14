@@ -242,22 +242,27 @@ def _load_team_capacities_and_schedules(scheduler, sections):
     # Load mechanic team shifts - STORE AS LISTS
     if "MECHANIC TEAM WORKING CALENDARS" in sections:
         reader = csv.reader(sections["MECHANIC TEAM WORKING CALENDARS"].splitlines())
+        scheduler.team_shifts = defaultdict(list)
         for row in reader:
             if row and row[0] != 'Mechanic Team':
                 team = row[0].strip()
+                if not team:  # Skip empty team names
+                    continue
                 shifts = row[1].strip()
-                scheduler.team_shifts[team] = [shifts]  # Store as list!
+                scheduler.team_shifts[team].append(shifts)
         print(f"[DEBUG] Loaded {len(scheduler.team_shifts)} mechanic team schedules")
 
     # Load quality team shifts - STORE AS LISTS
-    scheduler.quality_team_shifts = {}
+    scheduler.quality_team_shifts = defaultdict(list)
     if "QUALITY TEAM WORKING CALENDARS" in sections:
         reader = csv.reader(sections["QUALITY TEAM WORKING CALENDARS"].splitlines())
         for row in reader:
             if row and row[0] != 'Quality Team':
                 team = row[0].strip()
+                if not team:  # Skip empty team names
+                    continue
                 shifts = row[1].strip()
-                scheduler.quality_team_shifts[team] = [shifts]  # Store as list!
+                scheduler.quality_team_shifts[team].append(shifts)
         print(f"[DEBUG] Loaded {len(scheduler.quality_team_shifts)} quality team schedules")
 
     # Ensure ALL quality teams have shifts
