@@ -914,6 +914,8 @@ function renderAdvancedGanttHeader() {
     shiftRow.style.whiteSpace = 'nowrap';
     timeRow.style.whiteSpace = 'nowrap';
 
+    // Get timescale value
+    const timescale = document.getElementById('wg-timescale-filter').value;
 
     while (current < window.end) {
         const dayStart = new Date(current);
@@ -935,49 +937,55 @@ function renderAdvancedGanttHeader() {
         dateRow.appendChild(dateHeader);
 
         // Shift Headers
-        const shift3 = document.createElement('div');
-        shift3.className = 'gantt-header-item header-shift';
-        shift3.textContent = '3rd';
-        shift3.style.width = `${shiftWidth}px`;
-        shift3.style.height = '20px';
-        shiftRow.appendChild(shift3);
-
-        const shift1 = document.createElement('div');
-        shift1.className = 'gantt-header-item header-shift';
-        shift1.textContent = '1st';
-        shift1.style.width = `${shiftWidth}px`;
-        shift1.style.height = '20px';
-        shiftRow.appendChild(shift1);
-
-        const shift2 = document.createElement('div');
-        shift2.className = 'gantt-header-item header-shift';
-        shift2.textContent = '2nd';
-        shift2.style.width = `${shiftWidth}px`;
-        shift2.style.height = '20px';
-        shiftRow.appendChild(shift2);
+        const shifts = ['3rd', '1st', '2nd'];
+        shifts.forEach(shiftText => {
+            const shiftHeader = document.createElement('div');
+            shiftHeader.className = 'gantt-header-item header-shift';
+            shiftHeader.textContent = shiftText;
+            shiftHeader.style.width = `${shiftWidth}px`;
+            shiftHeader.style.height = '20px';
+            shiftRow.appendChild(shiftHeader);
+        });
 
         // Time Headers
-        const time3 = document.createElement('div');
-        time3.className = 'gantt-header-item header-time';
-        time3.textContent = '11pm - 6am';
-        time3.style.width = `${shiftWidth}px`;
-        time3.style.height = '20px';
-        timeRow.appendChild(time3);
+        shifts.forEach(shiftText => {
+            const timeHeader = document.createElement('div');
+            timeHeader.className = 'gantt-header-item header-time';
+            timeHeader.style.width = `${shiftWidth}px`;
+            timeHeader.style.height = '20px';
+            timeHeader.style.display = 'flex';
+            timeHeader.style.alignItems = 'center';
+            timeHeader.style.padding = '0 5px';
+            timeHeader.style.fontSize = '12px';
 
-        const time1 = document.createElement('div');
-        time1.className = 'gantt-header-item header-time';
-        time1.textContent = '6am - 2:30pm';
-        time1.style.width = `${shiftWidth}px`;
-        time1.style.height = '20px';
-        timeRow.appendChild(time1);
 
-        const time2 = document.createElement('div');
-        time2.className = 'gantt-header-item header-time';
-        time2.textContent = '2:30pm - 11pm';
-        time2.style.width = `${shiftWidth}px`;
-        time2.style.height = '20px';
-        timeRow.appendChild(time2);
+            const shiftInfo = SHIFT_HOURS[shiftText];
+            const formatTime = (hours) => {
+                const h = Math.floor(hours);
+                const m = Math.round((hours - h) * 60);
+                const d = new Date();
+                d.setHours(h, m);
+                return d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }).replace(' AM', 'a').replace(' PM', 'p');
+            };
 
+            const startTime = formatTime(shiftInfo.start);
+            const endTime = formatTime(shiftInfo.end);
+
+            if (timescale === '1' || timescale === '2') {
+                timeHeader.style.justifyContent = 'space-between';
+                const midTimeValue = shiftInfo.start + shiftInfo.duration / 2;
+                const midTime = formatTime(midTimeValue >= 24 ? midTimeValue - 24 : midTimeValue);
+                timeHeader.innerHTML = `
+                    <span style="text-align: left;">${startTime}</span>
+                    <span style="text-align: center;">${midTime}</span>
+                    <span style="text-align: right;">${endTime}</span>
+                `;
+            } else { // 1 week and 2 week views
+                timeHeader.style.justifyContent = 'flex-start';
+                timeHeader.innerHTML = `<span style="text-align: left;">${startTime}</span>`;
+            }
+            timeRow.appendChild(timeHeader);
+        });
 
         current.setDate(current.getDate() + 1);
     }
