@@ -168,26 +168,36 @@ def _load_customer_inspections(scheduler, sections):
 
 
 def _load_shift_hours(scheduler, sections):
-    """Load shift working hours from CSV"""
+    """Load shift working hours from CSV and split overnight shifts."""
     if "SHIFT WORKING HOURS" in sections:
         reader = csv.reader(sections["SHIFT WORKING HOURS"].splitlines())
-
-        # Initialize shift_hours dict
         scheduler.shift_hours = {}
+        scheduler.overnight_shifts = {}
 
         for row in reader:
             if row and row[0] != 'Shift' and len(row) >= 3:
                 shift_name = row[0].strip()
-                start_time = row[1].strip()
-                end_time = row[2].strip()
+                start_time_str = row[1].strip()
+                end_time_str = row[2].strip()
 
-                scheduler.shift_hours[shift_name] = {
-                    'start': start_time,
-                    'end': end_time
-                }
+                start_h, start_m = scheduler._parse_shift_time(start_time_str)
+                end_h, end_m = scheduler._parse_shift_time(end_time_str)
 
-        print(f"[DEBUG] Loaded shift hours for {len(scheduler.shift_hours)} shifts:")
-        for shift, hours in scheduler.shift_hours.items():
+                if (start_h, start_m) > (end_h, end_m):  # Overnight shift
+                    print(f"[INFO] Detected overnight shift: {shift_name}. Splitting it.")
+                    # Part 1: from start_time to 23:59
+                    p1_name = f"{shift_name}_p1"
+                    scheduler.shift_hours[p1_name] = {'start': start_time_str, 'end': '23:59'}
+                    # Part 2: from 00:00 to end_time
+                    p2_name = f"{shift_name}_p2"
+                    scheduler.shift_hours[p2_name] = {'start': '00:00', 'end': end_time_str}
+                    # Store the mapping for later use
+                    scheduler.overnight_shifts[shift_name] = [p1_name, p2_name]
+                else:
+                    scheduler.shift_hours[shift_name] = {'start': start_time_str, 'end': end_time_str}
+
+        print(f"[DEBUG] Loaded shift hours for {len(scheduler.shift_hours)} shifts (including split overnight shifts):")
+        for shift, hours in sorted(scheduler.shift_hours.items()):
             print(f"  - {shift}: {hours['start']} to {hours['end']}")
     else:
         # Fallback to defaults if not in CSV
@@ -195,8 +205,10 @@ def _load_shift_hours(scheduler, sections):
         scheduler.shift_hours = {
             '1st': {'start': '6:00', 'end': '14:30'},
             '2nd': {'start': '14:30', 'end': '23:00'},
-            '3rd': {'start': '23:00', 'end': '6:30'}
+            '3rd_p1': {'start': '23:00', 'end': '23:59'},
+            '3rd_p2': {'start': '00:00', 'end': '06:00'}
         }
+        scheduler.overnight_shifts = {'3rd': ['3rd_p1', '3rd_p2']}
 
     # Create alias for compatibility
     scheduler.shift_definitions = scheduler.shift_hours
@@ -246,10 +258,16 @@ def _load_team_capacities_and_schedules(scheduler, sections):
         for row in reader:
             if row and row[0] != 'Mechanic Team':
                 team = row[0].strip()
-                if not team:  # Skip empty team names
+                if not team:
                     continue
-                shifts = row[1].strip()
-                scheduler.team_shifts[team].append(shifts)
+                shift_name = row[1].strip()
+                if shift_name in scheduler.overnight_shifts:
+                    scheduler.team_shifts[team].extend(scheduler.overnight_shifts[shift_name])
+                else:
+                    scheduler.team_shifts[team].append(shift_name)
+        # Remove duplicates
+        for team in scheduler.team_shifts:
+            scheduler.team_shifts[team] = sorted(list(set(scheduler.team_shifts[team])))
         print(f"[DEBUG] Loaded {len(scheduler.team_shifts)} mechanic team schedules")
 
     # Load quality team shifts - STORE AS LISTS
@@ -259,10 +277,16 @@ def _load_team_capacities_and_schedules(scheduler, sections):
         for row in reader:
             if row and row[0] != 'Quality Team':
                 team = row[0].strip()
-                if not team:  # Skip empty team names
+                if not team:
                     continue
-                shifts = row[1].strip()
-                scheduler.quality_team_shifts[team].append(shifts)
+                shift_name = row[1].strip()
+                if shift_name in scheduler.overnight_shifts:
+                    scheduler.quality_team_shifts[team].extend(scheduler.overnight_shifts[shift_name])
+                else:
+                    scheduler.quality_team_shifts[team].append(shift_name)
+        # Remove duplicates
+        for team in scheduler.quality_team_shifts:
+            scheduler.quality_team_shifts[team] = sorted(list(set(scheduler.quality_team_shifts[team])))
         print(f"[DEBUG] Loaded {len(scheduler.quality_team_shifts)} quality team schedules")
 
     # Ensure ALL quality teams have shifts
