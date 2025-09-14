@@ -42,6 +42,7 @@ class ProductionScheduler:
         self.quality_team_shifts = {}
         self.quality_team_capacity = {}
         self.shift_hours = {}
+        self.overnight_shifts = {}
         self.delivery_dates = {}
         self.holidays = defaultdict(set)
 
