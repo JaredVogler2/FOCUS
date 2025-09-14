@@ -728,10 +728,16 @@ function setupWorkerGanttEventListeners() {
     document.getElementById('wg-view-date').addEventListener('change', updateWorkerGanttWindow);
     document.getElementById('wg-timescale-filter').addEventListener('change', updateWorkerGanttWindow);
 
-    // Add a debounced event listener for the 'rangechanged' event to handle snap-to-shift scrolling.
-    const debouncedScrollHandler = debounce(handleGanttScroll, 250); // 250ms delay
-    workerGantt.on('rangechanged', debouncedScrollHandler);
+    // This single 'rangechanged' event handler now manages both the immediate header update
+    // and the debounced "snap-to-shift" functionality.
+    const debouncedSnapFunction = debounce(handleGanttScroll, 250); // Debounce the snapping logic
 
+    workerGantt.on('rangechanged', (properties) => {
+        // 1. Render the header immediately on any scroll for a smooth UX.
+        renderAdvancedGanttHeader();
+        // 2. Trigger the debounced snap function, which will execute after the user stops scrolling.
+        debouncedSnapFunction(properties);
+    });
 
     workerGantt.on('select', function(properties) {
         const selectedIds = properties.items;
@@ -1124,10 +1130,6 @@ function renderWorkerGantt() {
 
     renderAdvancedGanttSidebar(teams);
     renderAdvancedGanttHeader();
-
-    workerGantt.on('rangechanged', () => {
-        renderAdvancedGanttHeader();
-    });
 
     const legendContainer = document.getElementById('wg-product-legend');
     if (legendContainer) {
