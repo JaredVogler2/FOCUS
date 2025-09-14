@@ -87,130 +87,109 @@ class CpSatScheduler:
 
     def _add_resource_constraints(self):
         """
-        Adds resource constraints with corrected logic for Quality Inspections.
-        This version fixes a double-counting bug and correctly models resource usage.
+        Adds resource and shift constraints. Non-working hours are modeled as dummy tasks
+        that consume the full capacity of a resource.
         """
-        print("[INFO] Adding resource constraints with corrected shared mechanic logic...")
-        resource_to_tasks = defaultdict(lambda: {'intervals': [], 'demands': []})
-
-        for task_id, task_info in self.scheduler.tasks.items():
-            task_vars = self.task_vars[task_id]
-
-            if task_info.get('is_quality', False):
-                # A Quality Inspection task consumes TWO resources simultaneously:
-                # 1. A Quality Inspector from the designated Quality Team.
-                quality_team = task_info.get('team')
-                if quality_team:
-                    # The 'mechanics_required' for a QI task is the number of QI personnel.
-                    resource_to_tasks[quality_team]['intervals'].append(task_vars['interval'])
-                    resource_to_tasks[quality_team]['demands'].append(task_info['mechanics_required'])
-
-                # 2. A Mechanic from the primary task's team.
-                primary_task_id = task_info.get('primary_task')
-                if primary_task_id and primary_task_id in self.scheduler.tasks:
-                    primary_task_info = self.scheduler.tasks[primary_task_id]
-                    mechanic_team_resource = primary_task_info.get('team_skill')
-                    if mechanic_team_resource:
-                        # The number of mechanics required for the inspection is also in the QI task's data.
-                        mechanic_headcount_for_qi = task_info.get('mechanics_required', 1)
-                        resource_to_tasks[mechanic_team_resource]['intervals'].append(task_vars['interval'])
-                        resource_to_tasks[mechanic_team_resource]['demands'].append(mechanic_headcount_for_qi)
-
-            elif task_info.get('is_customer', False):
-                # A Customer Inspection task consumes only a Customer resource.
-                customer_team = task_info.get('team')
-                if customer_team:
-                    resource_to_tasks[customer_team]['intervals'].append(task_vars['interval'])
-                    resource_to_tasks[customer_team]['demands'].append(task_info['mechanics_required'])
-
-            else:
-                # This is a standard Production, Rework, or Late Part task.
-                # It only consumes a Mechanic resource.
-                mechanic_team_resource = task_info.get('team_skill')
-                if mechanic_team_resource:
-                    resource_to_tasks[mechanic_team_resource]['intervals'].append(task_vars['interval'])
-                    resource_to_tasks[mechanic_team_resource]['demands'].append(task_info['mechanics_required'])
-
-        # Add all the cumulative constraints to the model
-        all_resources = {**self.scheduler.team_capacity, **self.scheduler.quality_team_capacity, **self.scheduler.customer_team_capacity}
-        for resource_name, capacity in all_resources.items():
-            if resource_name in resource_to_tasks and capacity > 0:
-                intervals = resource_to_tasks[resource_name]['intervals']
-                demands = resource_to_tasks[resource_name]['demands']
-                self.model.AddCumulative(intervals, demands, capacity)
-                if self.scheduler.debug:
-                    print(f"  - Added cumulative constraint for '{resource_name}' with capacity {capacity} and {len(intervals)} tasks.")
-
-        print(f"[INFO] Added cumulative constraints for {len(resource_to_tasks)} unique resources.")
-
-    def _add_shift_constraints(self):
-        """
-        Adds constraints to ensure tasks are only scheduled during a team's working shifts.
-        This simplified version assumes no overnight shifts, as they are split during data loading.
-        """
-        print("[INFO] Adding simplified shift constraints...")
+        print("[INFO] Adding resource and shift constraints...")
         s = self.scheduler
         minutes_in_day = 24 * 60
+        resource_to_tasks = defaultdict(lambda: {'intervals': [], 'demands': []})
 
+        # Add real tasks to the resource usage map
         for task_id, task_info in s.tasks.items():
             task_vars = self.task_vars[task_id]
-            start_var = task_vars['start']
-            duration = task_vars['duration']
-
-            # Determine the team's shifts (now includes split shifts like '3rd_p1', '3rd_p2')
+            resource_key = None
             if task_info.get('is_quality'):
-                team_shifts = s.quality_team_shifts.get(task_info['team'], [])
+                resource_key = task_info.get('team')
             elif task_info.get('is_customer'):
-                team_shifts = s.customer_team_shifts.get(task_info['team'], [])
+                resource_key = task_info.get('team')
             else:
-                team_key = task_info.get('team_skill', task_info.get('team'))
-                base_team = team_key.split(' (')[0] if '(' in team_key else team_key
-                team_shifts = s.team_shifts.get(base_team, [])
+                resource_key = task_info.get('team_skill')
 
-            if not team_shifts:
-                if s.debug:
-                    print(f"[WARNING] Task {task_id} has no assigned shifts. Assuming 24/7 availability.")
+            if resource_key:
+                resource_to_tasks[resource_key]['intervals'].append(task_vars['interval'])
+                resource_to_tasks[resource_key]['demands'].append(task_info['mechanics_required'])
+
+            # Handle shared mechanic for QI tasks
+            if task_info.get('is_quality'):
+                primary_task_id = task_info.get('primary_task')
+                if primary_task_id and primary_task_id in s.tasks:
+                    primary_task_info = s.tasks[primary_task_id]
+                    mechanic_resource = primary_task_info.get('team_skill')
+                    if mechanic_resource:
+                        mechanic_headcount = task_info.get('mechanics_required', 1)
+                        resource_to_tasks[mechanic_resource]['intervals'].append(task_vars['interval'])
+                        resource_to_tasks[mechanic_resource]['demands'].append(mechanic_headcount)
+
+        all_resources = {**s.team_capacity, **s.quality_team_capacity, **s.customer_team_capacity}
+
+        # Add dummy tasks for non-working hours
+        for resource, capacity in all_resources.items():
+            if capacity <= 0: continue
+
+            team_type = 'mechanic'
+            if 'Quality' in resource: team_type = 'quality'
+            elif 'Customer' in resource: team_type = 'customer'
+
+            base_team = resource.split(' (')[0]
+
+            shifts = []
+            if team_type == 'quality':
+                shifts = s.quality_team_shifts.get(base_team, [])
+            elif team_type == 'customer':
+                shifts = s.customer_team_shifts.get(base_team, [])
+            else: # mechanic
+                shifts = s.team_shifts.get(base_team, [])
+
+            if not shifts:
+                if s.debug: print(f"[DEBUG] Resource {resource} has no defined shifts, assuming 24/7.")
                 continue
 
-            # Create a boolean variable for each possible shift for this task
-            shift_literals = []
-            for shift_name in team_shifts:
+            # Calculate working intervals for one day
+            working_intervals = []
+            for shift_name in shifts:
                 shift_info = s.shift_hours.get(shift_name)
-                if not shift_info: continue
+                if shift_info:
+                    start_h, start_m = s._parse_shift_time(shift_info['start'])
+                    end_h, end_m = s._parse_shift_time(shift_info['end'])
+                    working_intervals.append((start_h * 60 + start_m, end_h * 60 + end_m))
 
-                literal = self.model.NewBoolVar(f'{task_id}_in_{shift_name}')
-                shift_literals.append(literal)
+            working_intervals.sort()
 
-                start_h, start_m = s._parse_shift_time(shift_info['start'])
-                end_h, end_m = s._parse_shift_time(shift_info['end'])
-                shift_start_min = start_h * 60 + start_m
-                shift_end_min = end_h * 60 + end_m
+            # Calculate non-working intervals
+            non_working_intervals = []
+            last_end = 0
+            for start, end in working_intervals:
+                if start > last_end:
+                    non_working_intervals.append((last_end, start))
+                last_end = end
+            if last_end < minutes_in_day:
+                non_working_intervals.append((last_end, minutes_in_day))
 
-                # Since all shifts are now within a single day, the logic is simpler.
-                # We need to ensure the task is fully contained in a shift on some day.
-                # We can do this by creating a boolean for each possible day.
+            # Create dummy tasks for non-working intervals for each day of the horizon
+            for day in range(int(self.horizon / minutes_in_day)):
+                for start, end in non_working_intervals:
+                    if start == end: continue
 
-                daily_literals = []
-                for day in range(int(self.horizon / minutes_in_day) + 1):
-                    day_literal = self.model.NewBoolVar(f'{task_id}_in_{shift_name}_day_{day}')
-                    daily_literals.append(day_literal)
+                    dummy_start = day * minutes_in_day + start
+                    dummy_duration = end - start
+                    dummy_end = dummy_start + dummy_duration
 
-                    day_start_abs = day * minutes_in_day + shift_start_min
-                    day_end_abs = day * minutes_in_day + shift_end_min
+                    dummy_interval = self.model.NewIntervalVar(
+                        dummy_start, dummy_duration, dummy_end, f'dummy_{resource}_day{day}_{start}'
+                    )
+                    resource_to_tasks[resource]['intervals'].append(dummy_interval)
+                    resource_to_tasks[resource]['demands'].append(capacity + 1) # Block the resource completely
 
-                    # If this day is chosen for this shift, the task must be within its bounds.
-                    self.model.Add(start_var >= day_start_abs).OnlyEnforceIf(day_literal)
-                    self.model.Add(start_var + duration <= day_end_abs).OnlyEnforceIf(day_literal)
+        # Add cumulative constraints for all resources
+        for resource_name, usage_data in resource_to_tasks.items():
+            capacity = all_resources.get(resource_name, 0)
+            if capacity > 0:
+                self.model.AddCumulative(usage_data['intervals'], usage_data['demands'], capacity)
+                if s.debug:
+                    print(f"  - Added cumulative constraint for '{resource_name}' with capacity {capacity} and {len(usage_data['intervals'])} tasks (real and dummy).")
 
-                # If this shift is chosen for the task, it must be on one of the days.
-                self.model.AddBoolOr(daily_literals).OnlyEnforceIf(literal)
-
-
-            # A task must be assigned to exactly one of its possible shifts
-            if shift_literals:
-                self.model.Add(sum(shift_literals) == 1)
-
-        print(f"[INFO] Added simplified shift constraints for all applicable tasks.")
+        print(f"[INFO] Added cumulative constraints for {len(resource_to_tasks)} unique resources, including non-working hours.")
 
     def _set_objective(self):
         """
@@ -246,7 +225,6 @@ class CpSatScheduler:
         self._create_task_variables()
         self._add_precedence_constraints()
         self._add_resource_constraints()
-        self._add_shift_constraints()
         self._set_objective()
         print("[INFO] Starting CP-SAT solver...")
         solver = cp_model.CpSolver()
@@ -271,6 +249,45 @@ class CpSatScheduler:
         for task_id, task_info in self.scheduler.tasks.items():
             start_minutes = solver.Value(self.task_vars[task_id]['start'])
             end_minutes = solver.Value(self.task_vars[task_id]['end'])
+
+            # Determine the shift
+            time_of_day = start_minutes % (24 * 60)
+            assigned_shift = 'Unknown'
+
+            team_shifts = []
+            if task_info.get('is_quality'):
+                team_shifts = self.scheduler.quality_team_shifts.get(task_info['team'], [])
+            elif task_info.get('is_customer'):
+                team_shifts = self.scheduler.customer_team_shifts.get(task_info['team'], [])
+            else:
+                team_key = task_info.get('team_skill', task_info.get('team'))
+                base_team = team_key.split(' (')[0]
+                team_shifts = self.scheduler.team_shifts.get(base_team, [])
+
+            for shift_name in team_shifts:
+                shift_info = self.scheduler.shift_hours.get(shift_name)
+                if shift_info:
+                    start_h, start_m = self.scheduler._parse_shift_time(shift_info['start'])
+                    end_h, end_m = self.scheduler._parse_shift_time(shift_info['end'])
+                    shift_start_min = start_h * 60 + start_m
+                    shift_end_min = end_h * 60 + end_m
+
+                    if shift_start_min < shift_end_min: # Normal shift
+                        if shift_start_min <= time_of_day < shift_end_min:
+                            assigned_shift = shift_name
+                            break
+                    else: # Split overnight shift part
+                        if shift_start_min <= time_of_day:
+                            assigned_shift = shift_name
+                            break
+                        # Note: The other part of the overnight shift is handled as a separate shift
+
+            # Map split shift back to original name for display
+            for original, parts in self.scheduler.overnight_shifts.items():
+                if assigned_shift in parts:
+                    assigned_shift = original
+                    break
+
             schedule[task_id] = {
                 'start_time': start_datetime + timedelta(minutes=start_minutes),
                 'end_time': start_datetime + timedelta(minutes=end_minutes),
@@ -278,7 +295,8 @@ class CpSatScheduler:
                 'skill': task_info.get('skill'), 'product': task_info.get('product'),
                 'duration': task_info.get('duration'), 'mechanics_required': task_info.get('mechanics_required'),
                 'is_quality': task_info.get('is_quality', False), 'is_customer': task_info.get('is_customer', False),
-                'task_type': task_info.get('task_type'), 'original_task_id': task_info.get('original_task_id')
+                'task_type': task_info.get('task_type'), 'original_task_id': task_info.get('original_task_id'),
+                'shift': assigned_shift
             }
         print(f"[INFO] Extracted schedule for {len(schedule)} tasks.")
         return schedule
