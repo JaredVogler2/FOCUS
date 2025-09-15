@@ -154,16 +154,17 @@ def get_dependency_maps(scheduler):
             original_pred = scheduler.instance_to_original_task.get(predecessor_instance)
             original_succ = scheduler.instance_to_original_task.get(successor_instance)
 
-            if not original_pred:
-                print(f"[WARNING] Could not find original task ID for instance '{predecessor_instance}' in dependency map generation.")
-            if not original_succ:
-                print(f"[WARNING] Could not find original task ID for instance '{successor_instance}' in dependency map generation.")
-
             if original_pred and original_succ and original_pred != original_succ:
+                # Convert keys and values to strings to prevent sorting errors during JSON serialization
+                key_succ = str(original_succ)
+                key_pred = str(original_pred)
+                val_succ = str(original_succ)
+                val_pred = str(original_pred)
+
                 # Add to maps, ensuring no duplicates
-                if original_pred not in predecessor_map[original_succ]:
-                    predecessor_map[original_succ].append(original_pred)
-                if original_succ not in successor_map[original_pred]:
-                    successor_map[original_pred].append(original_succ)
+                if val_pred not in predecessor_map[key_succ]:
+                    predecessor_map[key_succ].append(val_pred)
+                if val_succ not in successor_map[key_pred]:
+                    successor_map[key_pred].append(val_succ)
 
     return dict(predecessor_map), dict(successor_map)
