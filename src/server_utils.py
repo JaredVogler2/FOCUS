@@ -78,9 +78,20 @@ def export_scenario_with_capacities(scheduler, scenario_name):
         sorted_priority_items = sorted(scheduler.global_priority_list, key=lambda x: x.get('global_priority', 999))[:MAX_TASKS_FOR_DASHBOARD]
         for item in sorted_priority_items:
             task_id = item.get('task_instance_id')
+            original_task_id = task_id.split('---part')[0]
+
             if task_id in scheduler.task_schedule:
                 schedule = scheduler.task_schedule[task_id]
-                task_info = scheduler.tasks.get(task_id, {})
+                task_info = scheduler.tasks.get(original_task_id, {})
+
+                slack_hours = item.get('slack_hours', 999)
+                is_critical = slack_hours < 24
+
+                if slack_hours == float('inf'):
+                    slack_hours_serializable = 99999
+                else:
+                    slack_hours_serializable = slack_hours
+
                 tasks.append({
                     'taskId': task_id,
                     'type': item.get('task_type', 'Production'),
@@ -94,15 +105,15 @@ def export_scenario_with_capacities(scheduler, scenario_name):
                     'mechanics': schedule.get('mechanics_required', 1),
                     'shift': schedule.get('shift', '1st'),
                     'priority': item.get('global_priority', 999),
-                    'isLatePartTask': task_id in scheduler.late_part_tasks,
-                    'isReworkTask': task_id in scheduler.rework_tasks,
+                    'isLatePartTask': original_task_id in scheduler.late_part_tasks,
+                    'isReworkTask': original_task_id in scheduler.rework_tasks,
                     'isQualityTask': schedule.get('is_quality', False),
                     'isCustomerTask': schedule.get('is_customer', False),
-                    'isCritical': item.get('slack_hours', 999) < 24,
-                    'slackHours': item.get('slack_hours', 999),
-                    'dependencies': predecessors_map.get(task_id, []),
-                    'dynamic_predecessors': predecessors_map.get(task_id, []),
-                    'dynamic_successors': successors_map.get(task_id, [])
+                    'isCritical': is_critical,
+                    'slackHours': slack_hours_serializable,
+                    'dependencies': predecessors_map.get(original_task_id, []),
+                    'dynamic_predecessors': predecessors_map.get(original_task_id, []),
+                    'dynamic_successors': successors_map.get(original_task_id, [])
                 })
 
     makespan = scheduler.calculate_makespan()
