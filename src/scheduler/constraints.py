@@ -137,8 +137,8 @@ def get_predecessors(scheduler, task_id):
 
 def get_dependency_maps(scheduler):
     """
-    Builds and returns both a predecessor and successor map in a single pass
-    for efficiency.
+    Builds and returns both a predecessor and successor map in a single pass,
+    using original task IDs for compatibility with the frontend.
     """
     predecessor_map = defaultdict(list)
     successor_map = defaultdict(list)
@@ -146,11 +146,19 @@ def get_dependency_maps(scheduler):
     dynamic_constraints = build_dynamic_dependencies(scheduler)
 
     for constraint in dynamic_constraints:
-        predecessor = constraint.get('First')
-        successor = constraint.get('Second')
+        predecessor_instance = constraint.get('First')
+        successor_instance = constraint.get('Second')
 
-        if predecessor and successor:
-            predecessor_map[successor].append(predecessor)
-            successor_map[predecessor].append(successor)
+        if predecessor_instance and successor_instance:
+            # Convert instance IDs to original task IDs
+            original_pred = scheduler.instance_to_original_task.get(predecessor_instance)
+            original_succ = scheduler.instance_to_original_task.get(successor_instance)
+
+            if original_pred and original_succ and original_pred != original_succ:
+                # Add to maps, ensuring no duplicates
+                if original_pred not in predecessor_map[original_succ]:
+                    predecessor_map[original_succ].append(original_pred)
+                if original_succ not in successor_map[original_pred]:
+                    successor_map[original_pred].append(original_succ)
 
     return dict(predecessor_map), dict(successor_map)
