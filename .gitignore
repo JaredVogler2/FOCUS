@@ -38,3 +38,4 @@ Thumbs.db
 /*.ods
 
 # Keep scheduling_data.csv (this overrides the *.csv rule
+!scheduling_data.csv
