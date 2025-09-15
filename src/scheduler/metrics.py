@@ -8,11 +8,14 @@ def calculate_lateness_metrics(scheduler):
     """Calculate lateness metrics per product"""
     metrics = {}
 
+    product_task_schedules = defaultdict(list)
+    for task_instance_id, schedule in scheduler.task_schedule.items():
+        product = schedule.get('product')
+        if product:
+            product_task_schedules[product].append(schedule)
+
     for product, delivery_date in scheduler.delivery_dates.items():
-        product_tasks = []
-        for task_instance_id, schedule in scheduler.task_schedule.items():
-            if schedule.get('product') == product:
-                product_tasks.append(schedule)
+        product_tasks = product_task_schedules.get(product, [])
 
         if product_tasks:
             last_task_end = max(task['end_time'] for task in product_tasks)
@@ -73,16 +76,18 @@ def calculate_makespan(scheduler):
 
 def calculate_slack_time(scheduler, task_id):
     """Calculate slack time for a task with overflow protection"""
+    original_task_id = task_id.split('---part')[0]
+
     if task_id not in scheduler.task_schedule:
         return float('inf')
 
     scheduled_start = scheduler.task_schedule[task_id]['start_time']
 
     # Get product and delivery date if available
-    product = scheduler.tasks.get(task_id, {}).get('product')
+    product = scheduler.tasks.get(original_task_id, {}).get('product')
 
     # For tasks without successors, use delivery date as constraint
-    successors = scheduler.get_successors(task_id)
+    successors = scheduler.get_successors(original_task_id)
 
     if not successors:
         # No successors - use product delivery date if available
@@ -105,14 +110,18 @@ def calculate_slack_time(scheduler, task_id):
     latest_start = None
 
     for successor_id in successors:
-        if successor_id in scheduler.task_schedule:
-            successor_start = scheduler.task_schedule[successor_id]['start_time']
+        # Successor might be split, so we find the earliest start time of its parts
+        successor_parts = [sid for sid in scheduler.task_schedule.keys() if sid.startswith(successor_id)]
+        if not successor_parts:
+            continue
 
-            # Account for task duration
-            task_duration_hours = scheduler.tasks[task_id].get('duration', 0) / 60
+        successor_start = min(scheduler.task_schedule[sp]['start_time'] for sp in successor_parts)
 
-            # Calculate when this task must start to not delay successor
-            required_start = successor_start - timedelta(hours=task_duration_hours)
+        # Account for task duration
+        task_duration_hours = scheduler.tasks[original_task_id].get('duration', 0) / 60
+
+        # Calculate when this task must start to not delay successor
+        required_start = successor_start - timedelta(hours=task_duration_hours)
 
             if latest_start is None or required_start < latest_start:
                 latest_start = required_start

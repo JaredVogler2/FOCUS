@@ -185,6 +185,12 @@ def export_scenario_with_capacities(scheduler, scenario_name):
             agg_stats['by_skill'][skill_name]['teams'] += 1
             agg_stats['by_skill'][skill_name]['workers'] += capacity
 
+    # Convert holiday dates to strings for JSON serialization
+    holidays_serializable = {
+        product: [d.isoformat() for d in dates]
+        for product, dates in scheduler.holidays.items()
+    }
+
     return {
         'scenarioId': scenario_name,
         'tasks': tasks,
@@ -202,5 +208,6 @@ def export_scenario_with_capacities(scheduler, scenario_name):
         'truncated': total_tasks_available > MAX_TASKS_FOR_DASHBOARD,
         'aggStats': agg_stats,
         'predecessors_map': dict(predecessors_map),
-        'successors_map': dict(successors_map)
+        'successors_map': dict(successors_map),
+        'holidays': holidays_serializable
     }

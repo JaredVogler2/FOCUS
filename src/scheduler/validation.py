@@ -60,10 +60,12 @@ def check_resource_conflicts(scheduler):
 
     team_tasks = defaultdict(list)
     for task_id, schedule in scheduler.task_schedule.items():
-        team_tasks[schedule['team']].append((task_id, schedule))
+        team = schedule.get('team_skill', schedule.get('team'))
+        if team:
+            team_tasks[team].append((task_id, schedule))
 
     for team, tasks in team_tasks.items():
-        capacity = scheduler.team_capacity.get(team, 0) or scheduler.quality_team_capacity.get(team, 0)
+        capacity = scheduler.team_capacity.get(team, 0) or scheduler.quality_team_capacity.get(team, 0) or scheduler.customer_team_capacity.get(team, 0)
 
         events = []
         for task_id, schedule in tasks:
