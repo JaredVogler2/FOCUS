@@ -893,10 +893,42 @@ function populateWorkerGanttFilters() {
     workerSelect.value = currentWorker;
 }
 
+// Helper to get a set of non-working days (weekends and common holidays)
+function getNonWorkingDaysSet() {
+    const nonWorkingDays = new Set();
+    if (!scenarioData.holidays) return nonWorkingDays;
+
+    const allProductLines = Object.keys(scenarioData.holidays);
+    if (allProductLines.length === 0) return nonWorkingDays;
+
+    // Find intersection of all holiday dates
+    let commonHolidays = new Set(scenarioData.holidays[allProductLines[0]]);
+    for (let i = 1; i < allProductLines.length; i++) {
+        const productHolidays = new Set(scenarioData.holidays[allProductLines[i]]);
+        commonHolidays = new Set([...commonHolidays].filter(date => productHolidays.has(date)));
+    }
+
+    commonHolidays.forEach(dateStr => nonWorkingDays.add(dateStr));
+
+    // Add weekends for a reasonable range (e.g., 2 years)
+    const today = new Date();
+    for (let i = -365; i < 365; i++) {
+        const date = new Date(today);
+        date.setDate(today.getDate() + i);
+        if (date.getDay() === 0 || date.getDay() === 6) { // Sunday or Saturday
+            nonWorkingDays.add(date.toISOString().split('T')[0]);
+        }
+    }
+    return nonWorkingDays;
+}
+
 // New function to render the custom header for the advanced Gantt
 function renderAdvancedGanttHeader() {
     const headerContainer = document.querySelector('.gantt-header-advanced');
     if (!headerContainer || !workerGantt) return;
+
+    const nonWorkingDays = getNonWorkingDaysSet();
+    const NON_WORKING_DAY_COLOR = '#f3f4f6'; // A light grey
 
     headerContainer.innerHTML = '';
     const window = workerGantt.getWindow();
@@ -931,8 +963,11 @@ function renderAdvancedGanttHeader() {
         const shiftWidth = dateWidth / 3;
 
         // Date Header - create three cells to position date over 1st shift
+        const isNonWorking = nonWorkingDays.has(dayStart.toISOString().split('T')[0]);
+
         const dateCell1 = document.createElement('div');
         dateCell1.style.width = `${shiftWidth}px`;
+        if (isNonWorking) dateCell1.style.backgroundColor = NON_WORKING_DAY_COLOR;
         dateRow.appendChild(dateCell1);
 
         const dateCell2 = document.createElement('div');
@@ -940,10 +975,12 @@ function renderAdvancedGanttHeader() {
         dateCell2.textContent = dayStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
         dateCell2.style.width = `${shiftWidth}px`;
         dateCell2.style.textAlign = 'center';
+        if (isNonWorking) dateCell2.style.backgroundColor = NON_WORKING_DAY_COLOR;
         dateRow.appendChild(dateCell2);
 
         const dateCell3 = document.createElement('div');
         dateCell3.style.width = `${shiftWidth}px`;
+        if (isNonWorking) dateCell3.style.backgroundColor = NON_WORKING_DAY_COLOR;
         dateRow.appendChild(dateCell3);
 
 
@@ -952,6 +989,7 @@ function renderAdvancedGanttHeader() {
         shifts.forEach(shiftText => {
             const shiftContainer = document.createElement('div');
             shiftContainer.className = 'gantt-header-item';
+            if (isNonWorking) shiftContainer.style.backgroundColor = NON_WORKING_DAY_COLOR;
             shiftContainer.style.width = `${shiftWidth}px`;
             shiftContainer.style.display = 'flex';
             shiftContainer.style.flexDirection = 'column';

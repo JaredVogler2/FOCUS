@@ -2,6 +2,7 @@
 
 from collections import defaultdict
 from datetime import datetime
+import re
 from . import data_loader, scenarios, metrics, utils, algorithms, validation, reporting, constraints, cp_sat_solver
 
 class ProductionScheduler:
@@ -118,25 +119,35 @@ class ProductionScheduler:
 
         priority_data = []
         for task_instance_id, schedule in self.task_schedule.items():
-            slack = metrics.calculate_slack_time(self, task_instance_id)
+            # If the task was split, recover the original instance ID for metrics and lookups
+            original_instance_id = task_instance_id.split('---part')[0]
+
+            slack = metrics.calculate_slack_time(self, original_instance_id)
             task_type = schedule['task_type']
             original_task_id = schedule.get('original_task_id')
             product = schedule.get('product', 'Unknown')
-            criticality = algorithms.classify_task_criticality(self, task_instance_id)
+            criticality = algorithms.classify_task_criticality(self, original_instance_id)
+
+            # Adjust display name for split parts
+            is_split_part = schedule.get('is_split_part', False)
+            part_num_match = re.search(r'---part(\d+)$', task_instance_id)
+            part_num = part_num_match.group(1) if part_num_match else ''
 
             if task_type == 'Quality Inspection':
-                primary_task = self.quality_inspections.get(task_instance_id, {}).get('primary_task')
+                primary_task = self.quality_inspections.get(original_instance_id, {}).get('primary_task')
                 if primary_task:
                     primary_original = self.instance_to_original_task.get(primary_task, primary_task)
-                    display_name = f"{product} QI for Task {primary_original}"
+                    base_name = f"{product} QI for Task {primary_original}"
                 else:
-                    display_name = f"{product} QI {original_task_id}"
+                    base_name = f"{product} QI {original_task_id}"
             elif task_type == 'Late Part':
-                display_name = f"{product} Late Part {original_task_id}"
+                base_name = f"{product} Late Part {original_task_id}"
             elif task_type == 'Rework':
-                display_name = f"{product} Rework {original_task_id}"
+                base_name = f"{product} Rework {original_task_id}"
             else:
-                display_name = f"{product} Task {original_task_id}"
+                base_name = f"{product} Task {original_task_id}"
+
+            display_name = f"{base_name} (Part {part_num})" if is_split_part and part_num else base_name
 
             criticality_symbol = {'CRITICAL': '🔴', 'BUFFER': '🟡', 'FLEXIBLE': '🟢'}.get(criticality, '')
             display_name_with_criticality = f"{criticality_symbol} {display_name} [{criticality}]"
