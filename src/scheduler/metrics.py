@@ -123,8 +123,8 @@ def calculate_slack_time(scheduler, task_id):
         # Calculate when this task must start to not delay successor
         required_start = successor_start - timedelta(hours=task_duration_hours)
 
-            if latest_start is None or required_start < latest_start:
-                latest_start = required_start
+        if latest_start is None or required_start < latest_start:
+            latest_start = required_start
 
     # If no valid latest start found, use delivery date
     if latest_start is None:
