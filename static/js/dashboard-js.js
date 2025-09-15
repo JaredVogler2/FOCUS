@@ -754,69 +754,57 @@ function setupWorkerGanttEventListeners() {
             workerGantt.itemsData.update(itemsToClear);
         }
 
-        // If nothing is selected, we're done.
         if (selectedIds.length === 0) {
             return;
         }
 
-        // --- Start Highlighting Logic ---
-        const selectedCompositeId = selectedIds[0];
-        const originalSelectedTaskId = selectedCompositeId.split('_').pop();
+        // --- New Highlighting Logic ---
         const allTasks = scenarioData.tasks;
+        const selectedInstanceId = selectedIds[0].split('_').pop();
+        const selectedTask = allTasks.find(t => t.taskId === selectedInstanceId);
 
-        // Build dependency maps for efficient lookup
-        const successors = {};
-        const predecessors = {};
-        allTasks.forEach(task => {
-            if (!task.taskId) return;
-            successors[task.taskId] = [];
-            predecessors[task.taskId] = task.dependencies || [];
-        });
-        allTasks.forEach(task => {
-            if (task.dependencies) {
-                task.dependencies.forEach(dep => {
-                    if (successors[dep]) {
-                        successors[dep].push(task.taskId);
-                    }
-                });
-            }
-        });
-
-        const toHighlight = new Set();
-        let queue = [];
-        let visited = new Set();
-
-        // Find all successors (downstream)
-        queue.push(originalSelectedTaskId);
-        while(queue.length > 0) {
-            const currentId = queue.shift();
-            if (visited.has(currentId) || !currentId) continue;
-            visited.add(currentId);
-            toHighlight.add(currentId);
-            if (successors[currentId]) {
-                successors[currentId].forEach(succId => queue.push(succId));
-            }
+        if (!selectedTask || !selectedTask.originalTaskId) {
+            console.warn("Selected task or its originalTaskId not found, cannot highlight dependencies.");
+            return;
         }
 
-        // Find all predecessors (upstream)
-        queue = [originalSelectedTaskId]; // Reset queue
-        visited = new Set(); // Reset visited
-        while(queue.length > 0) {
-            const currentId = queue.shift();
-            if (visited.has(currentId) || !currentId) continue;
-            visited.add(currentId);
-            toHighlight.add(currentId);
-            if (predecessors[currentId]) {
-                predecessors[currentId].forEach(predId => queue.push(predId));
-            }
+        const selectedOriginalId = selectedTask.originalTaskId;
+        const predecessorsMap = scenarioData.predecessors_map || {};
+        const successorsMap = scenarioData.successors_map || {};
+
+        const allUpstream = new Set();
+        const allDownstream = new Set();
+        const predQueue = [selectedOriginalId];
+        const succQueue = [selectedOriginalId];
+        const visitedPred = new Set();
+        const visitedSucc = new Set();
+
+        // Find all downstream original IDs
+        while (succQueue.length > 0) {
+            const currentId = succQueue.shift();
+            if (visitedSucc.has(currentId)) continue;
+            visitedSucc.add(currentId);
+            allDownstream.add(currentId);
+            (successorsMap[currentId] || []).forEach(succId => succQueue.push(succId));
         }
 
-        // Apply the 'wg-highlight' class to all items whose original task ID is in the set
+        // Find all upstream original IDs
+        while (predQueue.length > 0) {
+            const currentId = predQueue.shift();
+            if (visitedPred.has(currentId)) continue;
+            visitedPred.add(currentId);
+            allUpstream.add(currentId);
+            (predecessorsMap[currentId] || []).forEach(predId => predQueue.push(predId));
+        }
+
+        const originalIdsToHighlight = new Set([...allUpstream, ...allDownstream]);
+
+        // Find all task INSTANCES that correspond to these original IDs and highlight them.
         const itemsToUpdate = [];
         workerGantt.itemsData.forEach(item => {
-            const itemOriginalId = item.id.split('_').pop();
-            if (toHighlight.has(itemOriginalId)) {
-                // Ensure the class is not duplicated
+            const itemInstanceId = item.id.split('_').pop();
+            const task = allTasks.find(t => t.taskId === itemInstanceId);
+            if (task && originalIdsToHighlight.has(task.originalTaskId)) {
                 if (!item.className || !item.className.includes('wg-highlight')) {
                     itemsToUpdate.push({ id: item.id, className: `${item.className || ''} wg-highlight`.trim() });
                 }
@@ -1178,7 +1166,7 @@ function renderWorkerGantt() {
                     content: task.taskId,
                     start: displayStart,
                     end: displayEnd,
-                    title: `Task: ${task.taskId}<br>Team: ${task.team}<br>Product: ${task.product}<br>Worker: ${worker.name}<br>Shift: ${worker.shift}<br>Duration: ${task.duration} min<br>Real Start: ${realStart.toLocaleString()}<br>Real End: ${realEnd.toLocaleString()}`,
+                    title: `Task: ${task.taskId}<br>Team: ${task.team || 'N/A'}<br>Product: ${task.product || 'N/A'}<br>Worker: ${worker.name || 'N/A'}<br>Shift: ${worker.shift || 'N/A'}<br>Duration: ${task.duration || 'N/A'} min<br>Real Start: ${realStart.toLocaleString()}<br>Real End: ${realEnd.toLocaleString()}`,
                     style: `background-color: ${productColors[task.product]}; border-color: ${productColors[task.product]};`,
                     className: `wg-task ${task.isCritical ? 'wg-critical' : ''}`
                 });
