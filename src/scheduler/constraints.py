@@ -154,6 +154,11 @@ def get_dependency_maps(scheduler):
             original_pred = scheduler.instance_to_original_task.get(predecessor_instance)
             original_succ = scheduler.instance_to_original_task.get(successor_instance)
 
+            if not original_pred:
+                print(f"[WARNING] Could not find original task ID for instance '{predecessor_instance}' in dependency map generation.")
+            if not original_succ:
+                print(f"[WARNING] Could not find original task ID for instance '{successor_instance}' in dependency map generation.")
+
             if original_pred and original_succ and original_pred != original_succ:
                 # Add to maps, ensuring no duplicates
                 if original_pred not in predecessor_map[original_succ]:
