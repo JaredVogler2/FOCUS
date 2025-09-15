@@ -134,3 +134,23 @@ def get_predecessors(scheduler, task_id):
         if constraint['Second'] == task_id:
             predecessors.append(constraint['First'])
     return predecessors
+
+def get_dependency_maps(scheduler):
+    """
+    Builds and returns both a predecessor and successor map in a single pass
+    for efficiency.
+    """
+    predecessor_map = defaultdict(list)
+    successor_map = defaultdict(list)
+
+    dynamic_constraints = build_dynamic_dependencies(scheduler)
+
+    for constraint in dynamic_constraints:
+        predecessor = constraint.get('First')
+        successor = constraint.get('Second')
+
+        if predecessor and successor:
+            predecessor_map[successor].append(predecessor)
+            successor_map[predecessor].append(successor)
+
+    return dict(predecessor_map), dict(successor_map)
