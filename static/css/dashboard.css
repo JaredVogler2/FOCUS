@@ -1722,3 +1722,9 @@ tr.has-conflict {
 #worker-gantt-container-advanced .vis-center {
     cursor: default !important;
 }
+
+/* --- Worker Gantt Row Height Synchronization --- */
+#worker-gantt-container-advanced .vis-item {
+    height: 36px !important;
+    box-sizing: border-box !important;
+}
