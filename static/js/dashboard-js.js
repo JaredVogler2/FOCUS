@@ -928,7 +928,7 @@ function renderAdvancedGanttHeader() {
     if (!headerContainer || !workerGantt) return;
 
     const nonWorkingDays = getNonWorkingDaysSet();
-    const NON_WORKING_DAY_COLOR = '#f3f4f6'; // A light grey
+    const NON_WORKING_DAY_COLOR = '#e5e7eb'; // A darker grey
 
     headerContainer.innerHTML = '';
     const window = workerGantt.getWindow();
@@ -1178,7 +1178,7 @@ function renderWorkerGantt() {
                     content: task.taskId,
                     start: displayStart,
                     end: displayEnd,
-                    title: `Task: ${task.taskId}<br>Product: ${task.product}<br>Worker: ${worker.name}<br>Shift: ${worker.shift}<br>Real Start: ${realStart.toLocaleString()}<br>Real End: ${realEnd.toLocaleString()}`,
+                    title: `Task: ${task.taskId}<br>Team: ${task.team}<br>Product: ${task.product}<br>Worker: ${worker.name}<br>Shift: ${worker.shift}<br>Duration: ${task.duration} min<br>Real Start: ${realStart.toLocaleString()}<br>Real End: ${realEnd.toLocaleString()}`,
                     style: `background-color: ${productColors[task.product]}; border-color: ${productColors[task.product]};`,
                     className: `wg-task ${task.isCritical ? 'wg-critical' : ''}`
                 });
