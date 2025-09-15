@@ -575,11 +575,12 @@ def can_reschedule_task(scheduler, task_id, new_start_time):
 
 def calculate_task_priority(scheduler, task_instance_id):
     """Calculate priority for a task instance considering dependent task timing"""
-    task_info = scheduler.tasks[task_instance_id]
+    original_task_id = task_instance_id.split('---part')[0]
+    task_info = scheduler.tasks[original_task_id]
 
 
     # For late parts, check on-dock date
-    if task_instance_id in scheduler.late_part_tasks:
+    if original_task_id in scheduler.late_part_tasks:
         # Check if we have an on-dock date
         if task_instance_id in scheduler.on_dock_dates:
             on_dock_date = scheduler.on_dock_dates[task_instance_id]
@@ -589,21 +590,21 @@ def calculate_task_priority(scheduler, task_instance_id):
         return -3000
 
     # For quality inspections, inherit priority from primary task
-    if task_instance_id in scheduler.quality_inspections:
-        primary_task = scheduler.quality_inspections[task_instance_id].get('primary_task')
+    if original_task_id in scheduler.quality_inspections:
+        primary_task = scheduler.quality_inspections[original_task_id].get('primary_task')
         if primary_task and primary_task in scheduler.task_schedule:
             # QI should happen right after primary task
             return calculate_task_priority(scheduler, primary_task) - 1
         return -2000
 
     # For rework tasks, consider when the dependent tasks need them
-    if task_instance_id in scheduler.rework_tasks:
+    if original_task_id in scheduler.rework_tasks:
         # Find all tasks that depend on this rework
         dynamic_constraints = scheduler.build_dynamic_dependencies()
         dependent_tasks = []
 
         for constraint in dynamic_constraints:
-            if constraint['First'] == task_instance_id:
+            if constraint['First'] == original_task_id:
                 dependent_tasks.append(constraint['Second'])
 
         if dependent_tasks:
@@ -639,7 +640,7 @@ def calculate_task_priority(scheduler, task_instance_id):
     else:
         days_to_delivery = 999
 
-    critical_path_length = calculate_critical_path_length(scheduler, task_instance_id)
+    critical_path_length = calculate_critical_path_length(scheduler, original_task_id)
     duration = int(task_info['duration'])
 
     priority = (
