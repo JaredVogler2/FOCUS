@@ -1724,7 +1724,14 @@ tr.has-conflict {
 }
 
 /* --- Worker Gantt Row Height Synchronization --- */
-#worker-gantt-container-advanced .vis-item {
+#worker-gantt-container-advanced .vis-group {
     height: 36px !important;
+    min-height: 36px !important;
+    border: none !important;
+}
+
+#worker-gantt-container-advanced .vis-item {
+    height: 30px !important; /* Slightly smaller than row to have some padding */
+    top: 3px !important; /* Center vertically */
     box-sizing: border-box !important;
 }
