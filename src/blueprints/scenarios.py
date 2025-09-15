@@ -4,6 +4,8 @@ from flask import Blueprint, jsonify, current_app, request
 from src.scheduler.scenarios import run_what_if_scenario
 from src.server_utils import export_scenario_with_capacities
 from datetime import datetime, timedelta
+from src.scheduler import constraints
+
 
 scenarios_bp = Blueprint('scenarios', __name__, url_prefix='/api')
 
@@ -58,7 +60,18 @@ def get_scenario_data(scenario_id):
     scenario_results = current_app.scenario_results
     if scenario_id not in scenario_results:
         return jsonify({'error': f'Scenario {scenario_id} not found'}), 404
-    scenario_data = scenario_results[scenario_id]
+
+    # Make a copy to avoid modifying the cached results
+    scenario_data = scenario_results[scenario_id].copy()
+
+    # Get the scheduler instance from the app context
+    scheduler = current_app.scheduler
+    if scheduler:
+        # Build and add the dependency maps
+        predecessors_map, successors_map = constraints.get_dependency_maps(scheduler)
+        scenario_data['predecessors_map'] = predecessors_map
+        scenario_data['successors_map'] = successors_map
+
     return jsonify(scenario_data)
 
 @scenarios_bp.route('/scenario/<scenario_id>/summary')
