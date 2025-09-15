@@ -760,8 +760,11 @@ function setupWorkerGanttEventListeners() {
         }
 
         // --- Start Highlighting Logic ---
-        const selectedCompositeId = selectedIds[0];
-        const originalSelectedTaskId = selectedCompositeId.split('_').pop();
+        const selectedVisItem = workerGantt.itemsData.get(selectedIds[0]);
+        if (!selectedVisItem) return;
+
+        const workerId = selectedVisItem.group;
+        const originalSelectedTaskId = selectedVisItem.id.substring(workerId.length + 1);
         const allTasks = scenarioData.tasks;
 
         // Build dependency maps for efficient lookup
@@ -769,17 +772,8 @@ function setupWorkerGanttEventListeners() {
         const predecessors = {};
         allTasks.forEach(task => {
             if (!task.taskId) return;
-            successors[task.taskId] = [];
-            predecessors[task.taskId] = task.dependencies || [];
-        });
-        allTasks.forEach(task => {
-            if (task.dependencies) {
-                task.dependencies.forEach(dep => {
-                    if (successors[dep]) {
-                        successors[dep].push(task.taskId);
-                    }
-                });
-            }
+            successors[task.taskId] = task.dynamic_successors || [];
+            predecessors[task.taskId] = task.dynamic_predecessors || [];
         });
 
         const toHighlight = new Set();
@@ -896,19 +890,43 @@ function populateWorkerGanttFilters() {
 // Helper to get a set of non-working days (weekends and common holidays)
 function getNonWorkingDaysSet() {
     const nonWorkingDays = new Set();
-    if (!scenarioData.holidays) return nonWorkingDays;
-
-    const allProductLines = Object.keys(scenarioData.holidays);
-    if (allProductLines.length === 0) return nonWorkingDays;
-
-    // Find intersection of all holiday dates
-    let commonHolidays = new Set(scenarioData.holidays[allProductLines[0]]);
-    for (let i = 1; i < allProductLines.length; i++) {
-        const productHolidays = new Set(scenarioData.holidays[allProductLines[i]]);
-        commonHolidays = new Set([...commonHolidays].filter(date => productHolidays.has(date)));
+    if (!scenarioData.holidays) {
+        // Still add weekends even if there are no holidays
+        const today = new Date();
+        for (let i = -365; i < 365; i++) {
+            const date = new Date(today);
+            date.setDate(today.getDate() + i);
+            if (date.getDay() === 0 || date.getDay() === 6) { // Sunday or Saturday
+                nonWorkingDays.add(date.toISOString().split('T')[0]);
+            }
+        }
+        return nonWorkingDays;
     }
 
-    commonHolidays.forEach(dateStr => nonWorkingDays.add(dateStr));
+    const allProductLines = Object.keys(scenarioData.holidays);
+
+    // Find intersection of all holiday dates if there are any product lines with holidays
+    if (allProductLines.length > 0) {
+        // Get the first valid set of holidays
+        let firstProductHolidays = null;
+        let startIndex = 0;
+        for(let i=0; i<allProductLines.length; i++) {
+            if(scenarioData.holidays[allProductLines[i]] && scenarioData.holidays[allProductLines[i]].length > 0) {
+                firstProductHolidays = new Set(scenarioData.holidays[allProductLines[i]].map(d => d.split('T')[0]));
+                startIndex = i + 1;
+                break;
+            }
+        }
+
+        if (firstProductHolidays) {
+            let commonHolidays = firstProductHolidays;
+            for (let i = startIndex; i < allProductLines.length; i++) {
+                const productHolidays = new Set(scenarioData.holidays[allProductLines[i]].map(d => d.split('T')[0]));
+                commonHolidays = new Set([...commonHolidays].filter(date => productHolidays.has(date)));
+            }
+            commonHolidays.forEach(dateStr => nonWorkingDays.add(dateStr));
+        }
+    }
 
     // Add weekends for a reasonable range (e.g., 2 years)
     const today = new Date();
@@ -928,7 +946,7 @@ function renderAdvancedGanttHeader() {
     if (!headerContainer || !workerGantt) return;
 
     const nonWorkingDays = getNonWorkingDaysSet();
-    const NON_WORKING_DAY_COLOR = '#f3f4f6'; // A light grey
+    const NON_WORKING_DAY_COLOR = '#e5e7eb'; // A more visible light grey
 
     headerContainer.innerHTML = '';
     const window = workerGantt.getWindow();
