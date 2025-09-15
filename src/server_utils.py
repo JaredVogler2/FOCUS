@@ -94,7 +94,7 @@ def export_scenario_with_capacities(scheduler, scenario_name):
 
                 tasks.append({
                     'taskId': task_id,
-                    'originalTaskId': original_task_id,
+                    'originalTaskId': str(original_task_id),
                     'type': item.get('task_type', 'Production'),
                     'product': item.get('product_line', 'Unknown'),
                     'team': schedule.get('team', ''),
