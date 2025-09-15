@@ -760,27 +760,15 @@ function setupWorkerGanttEventListeners() {
         }
 
         // --- Start Highlighting Logic ---
-        const selectedCompositeId = selectedIds[0];
-        const originalSelectedTaskId = selectedCompositeId.split('_').pop();
-        const allTasks = scenarioData.tasks;
+        const selectedVisItem = workerGantt.itemsData.get(selectedIds[0]);
+        if (!selectedVisItem) return;
 
-        // Build dependency maps for efficient lookup
-        const successors = {};
-        const predecessors = {};
-        allTasks.forEach(task => {
-            if (!task.taskId) return;
-            successors[task.taskId] = [];
-            predecessors[task.taskId] = task.dependencies || [];
-        });
-        allTasks.forEach(task => {
-            if (task.dependencies) {
-                task.dependencies.forEach(dep => {
-                    if (successors[dep]) {
-                        successors[dep].push(task.taskId);
-                    }
-                });
-            }
-        });
+        // The task ID is everything after the worker ID and the underscore.
+        const originalSelectedTaskId = selectedVisItem.id.substring(selectedVisItem.group.length + 1);
+
+        // Use the pre-computed dependency maps from the backend
+        const successors = scenarioData.successors_map || {};
+        const predecessors = scenarioData.predecessors_map || {};
 
         const toHighlight = new Set();
         let queue = [];
@@ -814,7 +802,7 @@ function setupWorkerGanttEventListeners() {
         // Apply the 'wg-highlight' class to all items whose original task ID is in the set
         const itemsToUpdate = [];
         workerGantt.itemsData.forEach(item => {
-            const itemOriginalId = item.id.split('_').pop();
+            const itemOriginalId = item.id.substring(item.group.length + 1);
             if (toHighlight.has(itemOriginalId)) {
                 // Ensure the class is not duplicated
                 if (!item.className || !item.className.includes('wg-highlight')) {
@@ -896,19 +884,47 @@ function populateWorkerGanttFilters() {
 // Helper to get a set of non-working days (weekends and common holidays)
 function getNonWorkingDaysSet() {
     const nonWorkingDays = new Set();
-    if (!scenarioData.holidays) return nonWorkingDays;
-
-    const allProductLines = Object.keys(scenarioData.holidays);
-    if (allProductLines.length === 0) return nonWorkingDays;
-
-    // Find intersection of all holiday dates
-    let commonHolidays = new Set(scenarioData.holidays[allProductLines[0]]);
-    for (let i = 1; i < allProductLines.length; i++) {
-        const productHolidays = new Set(scenarioData.holidays[allProductLines[i]]);
-        commonHolidays = new Set([...commonHolidays].filter(date => productHolidays.has(date)));
+    if (!scenarioData || !scenarioData.holidays) {
+        // Still add weekends even if there are no holidays
+        const today = new Date();
+        for (let i = -365; i < 365; i++) {
+            const date = new Date(today);
+            date.setDate(today.getDate() + i);
+            if (date.getDay() === 0 || date.getDay() === 6) { // Sunday or Saturday
+                nonWorkingDays.add(date.toISOString().split('T')[0]);
+            }
+        }
+        return nonWorkingDays;
     }
 
-    commonHolidays.forEach(dateStr => nonWorkingDays.add(dateStr));
+    const allProductLines = Object.keys(scenarioData.holidays);
+
+    // Find intersection of all holiday dates if there are any product lines with holidays
+    if (allProductLines.length > 0) {
+        // Get the first valid set of holidays
+        let firstProductHolidays = null;
+        let startIndex = 0;
+        for(let i=0; i<allProductLines.length; i++) {
+            const holidayList = scenarioData.holidays[allProductLines[i]];
+            if(holidayList && holidayList.length > 0) {
+                firstProductHolidays = new Set(holidayList.map(d => d.split('T')[0]));
+                startIndex = i + 1;
+                break;
+            }
+        }
+
+        if (firstProductHolidays) {
+            let commonHolidays = firstProductHolidays;
+            for (let i = startIndex; i < allProductLines.length; i++) {
+                const holidayList = scenarioData.holidays[allProductLines[i]];
+                if (holidayList && holidayList.length > 0) {
+                    const productHolidays = new Set(holidayList.map(d => d.split('T')[0]));
+                    commonHolidays = new Set([...commonHolidays].filter(date => productHolidays.has(date)));
+                }
+            }
+            commonHolidays.forEach(dateStr => nonWorkingDays.add(dateStr));
+        }
+    }
 
     // Add weekends for a reasonable range (e.g., 2 years)
     const today = new Date();
@@ -922,13 +938,14 @@ function getNonWorkingDaysSet() {
     return nonWorkingDays;
 }
 
+
 // New function to render the custom header for the advanced Gantt
 function renderAdvancedGanttHeader() {
     const headerContainer = document.querySelector('.gantt-header-advanced');
     if (!headerContainer || !workerGantt) return;
 
     const nonWorkingDays = getNonWorkingDaysSet();
-    const NON_WORKING_DAY_COLOR = '#f3f4f6'; // A light grey
+    const NON_WORKING_DAY_COLOR = '#d1d5db'; // Use a more visible light grey (slate-300)
 
     headerContainer.innerHTML = '';
     const window = workerGantt.getWindow();
@@ -1172,13 +1189,14 @@ function renderWorkerGantt() {
                 const displayEnd = mapRealTimeToDisplayTime(realEnd, worker.shift);
                 const uniqueItemId = `${worker.id}_${task.taskId}`;
 
+                const tooltip = `Task: ${task.taskId}\nTeam: ${worker.team}\nMechanic: ${worker.name} (${worker.skill || 'N/A'})\nDuration: ${task.duration} min\nStart: ${realStart.toLocaleString()}\nEnd: ${realEnd.toLocaleString()}`;
                 visItems.add({
                     id: uniqueItemId,
                     group: worker.id,
                     content: task.taskId,
                     start: displayStart,
                     end: displayEnd,
-                    title: `Task: ${task.taskId}<br>Product: ${task.product}<br>Worker: ${worker.name}<br>Shift: ${worker.shift}<br>Real Start: ${realStart.toLocaleString()}<br>Real End: ${realEnd.toLocaleString()}`,
+                    title: tooltip,
                     style: `background-color: ${productColors[task.product]}; border-color: ${productColors[task.product]};`,
                     className: `wg-task ${task.isCritical ? 'wg-critical' : ''}`
                 });

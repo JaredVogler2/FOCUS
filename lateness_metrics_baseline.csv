@@ -1,0 +1,6 @@
+Product Line,Delivery Date,Projected Completion,Lateness Days,On Time,Total Tasks,Production Tasks,Late Part Tasks,Rework Tasks
+Product A,2025-09-20,2025-09-23 23:20:00,3,False,22,21,0,1
+Product B,2025-09-26,2025-09-23 23:20:00,-3,True,28,26,1,1
+Product C,2025-09-29,2025-09-23 23:20:00,-6,True,57,51,3,3
+Product D,2025-10-05,2025-09-23 23:20:00,-12,True,81,76,2,3
+Product E,2025-10-01,2025-09-23 23:20:00,-8,True,106,100,4,2
