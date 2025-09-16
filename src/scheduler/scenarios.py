@@ -707,8 +707,8 @@ def run_what_if_scenario(scheduler, prioritized_product, time_limit_seconds=60):
                 'team_skill': task_info.get('team_skill', ''),
                 'mechanics_required': task_info.get('mechanics_required', 1), 'product': task_info.get('product', 'Unknown'),
                 'original_task_id': task_info.get('original_task_id', task_id), 'task_type': task_info.get('task_type', 'Production'),
-                'skill': task_info.get('skill', ''), 'shift': '1st', 'is_quality': 'Quality' in task_info.get('team', ''),
-                'is_customer': 'Customer' in task_info.get('team', ''),
+                'skill': task_info.get('skill', ''), 'shift': '1st', 'is_quality': task_info.get('is_quality', False),
+                'is_customer': task_info.get('is_customer', False),
             }
 
         priority_data = []
