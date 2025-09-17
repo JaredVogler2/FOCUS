@@ -1308,7 +1308,7 @@ function updateView() {
             console.log('Calling initScenarioView');
             initScenarioView();
             break;
-        case 'ie-review':
+        case 'industrial-engineering':
             console.log('Calling updateIEView');
             updateIEView();
             break;
