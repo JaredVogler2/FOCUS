@@ -1723,16 +1723,21 @@ tr.has-conflict {
     cursor: default !important;
 }
 
-/* --- Worker Gantt Row Height Synchronization --- */
+/* --- Worker Gantt Row Height and Stacking Fix --- */
+
+/* Set a z-index for the group rows */
 #worker-gantt-container-advanced .vis-group {
     height: 36px !important;
     min-height: 36px !important;
     border: none !important;
-    pointer-events: none; /* Allow mouse events to pass through the group rows to the items */
+    z-index: 1;
 }
 
+/* Give items a higher z-index to ensure they are on top of the groups */
 #worker-gantt-container-advanced .vis-item {
-    height: 30px !important; /* Slightly smaller than row to have some padding */
-    top: 3px !important; /* Center vertically */
+    height: 30px !important;
+    top: 3px !important;
     box-sizing: border-box !important;
+    position: relative; /* Required for z-index to take effect */
+    z-index: 2;
 }
