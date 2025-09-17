@@ -698,7 +698,6 @@ function initializeWorkerGantt() {
     const options = {
         stack: false,
         editable: false,
-        selectable: true, // Explicitly enable item selection and events
         zoomable: false, // Zoom is now controlled by timescale dropdown
         moveable: false, // Allow pan for the main timeline
         orientation: 'top',
