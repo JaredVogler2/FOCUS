@@ -706,11 +706,7 @@ function initializeWorkerGantt() {
         max: maxDate,
         showMajorLabels: false, // Hide all default labels
         showMinorLabels: false,
-        groupOrder: 'order', // Use a simple order property
-        tooltip: {
-            followMouse: true,
-            overflowMethod: 'cap'
-        }
+        groupOrder: 'order' // Use a simple order property
     };
 
     workerGantt = new vis.Timeline(container, items, groups, options);
@@ -743,6 +739,37 @@ function setupWorkerGanttEventListeners() {
 
     // This event updates the custom header whenever the window changes.
     workerGantt.on('rangechanged', renderAdvancedGanttHeader);
+
+    // Custom Tooltip Logic
+    const tooltip = document.getElementById('wg-custom-tooltip');
+    if (tooltip) {
+        workerGantt.on('mouseOver', function(properties) {
+            if (properties.item) {
+                const item = workerGantt.itemsData.get(properties.item);
+                tooltip.innerHTML = item.title;
+                tooltip.style.display = 'block';
+
+                // Position tooltip near the mouse
+                const x = properties.event.pageX + 15;
+                const y = properties.event.pageY + 15;
+                tooltip.style.left = `${x}px`;
+                tooltip.style.top = `${y}px`;
+            }
+        });
+
+        workerGantt.on('mouseMove', function(properties) {
+            if (tooltip.style.display === 'block') {
+                const x = properties.event.pageX + 15;
+                const y = properties.event.pageY + 15;
+                tooltip.style.left = `${x}px`;
+                tooltip.style.top = `${y}px`;
+            }
+        });
+
+        workerGantt.on('mouseOut', function(properties) {
+            tooltip.style.display = 'none';
+        });
+    }
 
     workerGantt.on('select', function(properties) {
         const selectedIds = properties.items;
