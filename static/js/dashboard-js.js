@@ -8798,39 +8798,44 @@ async function updateIEView() {
         let rowsHtml = '';
         queue.forEach(item => {
             const flaggedAt = new Date(item.flagged_at).toLocaleString();
-            const safeId = item.flagged_at.replace(/[^a-zA-Z0-9-_]/g, '');
 
-            let predecessorsHtml = '';
             if (item.predecessors && item.predecessors.length > 0) {
-                predecessorsHtml = '<ul style="margin: 0; padding-left: 18px; font-size: 12px;">';
-                item.predecessors.forEach(p => {
-                    // Use a placeholder if predecessorTask is empty or null
-                    const taskDisplay = p.predecessorTask ? `<strong>${p.predecessorTask}:</strong>` : '<em>(No task specified):</em>';
-                    predecessorsHtml += `<li style="margin-bottom: 5px;">${taskDisplay} ${p.notes}</li>`;
-                });
-                predecessorsHtml += '</ul>';
-            } else {
-                predecessorsHtml = '<span style="color: #888;">N/A</span>';
-            }
+                // If there are predecessors, create a row for each one
+                item.predecessors.forEach((p, index) => {
+                    const safeId = `${item.flagged_at.replace(/[^a-zA-Z0-9-_]/g, '')}-${index}`;
+                    const predecessorTask = p.predecessorTask || '';
+                    const predecessorNotes = p.notes || '';
+                    const predecessorTaskDisplay = predecessorTask ? `<strong>${predecessorTask}</strong>` : '<em>(No task specified)</em>';
 
-            rowsHtml += `
-                <tr id="ie-task-${safeId}">
-                    <td>${item.priority}</td>
-                    <td><strong>${item.task_id}</strong></td>
-                    <td>${item.details.product || 'N/A'}</td>
-                    <td>${item.details.team || 'N/A'}</td>
-                    <td>${item.mechanic_name || 'N/A'}</td>
-                    <td>${flaggedAt}</td>
-                    <td>${predecessorsHtml}</td>
-                    <td>${item.general_notes || ''}</td>
-                    <td>
-                        <button class="btn-ie-action" onclick="resolveIETask('${item.flagged_at}', 'agree')">Agree & Resolve</button>
-                        <button class="btn-ie-action" onclick="resolveIETask('${item.flagged_at}', 'disagree')">Disagree</button>
-                    </td>
-                </tr>
-            `;
+                    // Combine predecessor task and notes into a single cell
+                    const predecessorHtml = `${predecessorTaskDisplay}<br><small style="color: #555;">${predecessorNotes}</small>`;
+
+                    rowsHtml += `
+                        <tr id="ie-task-${safeId}">
+                            <td>${item.priority}</td>
+                            <td><strong>${item.task_id}</strong></td>
+                            <td>${item.details.product || 'N/A'}</td>
+                            <td>${item.details.team || 'N/A'}</td>
+                            <td>${item.mechanic_name || 'N/A'}</td>
+                            <td>${flaggedAt}</td>
+                            <td>${predecessorHtml}</td>
+                            <td>${item.general_notes || ''}</td>
+                            <td>
+                                <button class="btn-ie-action" onclick='resolveIETask("${item.flagged_at}", "agree", ${JSON.stringify(predecessorTask)}, ${JSON.stringify(predecessorNotes)})'>Agree & Resolve</button>
+                                <button class="btn-ie-action" onclick='resolveIETask("${item.flagged_at}", "disagree", ${JSON.stringify(predecessorTask)}, ${JSON.stringify(predecessorNotes)})'>Disagree</button>
+                            </td>
+                        </tr>
+                    `;
+                });
+            }
+            // Per user feedback, only predecessor-related delays are shown, so no 'else' block is needed.
         });
-        tableBody.innerHTML = rowsHtml;
+
+        if (!rowsHtml) {
+            tableBody.innerHTML = '<tr><td colspan="9" class="text-center" style="padding: 20px;">No tasks with predecessor delays in the review queue.</td></tr>';
+        } else {
+            tableBody.innerHTML = rowsHtml;
+        }
 
     } catch (error) {
         console.error('Error updating IE view:', error);
@@ -8838,8 +8843,8 @@ async function updateIEView() {
     }
 }
 
-async function resolveIETask(itemId, action) {
-    console.log(`Resolving IE task item ${itemId} with action: ${action}`);
+async function resolveIETask(itemId, action, predecessorTask = null, predecessorNotes = null) {
+    console.log(`Resolving IE task item:`, { itemId, action, predecessorTask, predecessorNotes });
     if (action === 'disagree') {
         alert('Disagree functionality is not yet implemented. The task will be removed from the queue for now.');
     }
@@ -8850,7 +8855,11 @@ async function resolveIETask(itemId, action) {
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ flagged_at: itemId })
+            body: JSON.stringify({
+                flagged_at: itemId,
+                predecessor_task: predecessorTask,
+                predecessor_notes: predecessorNotes
+            })
         });
 
         const result = await response.json();
@@ -8862,14 +8871,12 @@ async function resolveIETask(itemId, action) {
 
         if (result.success) {
             showNotification(result.message, 'success');
-            // Remove the row from the table using a sanitized ID
-            const safeId = itemId.replace(/[^a-zA-Z0-9-_]/g, '');
-            const row = document.getElementById(`ie-task-${safeId}`);
-            if (row) {
-                row.style.transition = 'opacity 0.5s';
-                row.style.opacity = '0';
-                setTimeout(() => row.remove(), 500);
-            }
+            // Find the row to remove. Since multiple rows can share an itemId, we need a more specific selector.
+            // This is a bit tricky without changing the ID structure more. For now, we'll try to find the button's parent row.
+            // This part is not robust. A better way would be to pass the unique row ID to resolveIETask.
+            // For now, we'll just refresh the view.
+            updateIEView();
+
         } else {
             throw new Error(result.error || 'An unknown error occurred.');
         }

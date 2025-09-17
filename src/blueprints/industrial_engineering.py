@@ -115,11 +115,15 @@ def get_review_queue():
 @ie_bp.route('/resolve_task', methods=['POST'])
 def resolve_task():
     """
-    Resolves a task from the file-based IE review queue using its unique timestamp.
-    This is now more robust to handle items that might be missing the `feedback_id`.
+    Resolves a task or a single predecessor from the IE review queue.
+    If predecessor_task and predecessor_notes are provided, only that predecessor is removed.
+    If the list of predecessors becomes empty, the entire task item is removed from the queue.
+    If no predecessor details are provided, the entire task item is removed (legacy behavior).
     """
     data = request.json
     item_id = data.get('flagged_at')
+    pred_task = data.get('predecessor_task')
+    pred_notes = data.get('predecessor_notes')
 
     if not item_id:
         return jsonify({'success': False, 'error': 'A unique item ID (flagged_at) is required.'}), 400
@@ -128,20 +132,56 @@ def resolve_task():
     task_found = False
     new_queue = []
     resolved_task_id = "Unknown"
+    message = ""
 
     for item in queue:
-        # Check against both the new 'feedback_id' and the legacy 'flagged_at' field for robustness.
-        # This makes the system backward-compatible with any older queue items.
+        # Find the correct flagged task by its unique timestamp ID
         if item.get('feedback_id') == item_id or item.get('flagged_at') == item_id:
             task_found = True
             resolved_task_id = item.get('task_id', 'Unknown')
-            current_app.logger.info(f"Resolved IE Queue item for task {resolved_task_id} with ID {item_id}")
+
+            # If predecessor details are provided, we're resolving a single predecessor
+            is_predecessor_resolution = pred_task is not None and pred_notes is not None
+
+            if is_predecessor_resolution and 'predecessors' in item and isinstance(item['predecessors'], list):
+                # Filter out the resolved predecessor
+                original_predecessor_count = len(item['predecessors'])
+                item['predecessors'] = [
+                    p for p in item['predecessors']
+                    if not (p.get('predecessorTask') == pred_task and p.get('notes') == pred_notes)
+                ]
+
+                if len(item['predecessors']) < original_predecessor_count:
+                    current_app.logger.info(f"Resolved predecessor '{pred_task}' for task {resolved_task_id}.")
+                    message = f"Predecessor '{pred_task}' for task {resolved_task_id} resolved."
+                else:
+                    current_app.logger.warning(f"Could not find predecessor '{pred_task}' to resolve for task {resolved_task_id}.")
+                    # Still append the item back to the queue
+                    new_queue.append(item)
+                    continue
+
+                # If there are still other predecessors, keep the item in the queue.
+                # Otherwise, it will be fully removed by not appending it to new_queue.
+                if item['predecessors']:
+                    new_queue.append(item)
+                else:
+                    current_app.logger.info(f"All predecessors for task {resolved_task_id} resolved. Removing item from queue.")
+                    message = f"Final predecessor for task {resolved_task_id} resolved. Task removed from queue."
+
+            else:
+                # This block handles two cases:
+                # 1. Legacy behavior: No predecessor info sent, so resolve the whole item.
+                # 2. Non-predecessor delays: These don't have a `predecessors` list to begin with.
+                current_app.logger.info(f"Resolved entire IE Queue item for task {resolved_task_id} with ID {item_id}")
+                message = f"Task {resolved_task_id} resolved and removed from the review queue."
+                # By not appending the item to new_queue, it gets removed.
         else:
+            # This item is not the one we're looking for, so keep it.
             new_queue.append(item)
 
     if task_found:
         write_queue(new_queue)
-        return jsonify({'success': True, 'message': f'Task {resolved_task_id} ({item_id}) resolved and removed from the review queue.'})
+        return jsonify({'success': True, 'message': message})
     else:
         current_app.logger.error(f"Could not find IE Queue item with ID {item_id} to resolve.")
         return jsonify({'success': False, 'error': f'Task with ID {item_id} not found in the review queue.'}), 404
