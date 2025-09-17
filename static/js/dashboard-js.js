@@ -706,7 +706,11 @@ function initializeWorkerGantt() {
         max: maxDate,
         showMajorLabels: false, // Hide all default labels
         showMinorLabels: false,
-        groupOrder: 'order' // Use a simple order property
+        groupOrder: 'order', // Use a simple order property
+        tooltip: {
+            followMouse: true,
+            overflowMethod: 'cap'
+        }
     };
 
     workerGantt = new vis.Timeline(container, items, groups, options);
