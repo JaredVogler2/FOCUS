@@ -1723,21 +1723,27 @@ tr.has-conflict {
     cursor: default !important;
 }
 
-/* --- Worker Gantt Row Height and Stacking Fix --- */
+/* --- Worker Gantt Row Height and Hover Fix --- */
 
-/* Set a z-index for the group rows */
+/*
+  The .vis-itemset contains both the group rows and the task items.
+  By default, the group rows can intercept mouse events meant for the items.
+  The fix is to make the entire itemset container non-interactive,
+  and then re-enable pointer events only on the items themselves.
+*/
+#worker-gantt-container-advanced .vis-itemset {
+    pointer-events: none;
+}
+
+#worker-gantt-container-advanced .vis-item {
+    pointer-events: auto; /* Re-enable interaction for items */
+    height: 30px !important;
+    top: 3px !important;
+    box-sizing: border-box !important;
+}
+
 #worker-gantt-container-advanced .vis-group {
     height: 36px !important;
     min-height: 36px !important;
     border: none !important;
-    z-index: 1;
-}
-
-/* Give items a higher z-index to ensure they are on top of the groups */
-#worker-gantt-container-advanced .vis-item {
-    height: 30px !important;
-    top: 3px !important;
-    box-sizing: border-box !important;
-    position: relative; /* Required for z-index to take effect */
-    z-index: 2;
 }
