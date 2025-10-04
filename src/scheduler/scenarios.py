@@ -113,20 +113,23 @@ def scenario_1_csv_headcount(scheduler, time_limit_seconds=60):
     for team, capacity in team_capacities.items():
         demands = []
         intervals_for_team = []
-        is_mechanic_team = team in scheduler._original_team_capacity
+        is_quality_team = team in scheduler._original_quality_capacity
+        is_customer_team = team in scheduler._original_customer_team_capacity
 
         for task_id, task_info in tasks.items():
-            assigned_team = None
-            if task_info.get('is_quality'):
-                assigned_team = task_info.get('team')
-            elif task_info.get('is_customer'):
-                assigned_team = task_info.get('team')
-            else: # is mechanic task
-                assigned_team = task_info.get('team_skill')
+            task_assigned_team = None
+            # Check team type based on the outer loop's 'team' variable
+            if is_quality_team and task_info.get('is_quality', False):
+                task_assigned_team = task_info.get('team')
+            elif is_customer_team and task_info.get('is_customer', False):
+                task_assigned_team = task_info.get('team')
+            elif not is_quality_team and not is_customer_team: # It's a mechanic team
+                task_assigned_team = task_info.get('team_skill')
 
-            if assigned_team == team:
+            if task_assigned_team == team:
                 demands.append(task_info.get('mechanics_required', 1))
-                if is_mechanic_team and task_id in mechanic_blocking_intervals:
+                # Use the same condition to check if it's a mechanic team for blocking intervals
+                if not is_quality_team and not is_customer_team and task_id in mechanic_blocking_intervals:
                     intervals_for_team.append(mechanic_blocking_intervals[task_id])
                 else:
                     intervals_for_team.append(task_intervals[task_id])

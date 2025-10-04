@@ -179,6 +179,34 @@ class ProductionScheduler:
     def get_predecessors(self, task_id):
         return constraints.get_predecessors(self, task_id)
 
+    def get_all_successors(self, start_task_id):
+        """
+        Get all unique successors for a given task by traversing the dependency graph.
+        """
+        # Set to keep track of visited nodes to avoid cycles and redundant work
+        visited = set()
+        # Queue for BFS traversal, initialized with the starting task
+        queue = [start_task_id]
+        # Set to store all unique successors found
+        all_successors = set()
+
+        while queue:
+            current_task = queue.pop(0)
+            if current_task in visited:
+                continue
+            visited.add(current_task)
+
+            # Get direct successors for the current task
+            direct_successors = self.get_successors(current_task)
+
+            for successor in direct_successors:
+                if successor not in all_successors:
+                    all_successors.add(successor)
+                    if successor not in visited:
+                        queue.append(successor)
+
+        return list(all_successors)
+
     def is_working_day(self, date, product_line):
         return utils.is_working_day(self, date, product_line)
 
