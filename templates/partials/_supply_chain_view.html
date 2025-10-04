@@ -1,27 +1,29 @@
 <!-- templates/partials/_supply_chain_view.html -->
 <div id="supply-chain-view" class="view-container" style="display: none;">
     <div class="header">
-        <h2>Supply Chain Analysis: Late Parts</h2>
-        <p>This view tracks parts that are arriving late and their impact on the schedule.</p>
+        <h2>Supply Chain Analysis: Late Parts Impact</h2>
+        <p>This view tracks late parts and quantifies their impact on the overall project schedule. Parts with the highest impact score pose the greatest risk.</p>
     </div>
 
     <div class="table-container">
         <table id="late-parts-table">
             <thead>
                 <tr>
-                    <th>Part ID</th>
-                    <th>Product</th>
-                    <th>On-Dock Date</th>
-                    <th>Scheduled Start</th>
-                    <th>Delay (Days)</th>
-                    <th>Immediate Successor(s)</th>
-                    <th>Team</th>
+                    <th data-sort="part_id">Part ID</th>
+                    <th data-sort="product">Product</th>
+                    <th data-sort="on_dock_date">On-Dock Date</th>
+                    <th data-sort="scheduled_start">Scheduled Start</th>
+                    <th data-sort="impact_score" class="sortable">Impact Score &#x25B2;</th>
+                    <th data-sort="affected_task_count" class="sortable">Affected Tasks</th>
+                    <th data-sort="total_downstream_duration_hours" class="sortable">Downstream Duration (Hours)</th>
+                    <th>Direct Successor(s)</th>
+                    <th data-sort="team">Team</th>
                 </tr>
             </thead>
             <tbody id="late-parts-table-body">
                 <!-- Data will be loaded here by JavaScript -->
                 <tr>
-                    <td colspan="7" class="text-center">Loading supply chain data...</td>
+                    <td colspan="9" class="text-center">Loading supply chain data...</td>
                 </tr>
             </tbody>
         </table>

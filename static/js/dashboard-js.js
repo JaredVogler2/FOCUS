@@ -8710,9 +8710,18 @@ function formatChainList(tasks, mainTaskId) {
     return listHtml;
 }
 
-// New function for Supply Chain View
+// Global cache for late parts data
+let latePartsCache = [];
+
+// Global sort state for the late parts table
+let latePartsSortConfig = {
+    key: 'impact_score',
+    direction: 'desc'
+};
+
+// New, enhanced function for Supply Chain View
 async function updateSupplyChainView() {
-    console.log('Updating Supply Chain View...');
+    console.log('Updating Supply Chain View with Impact Analysis...');
     const tableBody = document.getElementById('late-parts-table-body');
     const totalLatePartsSpan = document.getElementById('total-late-parts');
 
@@ -8722,63 +8731,117 @@ async function updateSupplyChainView() {
     }
 
     // Set loading state
-    tableBody.innerHTML = '<tr><td colspan="7" class="text-center" style="padding: 20px;">Loading supply chain data...</td></tr>';
+    tableBody.innerHTML = '<tr><td colspan="9" class="text-center" style="padding: 20px;">Loading supply chain impact data...</td></tr>';
 
     try {
         const response = await fetch('/api/supply_chain/late_parts_analysis');
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
-        const lateParts = await response.json();
+        latePartsCache = await response.json(); // Store data in cache
 
-        if (lateParts.length === 0) {
-            tableBody.innerHTML = '<tr><td colspan="7" class="text-center" style="padding: 20px;">No late parts found.</td></tr>';
-            totalLatePartsSpan.textContent = '0';
-            return;
-        }
-
-        let rowsHtml = '';
-        lateParts.forEach(part => {
-            const onDockDate = part.on_dock_date ? new Date(part.on_dock_date) : null;
-            const scheduledStart = part.scheduled_start ? new Date(part.scheduled_start) : null;
-
-            let delayDays = 'N/A';
-            let delayClass = '';
-            if (onDockDate && scheduledStart) {
-                // Calculate delay only from on-dock date to scheduled start
-                const delay = (scheduledStart - onDockDate) / (1000 * 60 * 60 * 24);
-                if (delay > 0) {
-                    delayDays = Math.ceil(delay);
-                    if (delay > 7) {
-                        delayClass = 'delay-critical';
-                    } else if (delay > 2) {
-                        delayClass = 'delay-warning';
-                    }
-                } else {
-                    delayDays = '0';
-                }
-            }
-
-            rowsHtml += `
-                <tr>
-                    <td><strong>${part.part_id}</strong></td>
-                    <td>${part.product}</td>
-                    <td>${onDockDate ? onDockDate.toLocaleDateString() : 'N/A'}</td>
-                    <td>${scheduledStart ? scheduledStart.toLocaleString() : 'Not Scheduled'}</td>
-                    <td class="${delayClass}">${delayDays}</td>
-                    <td>${part.dependent_tasks.join(', ') || 'None'}</td>
-                    <td>${part.team || 'N/A'}</td>
-                </tr>
-            `;
-        });
-
-        tableBody.innerHTML = rowsHtml;
-        totalLatePartsSpan.textContent = lateParts.length;
+        totalLatePartsSpan.textContent = latePartsCache.length;
+        renderLatePartsTable(); // Render the table with initial sort
+        setupLatePartsTableSorting(); // Setup sorting listeners
 
     } catch (error) {
         console.error('Failed to update supply chain view:', error);
-        tableBody.innerHTML = '<tr><td colspan="7" class="text-center" style="color: red; padding: 20px;">Error loading data. Please try again.</td></tr>';
+        tableBody.innerHTML = '<tr><td colspan="9" class="text-center" style="color: red; padding: 20px;">Error loading data. Please try again.</td></tr>';
     }
+}
+
+function renderLatePartsTable() {
+    const tableBody = document.getElementById('late-parts-table-body');
+    if (!tableBody) return;
+
+    if (latePartsCache.length === 0) {
+        tableBody.innerHTML = '<tr><td colspan="9" class="text-center" style="padding: 20px;">No late parts found.</td></tr>';
+        return;
+    }
+
+    // Sort the data based on the current config
+    const sortedData = [...latePartsCache].sort((a, b) => {
+        const key = latePartsSortConfig.key;
+        const dir = latePartsSortConfig.direction === 'asc' ? 1 : -1;
+
+        let valA = a[key];
+        let valB = b[key];
+
+        // Handle date strings
+        if (key === 'on_dock_date' || key === 'scheduled_start') {
+            valA = a[key] ? new Date(a[key]).getTime() : 0;
+            valB = b[key] ? new Date(b[key]).getTime() : 0;
+        }
+
+        // Handle null or undefined values
+        if (valA === null || valA === undefined) valA = -Infinity;
+        if (valB === null || valB === undefined) valB = -Infinity;
+
+        if (valA < valB) return -1 * dir;
+        if (valA > valB) return 1 * dir;
+        return 0;
+    });
+
+    let rowsHtml = '';
+    sortedData.forEach(part => {
+        const onDockDate = part.on_dock_date ? new Date(part.on_dock_date).toLocaleDateString() : 'N/A';
+        const scheduledStart = part.scheduled_start ? new Date(part.scheduled_start).toLocaleString() : 'Not Scheduled';
+
+        rowsHtml += `
+            <tr class="${part.impact_score > 500 ? 'impact-critical' : part.impact_score > 100 ? 'impact-warning' : ''}">
+                <td><strong>${part.part_id}</strong></td>
+                <td>${part.product}</td>
+                <td>${onDockDate}</td>
+                <td>${scheduledStart}</td>
+                <td class="impact-score">${part.impact_score.toFixed(2)}</td>
+                <td>${part.affected_task_count}</td>
+                <td>${part.total_downstream_duration_hours.toFixed(2)}</td>
+                <td>${part.dependent_tasks.join(', ') || 'None'}</td>
+                <td>${part.team || 'N/A'}</td>
+            </tr>
+        `;
+    });
+
+    tableBody.innerHTML = rowsHtml;
+    updateSortIndicators();
+}
+
+function setupLatePartsTableSorting() {
+    const headers = document.querySelectorAll('#late-parts-table th.sortable');
+    headers.forEach(header => {
+        // Prevent multiple listeners
+        if (header.dataset.listenerAttached) return;
+        header.dataset.listenerAttached = 'true';
+
+        header.addEventListener('click', () => {
+            const sortKey = header.dataset.sort;
+            if (latePartsSortConfig.key === sortKey) {
+                latePartsSortConfig.direction = latePartsSortConfig.direction === 'asc' ? 'desc' : 'asc';
+            } else {
+                latePartsSortConfig.key = sortKey;
+                latePartsSortConfig.direction = 'desc'; // Default to descending for new column
+            }
+            renderLatePartsTable();
+        });
+    });
+}
+
+function updateSortIndicators() {
+    document.querySelectorAll('#late-parts-table th.sortable').forEach(header => {
+        const sortKey = header.dataset.sort;
+        let headerText = header.textContent.replace(/ ▲| ▼/g, '').trim();
+
+        if (latePartsSortConfig.key === sortKey) {
+            const arrow = latePartsSortConfig.direction === 'asc' ? '▲' : '▼';
+            header.innerHTML = `${headerText} ${arrow}`;
+        } else {
+             if (header.dataset.sort === 'impact_score') {
+                header.innerHTML = `${headerText} &#x25B2;`;
+            } else {
+                 header.textContent = headerText;
+            }
+        }
+    });
 }
 
 // New function for Industrial Engineering View
